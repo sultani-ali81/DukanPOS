@@ -103,7 +103,7 @@ function JournalDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="w-[90vw] max-w-4xl">
+      <DialogContent className="!max-w-3xl w-[90vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpenCheck className="size-4 text-muted-foreground" />
