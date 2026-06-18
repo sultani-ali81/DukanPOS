@@ -1,13 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Plus, Package } from "lucide-react"
-import { toast } from "sonner"
-import { PageHeader } from "@/components/page-header"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -16,41 +11,61 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { categories, products } from "@/lib/data"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { categories, products } from "@/lib/data";
+import { Package, Plus } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function CategoriesClient() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   function countProducts(categoryId: string) {
-    return products.filter((p) => p.categoryId === categoryId).length
+    return products.filter((p) => p.categoryId === categoryId).length;
   }
 
   function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    toast.success("Category added", { description: "Your new category is ready to use." })
-    setOpen(false)
+    e.preventDefault();
+    toast.success("Category added", {
+      description: "Your new category is ready to use.",
+    });
+    setOpen(false);
   }
 
   return (
     <div>
-      <PageHeader title="Categories" description="Organize your products into categories.">
+      <PageHeader
+        title="Categories"
+        description="Organize your products into categories."
+      >
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button />}>
-            <Plus className="size-4" /> Add Category
+          <DialogTrigger>
+            <Button>
+              <Plus className="size-4" /> Add Category
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSave}>
               <DialogHeader>
-                <DialogTitle>Add Category</DialogTitle>
-                <DialogDescription>Create a new product category.</DialogDescription>
+                <DialogTitle>
+                  <p className="text-lg font-semibold mb-2">Add Category</p>
+                </DialogTitle>
+                <DialogDescription>
+                  Create a new product category.
+                </DialogDescription>
               </DialogHeader>
               <div className="grid gap-2 py-4">
                 <Label htmlFor="catname">Category Name</Label>
                 <Input id="catname" placeholder="e.g. Dairy" required />
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">Save Category</Button>
@@ -71,7 +86,9 @@ export function CategoriesClient() {
                 <Package className="size-6" />
               </div>
               <div>
-                <p className="text-base font-semibold text-foreground">{cat.name}</p>
+                <p className="text-base font-semibold text-foreground">
+                  {cat.name}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {countProducts(cat.id)} products
                 </p>
@@ -81,5 +98,5 @@ export function CategoriesClient() {
         ))}
       </div>
     </div>
-  )
+  );
 }

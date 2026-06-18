@@ -65,7 +65,7 @@ export function PosInventoryCombobox({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[280px] p-0 rounded-xl shadow-lg border border-gray-100"
+        className="w-[280px] p-0 rounded-xl bg-white border border-gray-100"
         align="start"
       >
         {/* Search */}

@@ -74,9 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="ghost" size="sm" className="gap-2" />}
-              >
+              <DropdownMenuTrigger>
                 <Globe className="size-4" />
                 <span className="hidden sm:inline">English</span>
               </DropdownMenuTrigger>

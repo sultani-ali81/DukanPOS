@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuthStore } from "@/lib/store";
+import PosPage from "@/pages/pos";
 import {
   Bell,
   Globe,
@@ -28,7 +29,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 /**
  * AppLayout — THE shell. Single source of truth for navigation + chrome.
@@ -41,6 +42,8 @@ import { Navigate, Outlet, useNavigate } from "react-router-dom";
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   const user = useAuthStore((s) => s.user);
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -88,6 +91,10 @@ export default function AppLayout() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  if (pathname === "/pos") {
+    <PosPage />;
+  }
 
   return (
     <div className="flex min-h-screen gap-2.5 p-2.5 bg-gray-200">
@@ -158,11 +165,7 @@ export default function AppLayout() {
             </Button>
 
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button aria-label="Open user menu" className="block" />
-                }
-              >
+              <DropdownMenuTrigger>
                 <Avatar className="size-9 cursor-pointer">
                   <AvatarImage
                     src={profile?.imageUrl ?? undefined}
@@ -199,7 +202,7 @@ export default function AppLayout() {
         </header>
 
         {/* Page content — the router fills this in */}
-        <main className="flex-1 overflow-y-auto rounded-lg bg-white p-2.5">
+        <main className="flex-1 overflow-y-auto rounded-lg bg-white p-4">
           <Outlet />
         </main>
       </div>

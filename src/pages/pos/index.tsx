@@ -328,12 +328,16 @@ export default function PosPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
+  // ── Render ────────────────────────────────────────────────────────────────────
+
   return (
-    <div className="h-[calc(100vh-80px)] flex flex-col lg:flex-row">
+    // CHANGE: Changed h-[calc(100vh-80px)] overflow-y-auto to fixed structural limits
+    <div className="h-[calc(100vh-64px)] w-full overflow-hidden flex flex-col lg:flex-row bg-bg-main p-4 gap-4">
       {/* ── Product list ── */}
-      <div className="bg-white flex-1 rounded-xl min-w-0 overflow-y-auto p-4 space-y-3 pb-24 lg:pb-4">
+      {/* CHANGE: Removed space-y-3 & pb-24; added internal flex layouts to handle individual column scrolling */}
+      <div className="bg-white flex-1 rounded-xl min-w-0 flex flex-col h-full overflow-hidden p-4 border border-gray-100 shadow-xs">
         {/* MOBILE: inventory picker always visible */}
-        <div className="lg:hidden">
+        <div className="lg:hidden flex-none mb-3">
           <PosInventoryCombobox
             value={inventoryId}
             label={inventoryLabel}
@@ -341,68 +345,77 @@ export default function PosPage() {
           />
         </div>
 
-        <PosCategoryFilter
-          categories={categories}
-          selected={selectedCategory}
-          onSelect={handleCategorySelect}
-          searchQuery={search}
-          onSearchChange={handleSearch}
-        />
+        <div className="flex-none mb-3">
+          <PosCategoryFilter
+            categories={categories}
+            selected={selectedCategory}
+            onSelect={handleCategorySelect}
+            searchQuery={search}
+            onSearchChange={handleSearch}
+          />
+        </div>
 
-        {!inventoryId ? (
-          <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-4">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-              <svg
-                className="w-8 h-8 text-gray-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
+        {/* CHANGE: Wrapped product results area into its own unique isolated scroll element */}
+        <div className="flex-1 overflow-y-auto min-h-0 py-1">
+          {!inventoryId ? (
+            <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-4">
+              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                <svg
+                  className="w-8 h-8 text-gray-300"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
+                </svg>
+              </div>
+              <p className="text-base font-medium text-gray-600">
+                No inventory selected
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                <span className="lg:hidden">
+                  Select an inventory above to load products
+                </span>
+                <span className="hidden lg:inline">
+                  Choose an inventory on the right to load products
+                </span>
+              </p>
             </div>
-            <p className="text-base font-medium text-gray-600">
-              No inventory selected
+          ) : loadingInventory ? (
+            <p className="text-center text-gray-400 py-16 text-sm">
+              Loading products…
             </p>
-            <p className="text-sm text-gray-400 mt-1">
-              <span className="lg:hidden">
-                Select an inventory above to load products
-              </span>
-              <span className="hidden lg:inline">
-                Choose an inventory on the right to load products
-              </span>
-            </p>
-          </div>
-        ) : loadingInventory ? (
-          <p className="text-center text-gray-400 py-16 text-sm">
-            Loading products…
-          </p>
-        ) : (
-          <PosProductList
-            products={pagedProducts}
-            cartQuantities={cartQuantities}
-            onAdd={addToCart}
-          />
-        )}
+          ) : (
+            <PosProductList
+              products={pagedProducts}
+              cartQuantities={cartQuantities}
+              onAdd={addToCart}
+            />
+          )}
+        </div>
 
+        {/* CHANGE: Placed pagination inside fixed non-scroll footer view */}
         {!loadingInventory && inventoryId && totalPages > 1 && (
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            className="pt-2 pb-1"
-          />
+          <div className="flex-none pt-3 border-t border-gray-100 mt-2">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              className="py-0"
+            />
+          </div>
         )}
       </div>
 
       {/* ── DESKTOP: Order details (right panel) ── */}
-      <div className="bg-bg-main rounded-tl-xl hidden lg:block">
-        <div className="lg:flex lg:flex-col sm:mt-2.5 ml-2.5 w-[380px] xl:w-[420px] shrink-0 bg-white rounded-xl h-[calc(100vh-90px)]">
+      {/* CHANGE: Cleaned up inner margins, hardcoded matching calculations, and fixed full height structure layout */}
+      <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 h-full overflow-hidden">
+        <div className="bg-white rounded-xl h-full border border-gray-100 shadow-xs overflow-hidden">
           <PosOrderDetails
             inventoryId={inventoryId}
             inventoryLabel={inventoryLabel}
