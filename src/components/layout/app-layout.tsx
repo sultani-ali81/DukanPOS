@@ -17,7 +17,16 @@ import {
 } from "@/components/ui/sheet";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuthStore } from "@/lib/store";
-import { Bell, Globe, Loader2, LogOut, Menu, Search } from "lucide-react";
+import {
+  Bell,
+  Globe,
+  Loader2,
+  LogOut,
+  Mail,
+  Menu,
+  Search,
+  UserCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useNavigate } from "react-router-dom";
 
@@ -81,7 +90,7 @@ export default function AppLayout() {
     .toUpperCase();
 
   return (
-    <div className="flex min-h-screen gap-2.5 p-2.5 bg-gray-100">
+    <div className="flex min-h-screen gap-2.5 p-2.5 bg-gray-200">
       {/* Desktop sidebar — always visible on lg+ */}
       <aside className="hidden w-64 shrink-0 rounded-xl bg-white lg:sticky lg:top-2.5 lg:block lg:h-[calc(100vh-1.25rem)]">
         <SidebarNav />
@@ -89,7 +98,7 @@ export default function AppLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex min-h-[80px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 backdrop-blur md:px-6">
+        <header className="sticky top-0 z-30 flex min-h-[60px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
           {/* Mobile menu — Sheet with sidebar inside */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
@@ -123,13 +132,13 @@ export default function AppLayout() {
           {/* Right side: language, notifications, user */}
           <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="ghost" size="sm" className="gap-2" />}
-              >
-                <Globe className="size-4" />
-                <span className="hidden md:inline">English</span>
+              <DropdownMenuTrigger className="cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <Globe className="size-4" />
+                  <span className="hidden md:inline">English</span>
+                </div>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="cursor-pointer">
                 <DropdownMenuLabel>Language</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>English</DropdownMenuItem>
@@ -167,10 +176,8 @@ export default function AppLayout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.role}
-                    </p>
+                  <div className="flex space-y-1 items-center">
+                    <Mail className="mr-2 h-4 w-4"></Mail>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
                     </p>
@@ -178,10 +185,11 @@ export default function AppLayout() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
+                  <UserCircle className="mr-2 h-4 w-4"></UserCircle>
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={logout} className="text-red-500">
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>

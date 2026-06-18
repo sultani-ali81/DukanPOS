@@ -21,6 +21,7 @@ export interface PosProduct {
   name: string;
   price: number;
   quantity: number;
+  sequence: string | null;
   categories: PosProductCategory[];
   images: PosProductImage[];
   /** Convenience: first signed URL or empty string */
@@ -53,6 +54,7 @@ interface RawPosProduct {
   name: string;
   price: number;
   quantity: number;
+  sequence?: string | null;
   categories?: RawPosCategory[];
   images?: RawPosImage[];
 }
@@ -78,6 +80,7 @@ function mapPosProduct(p: RawPosProduct): PosProduct {
     name: p.name,
     price: p.price,
     quantity: p.quantity,
+    sequence: p.sequence ?? null,
     categories: (p.categories ?? []).map((c) => ({ id: c.id, name: c.name })),
     images,
     primaryImage: images[0]?.signedUrl ?? "",

@@ -66,6 +66,11 @@ export async function completeStockOut(
   return res.data;
 }
 
+export async function updateSale(id: string): Promise<{ message: string }> {
+  const res = await api.put(`/sales/${id}`, { status: "Done" });
+  return res.data;
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export interface DashboardStats {

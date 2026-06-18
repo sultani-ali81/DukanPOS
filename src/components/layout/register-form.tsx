@@ -2,14 +2,18 @@ import api from "@/lib/axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import AuthLayout from "@/components/layout/auth-layout";
 import OtpDialog from "@/components/otp-dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, Phone, Store, User } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Input } from "../ui/input";
-import { Separator } from "../ui/separator";
+
+type ApiError = {
+  response?: { data?: { message?: string | string[] } };
+};
 
 export default function RegisterForm() {
   const navigate = useNavigate();
@@ -25,8 +29,8 @@ export default function RegisterForm() {
     },
   });
 
-  const [showPassword, setShowPassword] = useState(true);
-  const [showConfirm, setShowConfirm] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,18 +38,28 @@ export default function RegisterForm() {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [userEmail, setUserEmail] = useState("");
 
-  const handleSubmit = async (values: any) => {
-    if (!values.name) return setError("Please Enter you Full name!");
-    if (!values.storeName) return setError("Please Enter Store Name");
-    if (!values.email) return setError("Please enter your email!");
-    if (!values.password) return setError("Please enter your password!");
-    if (values.password !== values.confirmPassword) {
+  const handleSubmit = async (values: {
+    name: string;
+    storeName: string;
+    email: string;
+    phone: string;
+    password: string;
+    confirmPassword: string;
+  }) => {
+    if (!values.name) return setError("Please enter your name");
+
+    if (!values.storeName) return setError("Please enter store name");
+
+    if (!values.email) return setError("Please enter email");
+
+    if (!values.password) return setError("Please enter password");
+
+    if (values.password !== values.confirmPassword)
       return setError("Passwords do not match");
-    }
 
     try {
-      setError("");
       setLoading(true);
+      setError("");
 
       await api.post("/auth/register", {
         name: values.name,
@@ -57,226 +71,245 @@ export default function RegisterForm() {
 
       setUserEmail(values.email);
       setShowOtpModal(true);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg[0] : msg || "Sign Up Failed");
+    } catch (err) {
+      const msg = (err as ApiError)?.response?.data?.message;
+
+      setError(Array.isArray(msg) ? msg[0] : msg || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
+  const fieldClass =
+    "h-12 rounded-xl border-transparent bg-slate-100 pl-12 text-slate-700 placeholder:text-slate-400 focus-visible:ring-teal-500";
+
   return (
-    <div className="w-full max-w-md space-y-8">
-      {/* Header */}
-      <div className="text-center mt-20">
-        <img src="/icons/logo.svg" alt="Logo" className="mx-auto w-8 h-8" />
-
-        <h1 className="text-[32px] leading-tight font-semibold mb-2">
-          Welcome!
-        </h1>
-
-        <p className="text-gray-500 text-[15px] leading-snug">
-          Please enter your details to Create Your Account
-        </p>
-      </div>
-
-      {/* FORM */}
-      <Form {...formHook}>
-        <form
-          onSubmit={formHook.handleSubmit(handleSubmit)}
-          className="space-y-4"
-        >
-          {/* ROW 1 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={formHook.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      placeholder="Full Name"
-                      className="min-h-12 w-full bg-white border-gray-150"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={formHook.control}
-              name="storeName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      placeholder="Store Name"
-                      className="min-h-12 w-full bg-white border-gray-150"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+    <>
+      <AuthLayout
+        reverse
+        panel={
+          <>
+            <h2 className="text-3xl font-bold">Welcome Back!</h2>
+            <p className="mt-4 text-sm leading-relaxed text-white/80">
+              Already have an account? Sign in to continue managing your store.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="mt-8 rounded-full border-2 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition hover:bg-white hover:text-teal-600"
+            >
+              Sign In
+            </button>
+          </>
+        }
+      >
+        <div className="w-full max-w-sm">
+          {/* Brand */}
+          <div className="mb-6 flex items-center gap-2">
+            <img src="/icons/logo.svg" alt="Logo" className="h-7 w-7" />
+            <span className="text-lg font-bold text-slate-800">POS</span>
           </div>
 
-          {/* ROW 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={formHook.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="Your Email"
-                      className="min-h-12 w-full bg-white border-gray-150"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+          <h1 className="text-center text-3xl font-bold text-teal-600">
+            Create Your Store
+          </h1>
+          <p className="mt-2 text-center text-sm text-slate-400">
+            Set up your POS account in minutes
+          </p>
 
-            <FormField
-              control={formHook.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      placeholder="Phone number"
-                      className="min-h-12 w-full bg-white border-gray-150"
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
+          <Form {...formHook}>
+            <form
+              onSubmit={formHook.handleSubmit(handleSubmit)}
+              className="mt-6 space-y-4"
+            >
+              <FormField
+                control={formHook.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Owner Name"
+                          className={fieldClass}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formHook.control}
+                name="storeName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="relative">
+                        <Store className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Store Name"
+                          className={fieldClass}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formHook.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type="email"
+                          placeholder="Email"
+                          className={fieldClass}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formHook.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Phone Number"
+                          className={fieldClass}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formHook.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Password"
+                          className={`${fieldClass} pr-12`}
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                        >
+                          {showPassword ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={formHook.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          type={showConfirm ? "text" : "password"}
+                          placeholder="Confirm Password"
+                          className={`${fieldClass} pr-12`}
+                          {...field}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowConfirm((prev) => !prev)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                        >
+                          {showConfirm ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </Button>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {error && (
+                <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
+                  {error}
+                </div>
               )}
-            />
+
+              <div className="flex justify-center pt-2">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="h-12 rounded-full bg-primary/90 px-16 text-sm font-semibold uppercase tracking-wide text-white hover:bg-primary"
+                >
+                  {loading ? "Creating Account..." : "Create Account"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+
+          {/* Mobile-only switch link */}
+          <div className="mt-6 text-center text-sm text-slate-500 lg:hidden">
+            Already have an account?{" "}
+            <span
+              onClick={() => navigate("/login")}
+              className="cursor-pointer font-semibold text-teal-600 hover:underline"
+            >
+              Sign In
+            </span>
           </div>
+        </div>
+      </AuthLayout>
 
-          {/* PASSWORD */}
-          <FormField
-            control={formHook.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "password" : "text"}
-                      placeholder="Password"
-                      autoComplete="new-password"
-                      className="min-h-12 w-full bg-white border-gray-150"
-                      {...field}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setShowPassword((p) => !p)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </Button>
-                  </div>
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          {/* CONFIRM */}
-          <FormField
-            control={formHook.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showConfirm ? "password" : "text"}
-                      placeholder="Confirm Password"
-                      autoComplete="new-password"
-                      className="min-h-12 w-full bg-white border-gray-150"
-                      {...field}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setShowConfirm((p) => !p)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-                    >
-                      {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </Button>
-                  </div>
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-
-          <Button type="submit" className="w-full min-h-12" disabled={loading}>
-            {loading ? "Creating..." : "Sign Up"}
-          </Button>
-        </form>
-      </Form>
-
-      {/* LOGIN LINK */}
-      <div className="text-center text-sm text-gray-500">
-        Already have an account?{" "}
-        <span
-          onClick={() => navigate("/login")}
-          className="cursor-pointer text-black font-medium hover:underline"
-        >
-          Sign In
-        </span>
-      </div>
-
-      {/* Separator */}
-      <div className="flex items-center gap-4">
-        <Separator className="flex-1" />
-        <span className="text-gray-400 text-sm">Or</span>
-        <Separator className="flex-1" />
-      </div>
-
-      {/* SOCIAL */}
-      <div className="grid grid-cols-2 gap-4">
-        {/*Google */}
-        <Button
-          type="button"
-          variant="outline"
-          className="flex items-center justify-center gap-2 bg-white border-gray-150 rounded-sm py-3 h-12"
-        >
-          <img src="icons/google_color.svg" alt="Google" className="w-5 h-5" />
-          <span className="text-sm font-medium">Google</span>
-        </Button>
-        {/*Apple*/}
-        <Button
-          type="button"
-          variant="outline"
-          className="flex items-center justify-center gap-2 bg-white border-gray-150 rounded-sm py-3 h-12"
-        >
-          <img src="/icons/apple_black.svg" alt="Apple" className="w-5 h-5" />
-          <span className="text-sm font-medium">Apple</span>
-        </Button>
-      </div>
-
-      {/* OTP DIALOG */}
       <OtpDialog
         open={showOtpModal}
         onClose={() => setShowOtpModal(false)}
         title="Verify Email"
         description={`Enter the OTP sent to ${userEmail}`}
-        onVerify={async (code: any) => {
+        onVerify={async (code: string) => {
           await api.post("/auth/verify-register", {
             email: userEmail,
             code,
           });
+
           navigate("/dashboard");
         }}
       />
-    </div>
+    </>
   );
 }

@@ -1,14 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/lib/store";
 import { decodeToken } from "@/lib/utils";
 import TwoFADialog from "@/pages/(auth)/two-fa-dialog";
 import { login } from "@/queries/auth";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import AuthLayout from "@/components/layout/auth-layout";
+
+type ApiError = {
+  response?: { data?: { message?: string | string[] } };
+};
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -21,9 +26,10 @@ export default function LoginForm() {
 
   const [loading, setLoading] = useState(false);
   const [twoFAOpen, setTwoFAOpen] = useState(false);
-
-  const [showPassword, setShowPassword] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+
+  const { setAuth } = useAuthStore();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -34,42 +40,44 @@ export default function LoginForm() {
     }));
   };
 
-  const { setAuth } = useAuthStore();
-
   const handleSubmit = async () => {
     setError("");
+
     if (!form.email && !form.password)
       return setError("Email and password required");
-    if (!form.email) return setError("Please enter your Email");
+
+    if (!form.email) return setError("Please enter your email");
+
     if (!form.password) return setError("Please enter your password");
 
     try {
       setLoading(true);
-      const res = await login({ email: form.email, password: form.password });
+
+      const res = await login({
+        email: form.email,
+        password: form.password,
+      });
 
       if (res.data.twoFactorRequired) {
         setTwoFAOpen(true);
-        setLoading(false);
         return;
       }
 
       const token = res.data.token;
+
       if (!token) {
-        setError("Login failed: no token received");
+        setError("Login failed");
         return;
       }
 
-      const decoded = decodeToken<{ role: string; id: string; email: string }>(
-        token,
-      );
-      console.log(
-        "decoded role:",
-        decoded?.role,
-        "navigating to:",
-        decoded?.role === "Cashier" ? "/pos" : "/dashboard",
-      );
+      const decoded = decodeToken<{
+        role: string;
+        id: string;
+        email: string;
+      }>(token);
+
       if (!decoded) {
-        setError("Login failed: invalid token");
+        setError("Invalid token");
         return;
       }
 
@@ -85,8 +93,9 @@ export default function LoginForm() {
       navigate(decoded.role === "Cashier" ? "/pos" : "/dashboard", {
         replace: true,
       });
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
+    } catch (err) {
+      const msg = (err as ApiError)?.response?.data?.message;
+
       setError(Array.isArray(msg) ? msg[0] : msg || "Login failed");
     } finally {
       setLoading(false);
@@ -95,127 +104,127 @@ export default function LoginForm() {
 
   return (
     <>
-      <div className="w-full max-w-md space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <img src="/icons/logo.svg" alt="Logo" className="mx-auto w-8 h-8" />
-
-          <h1 className="text-[32px] leading-tight font-semibold mb-2">
-            Welcome Back!
-          </h1>
-
-          <p className="text-gray-500 text-[15px] leading-snug">
-            Please enter your details to sign in
-          </p>
-        </div>
-
-        {/* Form */}
-        <div className="space-y-4">
-          <Input
-            name="email"
-            className="h-12 bg-white border-gray-150"
-            type="email"
-            placeholder="Your Email"
-            value={form.email}
-            onChange={handleChange}
-          />
-
-          {/* Password */}
-          <div className="relative">
-            <Input
-              name="password"
-              className="h-12 bg-white border-gray-150"
-              type={showPassword ? "password" : "text"}
-              placeholder="Your Password"
-              autoComplete="new-password"
-              value={form.password}
-              onChange={handleChange}
-            />
-
-            <Button
+      <AuthLayout
+        panel={
+          <>
+            <h2 className="text-3xl font-bold">Hello, Friend!</h2>
+            <p className="mt-4 text-sm leading-relaxed text-white/80">
+              Enter your details and start your journey with us today.
+            </p>
+            <button
               type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+              onClick={() => navigate("/register")}
+              className="mt-8 rounded-full border-2 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition hover:bg-white hover:text-teal-600"
             >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5" />
-              ) : (
-                <Eye className="h-5 w-5" />
-              )}
-            </Button>
+              Sign Up
+            </button>
+          </>
+        }
+      >
+        <div className="w-full max-w-sm">
+          {/* Brand */}
+          <div className="mb-8 flex items-center gap-2">
+            <img src="logo.svg" alt="Logo" className="h-7 w-7" />
+            <span className="text-lg font-bold text-primary/90">POS</span>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
+          <h1 className="text-center text-3xl font-bold text-primary">
+            Welcome Back
+          </h1>
+          <p className="mt-2 text-center text-sm text-slate-600">
+            Sign in to manage your store
+          </p>
+
+          {/* Email */}
+          <div className="mt-8 space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+              <Input
+                name="email"
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={handleChange}
+                className="h-12 rounded-xl border-transparent bg-slate-100 pl-12 text-slate-700 placeholder:text-slate-400 focus-visible:ring-teal-500"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+              <Input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Password"
+                autoComplete="new-password"
+                className="h-12 rounded-xl border-transparent bg-slate-100 pl-12 pr-12 text-slate-700 placeholder:text-slate-400 focus-visible:ring-teal-500"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Remember + Forgot */}
+          <div className="mt-4 flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={form.remember}
-                onCheckedChange={(val) =>
-                  setForm((prev) => ({ ...prev, remember: !!val }))
+                onCheckedChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    remember: !!value,
+                  }))
                 }
               />
-              <label className="text-gray-600">Remember account</label>
+              <span className="text-slate-500">Remember me</span>
             </div>
-            <span
+
+            <button
+              type="button"
               onClick={() => navigate("/forgot-password")}
-              className="text-gray-400 cursor-pointer hover:underline"
+              className="text-slate-400 hover:text-teal-600"
             >
-              Forgot Password
-            </span>
+              Forgot your password?
+            </button>
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && (
+            <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
 
-          <Button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full h-12"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
+          <div className="mt-6 flex justify-center">
+            <Button
+              disabled={loading}
+              onClick={handleSubmit}
+              className="h-12 rounded-full bg-primary/90 px-16 text-sm font-semibold uppercase tracking-wide text-white hover:bg-primary"
+            >
+              {loading ? "Signing In..." : "Sign In"}
+            </Button>
+          </div>
+
+          {/* Mobile-only switch link */}
+          <div className="mt-6 text-center text-sm text-slate-500 lg:hidden">
+            Don&apos;t have an account?{" "}
+            <span
+              onClick={() => navigate("/register")}
+              className="cursor-pointer font-semibold text-teal-600 hover:underline"
+            >
+              Create Account
+            </span>
+          </div>
         </div>
-
-        <div className="text-center text-sm text-gray-500">
-          Don't have an account?{" "}
-          <span
-            onClick={() => navigate("/register")}
-            className="text-black font-medium cursor-pointer hover:underline"
-          >
-            Sign Up
-          </span>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <Separator className="flex-1" />
-          <span className="text-gray-400 text-sm">Or</span>
-          <Separator className="flex-1" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="flex bg-white border-gray-150 items-center justify-center gap-2 rounded-sm py-3 h-12"
-          >
-            <img
-              src="icons/google_color.svg"
-              alt="Google"
-              className="w-5 h-5"
-            />
-            <span className="text-sm font-medium">Google</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="flex items-center bg-white border-gray-150 justify-center gap-2 rounded-sm py-3 h-12"
-          >
-            <img src="/icons/apple_black.svg" alt="Apple" className="w-5 h-5" />
-            <span className="text-sm font-medium">Apple</span>
-          </Button>
-        </div>
-      </div>
+      </AuthLayout>
 
       <TwoFADialog
         open={twoFAOpen}

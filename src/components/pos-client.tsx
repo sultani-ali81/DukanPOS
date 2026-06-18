@@ -39,7 +39,7 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type CartItem = { product: Product; qty: number };
@@ -55,6 +55,7 @@ export function PosClient() {
   const [tendered, setTendered] = useState("");
 
   const customers = contacts.filter((c) => c.type === "customer");
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -321,7 +322,11 @@ export function PosClient() {
           <Badge variant="secondary" className="hidden sm:inline-flex">
             {itemCount} items in cart
           </Badge>
-          <Button variant="outline" size="sm" render={<Link ref="/" />}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+          >
             <X className="size-4" /> Exit POS
           </Button>
         </div>

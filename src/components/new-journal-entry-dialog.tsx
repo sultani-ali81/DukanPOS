@@ -43,8 +43,10 @@ export function NewJournalEntryDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
         <div className="flex flex-row items-center gap-2">
-          <Plus className="size-4" />
-          <span>New Entry</span>
+          <Button>
+            <Plus className="size-4" />
+            New Entry
+          </Button>
         </div>
       </DialogTrigger>
       <DialogContent>

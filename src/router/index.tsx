@@ -6,7 +6,7 @@ import ContactsPage from "@/pages/contacts";
 import Dashboard from "@/pages/dashboard";
 import InventoryPage from "@/pages/inventory/page";
 import JournalPage from "@/pages/journal/page";
-import PosPage from "@/pages/pos/page";
+import PosPage from "@/pages/pos";
 import ProductsPage from "@/pages/products/page";
 import ProfilePage from "@/pages/profile/page";
 import ViewPurchase from "@/pages/purchases/[id]";

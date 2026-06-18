@@ -18,15 +18,19 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex flex-col h-full ">
-      <div className="flex items-center gap-2 px-6 py-4">
-        <Store className="h-6 w-6" />
-        <span className="font-bold text-lg">Dukan POS</span>
+      <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
+        <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          <Store className="size-5" />
+        </div>
+        <div className="leading-tight">
+          <p className="text-base font-bold text-sidebar-foreground">
+            Dukan POS
+          </p>
+          <p className="text-xs text-muted-foreground">Retail made simple</p>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground px-6 pb-4">
-        Retail made simple
-      </p>
 
-      <nav className="flex-1 px-3">
+      <nav className="flex-1 px-3 pt-6">
         {visibleItems.map((item) => {
           const active =
             item.href === "/dashboard"
