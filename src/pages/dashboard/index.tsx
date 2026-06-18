@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   ArrowRight,
   DollarSign,
-  Package,
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -149,14 +148,24 @@ export default function DashboardPage() {
               trend={formatTrend(stats?.todayProfit?.percentageChange ?? 0)}
             />
             <StatCard
-              label="Total Products"
-              value={String(totalProducts)}
-              icon={Package}
+              label="Out of Stock"
+              value={String(stats?.outOfStockProducts?.length ?? 0)}
+              icon={AlertTriangle}
+              accent="rose"
+              trend={{
+                value:
+                  (stats?.outOfStockProducts?.length ?? 0) > 0
+                    ? "Needs restocking"
+                    : "All stocked",
+
+                positive: (stats?.outOfStockProducts?.length ?? 0) === 0,
+              }}
             />
             <StatCard
               label="Low Stock Items"
               value={String(lowStockCount)}
               icon={AlertTriangle}
+              accent="amber"
               trend={{
                 value: lowStockCount > 0 ? "Needs attention" : "All good",
                 positive: lowStockCount === 0,

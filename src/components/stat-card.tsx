@@ -1,7 +1,9 @@
-import { cn } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
-import type { LucideIcon } from "lucide-react"
-import { ArrowDownRight, ArrowUpRight } from "lucide-react"
+// src/components/stat-card.tsx
+
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 export function StatCard({
   label,
@@ -10,18 +12,18 @@ export function StatCard({
   trend,
   accent = "primary",
 }: {
-  label: string
-  value: string
-  icon: LucideIcon
-  trend?: { value: string; positive: boolean }
-  accent?: "primary" | "emerald" | "amber" | "rose"
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  trend?: { value: string; positive: boolean };
+  accent?: "primary" | "emerald" | "amber" | "rose";
 }) {
   const accentClasses: Record<string, string> = {
-    primary: "bg-secondary text-foreground",
-    emerald: "bg-secondary text-foreground",
-    amber: "bg-secondary text-foreground",
-    rose: "bg-secondary text-foreground",
-  }
+    primary: "bg-primary/10 text-primary",
+    emerald: "bg-emerald-500/10 text-emerald-600",
+    amber: "bg-amber-500/10 text-amber-600",
+    rose: "bg-rose-500/10 text-rose-600",
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -32,11 +34,7 @@ export function StatCard({
             {value}
           </p>
           {trend ? (
-            <div
-              className={cn(
-                "mt-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground",
-              )}
-            >
+            <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
               {trend.positive ? (
                 <ArrowUpRight className="size-3.5" />
               ) : (
@@ -46,10 +44,15 @@ export function StatCard({
             </div>
           ) : null}
         </div>
-        <div className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", accentClasses[accent])}>
+        <div
+          className={cn(
+            "flex size-12 shrink-0 items-center justify-center rounded-xl",
+            accentClasses[accent],
+          )}
+        >
           <Icon className="size-6" />
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
