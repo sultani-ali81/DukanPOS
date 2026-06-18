@@ -1,6 +1,7 @@
 export const CURRENCY = "AFN ";
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null): string {
+  if (!amount) amount = 0;
   return `${CURRENCY}${amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 

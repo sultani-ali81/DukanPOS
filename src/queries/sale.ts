@@ -103,11 +103,12 @@ export interface SaleListItem {
   id: string;
   customerId: string;
   inventoryId: string;
-  totalAmount: number;
+  totalPrice: number;
   status: string;
   createdAt: string;
   customer: { id: string; name: string };
   items: { id: string; quantity: number; unitPrice: number }[];
+  sequenceId: string;
 }
 
 export interface SalesMeta {

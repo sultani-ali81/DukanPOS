@@ -21,9 +21,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
 function StatCardSkeleton() {
   return (
     <Card>
@@ -209,7 +206,7 @@ export default function DashboardPage() {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground">
-                    #{s.id.slice(-8).toUpperCase()}
+                    #{s.sequenceId}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {s.customer?.name ?? "Walk-in"} · {s.items?.length ?? 0}{" "}
@@ -218,7 +215,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-bold text-foreground">
-                    {formatCurrency(s.totalAmount ?? 0)}
+                    {formatCurrency(s.totalPrice ?? 0)}
                   </p>
                   <Badge
                     variant={s.status === "Completed" ? "secondary" : "outline"}
