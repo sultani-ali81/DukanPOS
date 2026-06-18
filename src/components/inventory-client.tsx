@@ -1,25 +1,8 @@
-"use client"
-
-import { useState } from "react"
-import {
-  AlertTriangle,
-  Package,
-  Warehouse,
-  Plus,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  MapPin,
-  Check,
-} from "lucide-react"
-import { toast } from "sonner"
-import { PageHeader } from "@/components/page-header"
-import { StatCard } from "@/components/stat-card"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -36,65 +21,100 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  products,
-  inventories as initialInventories,
-  stockMovements as initialMovements,
   getCategoryName,
   getInventoryName,
-  type Product,
+  inventories as initialInventories,
+  stockMovements as initialMovements,
+  products,
   type Inventory,
+  type Product,
   type StockMovement,
-} from "@/lib/data"
+} from "@/lib/data";
+import {
+  AlertTriangle,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Check,
+  MapPin,
+  Package,
+  Plus,
+  Warehouse,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function InventoryClient() {
-  const [adjusting, setAdjusting] = useState<Product | null>(null)
-  const [addOpen, setAddOpen] = useState(false)
-  const [inventoryList, setInventoryList] = useState<Inventory[]>(initialInventories)
-  const [movements, setMovements] = useState<StockMovement[]>(initialMovements)
+  const [adjusting, setAdjusting] = useState<Product | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [inventoryList, setInventoryList] =
+    useState<Inventory[]>(initialInventories);
+  const [movements, setMovements] = useState<StockMovement[]>(initialMovements);
 
-  const lowStock = products.filter((p) => p.stock <= p.lowStockThreshold)
-  const totalUnits = products.reduce((sum, p) => sum + p.stock, 0)
-  const stockValue = products.reduce((sum, p) => sum + p.stock * p.purchasePrice, 0)
-  const pendingStockIn = movements.filter((m) => m.type === "in" && m.status === "Pending").length
+  const lowStock = products.filter((p) => p.stock <= p.lowStockThreshold);
+  const totalUnits = products.reduce((sum, p) => sum + p.stock, 0);
+  const stockValue = products.reduce(
+    (sum, p) => sum + p.stock * p.purchasePrice,
+    0,
+  );
+  const pendingStockIn = movements.filter(
+    (m) => m.type === "in" && m.status === "Pending",
+  ).length;
 
   function handleAdjust(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     toast.success("Stock adjusted", {
       description: `${adjusting?.name} stock has been updated.`,
-    })
-    setAdjusting(null)
+    });
+    setAdjusting(null);
   }
 
   function handleAddInventory(e: React.FormEvent) {
-    e.preventDefault()
-    const form = e.target as HTMLFormElement
-    const name = (form.elements.namedItem("inv-name") as HTMLInputElement).value
-    const location = (form.elements.namedItem("inv-location") as HTMLInputElement).value
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const name = (form.elements.namedItem("inv-name") as HTMLInputElement)
+      .value;
+    const location = (
+      form.elements.namedItem("inv-location") as HTMLInputElement
+    ).value;
     setInventoryList((prev) => [
       ...prev,
-      { id: `inv${prev.length + 1}-${Date.now()}`, name, location, productCount: 0, totalUnits: 0 },
-    ])
-    toast.success("Inventory created", { description: `${name} is ready to receive stock.` })
-    setAddOpen(false)
+      {
+        id: `inv${prev.length + 1}-${Date.now()}`,
+        name,
+        location,
+        productCount: 0,
+        totalUnits: 0,
+      },
+    ]);
+    toast.success("Inventory created", {
+      description: `${name} is ready to receive stock.`,
+    });
+    setAddOpen(false);
   }
 
   function receiveStockIn(id: string) {
     setMovements((prev) =>
       prev.map((m) => (m.id === id ? { ...m, status: "Done" as const } : m)),
-    )
+    );
     toast.success("Stock received", {
       description: "Inventory, journal, and reports have been updated.",
-    })
+    });
   }
 
   return (
     <div>
-      <PageHeader title="Inventory" description="Manage warehouses, stock levels, and stock movements.">
+      <PageHeader
+        title="Inventory"
+        description="Manage warehouses, stock levels, and stock movements."
+      >
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger render={<Button />}>
-            <Plus className="size-4" /> Add Inventory
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="size-4" /> Add Inventory
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleAddInventory}>
@@ -107,15 +127,29 @@ export function InventoryClient() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="inv-name">Inventory Name</Label>
-                  <Input id="inv-name" name="inv-name" placeholder="e.g. Back Warehouse" required />
+                  <Input
+                    id="inv-name"
+                    name="inv-name"
+                    placeholder="e.g. Back Warehouse"
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="inv-location">Location</Label>
-                  <Input id="inv-location" name="inv-location" placeholder="e.g. Storage room, Kabul" required />
+                  <Input
+                    id="inv-location"
+                    name="inv-location"
+                    placeholder="e.g. Storage room, Kabul"
+                    required
+                  />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit">Save Inventory</Button>
@@ -126,15 +160,37 @@ export function InventoryClient() {
       </PageHeader>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Units in Stock" value={totalUnits.toLocaleString()} icon={Warehouse} accent="primary" />
-        <StatCard label="Stock Value" value={`AFN ${stockValue.toLocaleString()}`} icon={Package} accent="emerald" />
-        <StatCard label="Low Stock Items" value={lowStock.length.toString()} icon={AlertTriangle} accent="rose" />
-        <StatCard label="Pending Stock-In" value={pendingStockIn.toString()} icon={ArrowDownToLine} accent="amber" />
+        <StatCard
+          label="Total Units in Stock"
+          value={totalUnits.toLocaleString()}
+          icon={Warehouse}
+          accent="primary"
+        />
+        <StatCard
+          label="Stock Value"
+          value={`AFN ${stockValue.toLocaleString()}`}
+          icon={Package}
+          accent="emerald"
+        />
+        <StatCard
+          label="Low Stock Items"
+          value={lowStock.length.toString()}
+          icon={AlertTriangle}
+          accent="rose"
+        />
+        <StatCard
+          label="Pending Stock-In"
+          value={pendingStockIn.toString()}
+          icon={ArrowDownToLine}
+          accent="amber"
+        />
       </div>
 
       <Tabs defaultValue="inventories">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="inventories">Inventories ({inventoryList.length})</TabsTrigger>
+          <TabsTrigger value="inventories">
+            Inventories ({inventoryList.length})
+          </TabsTrigger>
           <TabsTrigger value="movements">Stock Movements</TabsTrigger>
           <TabsTrigger value="levels">Stock Levels</TabsTrigger>
         </TabsList>
@@ -150,15 +206,21 @@ export function InventoryClient() {
                       <Warehouse className="size-6" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-foreground">{inv.name}</p>
+                      <p className="truncate text-base font-semibold text-foreground">
+                        {inv.name}
+                      </p>
                       <p className="flex items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="size-3" /> {inv.location}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
-                    <span className="text-muted-foreground">{inv.productCount} products</span>
-                    <span className="font-semibold text-foreground">{inv.totalUnits} units</span>
+                    <span className="text-muted-foreground">
+                      {inv.productCount} products
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {inv.totalUnits} units
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -197,23 +259,42 @@ export function InventoryClient() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="font-medium">{m.reference}</TableCell>
-                      <TableCell className="text-muted-foreground">{getInventoryName(m.inventoryId)}</TableCell>
-                      <TableCell className="text-muted-foreground">{m.product}</TableCell>
-                      <TableCell className="text-right font-semibold">{m.quantity}</TableCell>
-                      <TableCell className="text-muted-foreground">{m.date}</TableCell>
+                      <TableCell className="font-medium">
+                        {m.reference}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {getInventoryName(m.inventoryId)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {m.product}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {m.quantity}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {m.date}
+                      </TableCell>
                       <TableCell className="text-right">
-                        <Badge variant={m.status === "Done" ? "secondary" : "destructive"}>
+                        <Badge
+                          variant={
+                            m.status === "Done" ? "secondary" : "destructive"
+                          }
+                        >
                           {m.status === "Done" ? "Done" : "Pending"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         {m.type === "in" && m.status === "Pending" ? (
-                          <Button size="sm" onClick={() => receiveStockIn(m.id)}>
+                          <Button
+                            size="sm"
+                            onClick={() => receiveStockIn(m.id)}
+                          >
                             <Check className="size-4" /> Receive
                           </Button>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -223,8 +304,9 @@ export function InventoryClient() {
             </CardContent>
           </Card>
           <p className="mt-3 text-xs text-muted-foreground">
-            Stock-In is created from purchases and stays pending until received. Stock-Out is recorded
-            automatically when a sale is completed in the POS.
+            Stock-In is created from purchases and stays pending until received.
+            Stock-Out is recorded automatically when a sale is completed in the
+            POS.
           </p>
         </TabsContent>
 
@@ -238,7 +320,9 @@ export function InventoryClient() {
                     <TableRow>
                       <TableHead>Product</TableHead>
                       <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Current Stock</TableHead>
+                      <TableHead className="text-right">
+                        Current Stock
+                      </TableHead>
                       <TableHead className="text-right">Threshold</TableHead>
                       <TableHead className="text-right">Status</TableHead>
                       <TableHead className="text-right">Adjust</TableHead>
@@ -246,14 +330,18 @@ export function InventoryClient() {
                   </TableHeader>
                   <TableBody>
                     {products.map((p) => {
-                      const low = p.stock <= p.lowStockThreshold
+                      const low = p.stock <= p.lowStockThreshold;
                       return (
                         <TableRow key={p.id}>
-                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {p.name}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {getCategoryName(p.categoryId)}
                           </TableCell>
-                          <TableCell className="text-right font-semibold">{p.stock}</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {p.stock}
+                          </TableCell>
                           <TableCell className="text-right text-muted-foreground">
                             {p.lowStockThreshold}
                           </TableCell>
@@ -263,12 +351,16 @@ export function InventoryClient() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => setAdjusting(p)}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setAdjusting(p)}
+                            >
                               Adjust
                             </Button>
                           </TableCell>
                         </TableRow>
-                      )
+                      );
                     })}
                   </TableBody>
                 </Table>
@@ -309,7 +401,11 @@ export function InventoryClient() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAdjusting(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAdjusting(null)}
+              >
                 Cancel
               </Button>
               <Button type="submit">Save Adjustment</Button>
@@ -318,5 +414,5 @@ export function InventoryClient() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

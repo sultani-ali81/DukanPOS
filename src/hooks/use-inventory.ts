@@ -1,6 +1,5 @@
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
-import type { Product } from "@/pages/product/components/product-list";
 import { getInventories, getInventory } from "@/queries/inventory";
 import { getProductById } from "@/queries/products";
 import type {
@@ -11,6 +10,7 @@ import type {
   PaginationMeta,
   StockStatus,
 } from "@/types/inventory";
+import type { Product } from "@/types/product";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -19,7 +19,7 @@ export type {
   InventoryDetail,
   InventoryItem,
   InventoryProduct,
-  StockStatus
+  StockStatus,
 };
 
 export interface UseInventoryReturn {

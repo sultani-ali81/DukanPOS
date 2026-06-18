@@ -1,6 +1,6 @@
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
-export type UserRole = "Cashier";
+export type UserRole = "Cashier" | "Admin";
 
 export type EmployeeGender = "male" | "female" | "Other";
 
@@ -23,7 +23,7 @@ export interface User {
 
 export interface CreateUserPayload {
   name: string;
-  lastName: string;
+  lastName?: string;
   email: string;
   password: string;
   phone?: string;

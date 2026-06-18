@@ -1,5 +1,5 @@
 import { SidebarNav } from "@/components/sidebar-nav";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -127,7 +127,7 @@ export default function AppLayout() {
                 render={<Button variant="ghost" size="sm" className="gap-2" />}
               >
                 <Globe className="size-4" />
-                <span className="hidden sm:inline">English</span>
+                <span className="hidden md:inline">English</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Language</DropdownMenuLabel>
@@ -155,6 +155,11 @@ export default function AppLayout() {
                 }
               >
                 <Avatar className="size-9 cursor-pointer">
+                  <AvatarImage
+                    src={profile?.imageUrl ?? undefined}
+                    alt={user.name ?? "Avatar"}
+                  />
+
                   <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                     {initials || "?"}
                   </AvatarFallback>

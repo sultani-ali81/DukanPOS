@@ -2,7 +2,7 @@ import AppLayout from "@/components/layout/app-layout";
 
 import Login from "@/pages/(auth)/login";
 import CategoriesPage from "@/pages/categories";
-import ContactsPage from "@/pages/contacts/page";
+import ContactsPage from "@/pages/contacts";
 import Dashboard from "@/pages/dashboard";
 import InventoryPage from "@/pages/inventory/page";
 import JournalPage from "@/pages/journal/page";

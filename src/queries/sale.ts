@@ -14,9 +14,8 @@ export interface CreateSalePayload {
   items: SaleItemPayload[];
 }
 
-/** The backend returns the full sale object — we only need id and items */
 export interface CreatedSaleItem {
-  id: string; // this is the saleItemId needed for stock-out
+  id: string;
   productId: string;
   quantity: number;
   unitPrice: number;
@@ -66,3 +65,71 @@ export async function completeStockOut(
   const res = await api.put(`/stock-out/${id}`, { status: "Done" });
   return res.data;
 }
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  todaySales: {
+    total: number;
+    percentageChange: number;
+  };
+  todayProfit: {
+    total: number;
+    percentageChange: number;
+  };
+  lowStockProducts: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    inventoryName: string;
+  }[];
+  outOfStockProducts: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    inventoryName: string;
+  }[];
+}
+
+/** GET /sales/dashboard */
+export const getDashboardStats = (): Promise<DashboardStats> =>
+  api.get("/sales/dashboard").then((r) => r.data);
+
+// ── Recent Sales ──────────────────────────────────────────────────────────────
+
+export interface SaleListItem {
+  id: string;
+  customerId: string;
+  inventoryId: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  customer: { id: string; name: string };
+  items: { id: string; quantity: number; unitPrice: number }[];
+}
+
+export interface SalesMeta {
+  currentPage: number;
+  itemsPerPage: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+/** GET /sales — paginated, for the recent sales list */
+export const getRecentSales = (
+  page = 1,
+  itemsPerPage = 5,
+): Promise<{ data: SaleListItem[]; meta: SalesMeta }> =>
+  api.get("/sales", { params: { page, itemsPerPage } }).then((r) => {
+    const raw = r.data;
+    const items: SaleListItem[] = Array.isArray(raw) ? raw : (raw.data ?? []);
+    const meta: SalesMeta = raw.meta ?? {
+      currentPage: 1,
+      itemsPerPage,
+      totalItems: items.length,
+      totalPages: 1,
+    };
+    return { data: items, meta };
+  });
