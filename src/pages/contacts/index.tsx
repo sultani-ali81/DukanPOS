@@ -25,7 +25,7 @@ import {
 import { useCustomerDialog } from "@/hooks/use-customer-dialog";
 import { useCustomers } from "@/hooks/use-customers";
 import type { Customer } from "@/types/customer";
-import { Loader2, Pencil, Plus, Trash2, UserX } from "lucide-react";
+import { Loader2, Pencil, Plus, Search, Trash2, UserX, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -204,6 +204,7 @@ export default function ContactsPage() {
     isLoading,
     search,
     handleSearch,
+    clearSearch,
     mutate,
     total,
     page,
@@ -276,18 +277,24 @@ export default function ContactsPage() {
       </PageHeader>
 
       {/* Search */}
-      <div className="mb-4">
-        <span className="relative block">
-          <span className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground">
-            🔍
-          </span>
-          <Input
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search by name or phone..."
-            className="pl-9"
-          />
+      <div className="mb-4 relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <Search className="size-4" />
         </span>
+        <Input
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search categories..."
+          className="pl-9 pr-8"
+        />
+        {search && (
+          <button
+            onClick={clearSearch}
+            className="pointer-events-auto absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
 
       {/* Bulk selection bar */}
