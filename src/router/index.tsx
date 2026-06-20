@@ -7,6 +7,7 @@ import Dashboard from "@/pages/dashboard";
 import InventoryPage from "@/pages/inventory/page";
 import JournalPage from "@/pages/journal/page";
 import PosPage from "@/pages/pos";
+import ProductDetailPage from "@/pages/products/[id]/page";
 import ProductsPage from "@/pages/products/page";
 import ProfilePage from "@/pages/profile/page";
 import ViewPurchase from "@/pages/purchases/[id]";
@@ -71,6 +72,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allowed={["Admin"]}>
             <ProductsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: "/products/:id",
+        element: (
+          <RoleRoute allowed={["Admin"]}>
+            <ProductDetailPage />
           </RoleRoute>
         ),
       },
