@@ -1,7 +1,6 @@
 import { NewJournalEntryDialog } from "@/components/new-journal-entry-dialog";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -9,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -25,14 +25,7 @@ import {
   getStatusVariant,
 } from "@/lib/status";
 import type { JournalItem } from "@/types/journal";
-import {
-  BookOpenCheck,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+import { BookOpenCheck, Loader2 } from "lucide-react";
 
 function formatDate(iso?: string) {
   if (!iso) return "—";
@@ -50,8 +43,6 @@ function entryDebit(items: JournalItem[]) {
 function entryCredit(items: JournalItem[]) {
   return items.reduce((s, i) => s + (i.credit ?? 0), 0);
 }
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function TableSkeleton() {
   return (
@@ -78,8 +69,6 @@ function TableSkeleton() {
     </>
   );
 }
-
-// ── Detail Dialog ─────────────────────────────────────────────────────────────
 
 function JournalDetailDialog({
   open,
@@ -189,8 +178,6 @@ function JournalDetailDialog({
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function JournalPage() {
   const {
     journals,
@@ -216,7 +203,7 @@ export default function JournalPage() {
   );
 
   return (
-    <div className="overflow-y-auto">
+    <div className="p-4">
       <PageHeader
         title="Journal"
         description="Simple accounting entries for your shop."
@@ -231,7 +218,7 @@ export default function JournalPage() {
       )}
 
       <Card>
-        <CardContent className="overflow-x-auto p-0">
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -308,7 +295,6 @@ export default function JournalPage() {
                       </TableRow>
                     );
                   })}
-
                   <TableRow className="border-t-2 font-bold">
                     <TableCell colSpan={3}>Total</TableCell>
                     <TableCell className="text-left text-destructive tabular-nums">
@@ -326,26 +312,12 @@ export default function JournalPage() {
       </Card>
 
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => goToPage(page - 1)}
-            disabled={page <= 1}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => goToPage(page + 1)}
-            disabled={page >= totalPages}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
+        <div className="mt-4 flex items-center justify-end">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+          />
         </div>
       )}
 
