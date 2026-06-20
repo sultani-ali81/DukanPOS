@@ -326,13 +326,9 @@ export default function PosPage() {
     setMobileSheetOpen(false);
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────────
-
-  // ── Render ────────────────────────────────────────────────────────────────────
-
   return (
     // CHANGE: Changed h-[calc(100vh-80px)] overflow-y-auto to fixed structural limits
-    <div className="h-[calc(100vh-64px)] w-full overflow-hidden flex flex-col lg:flex-row bg-bg-main p-4 gap-4">
+    <div className="h-[calc(100vh-64px)] w-full overflow-hidden flex flex-col lg:flex-row bg-bg-main gap-4">
       {/* ── Product list ── */}
       {/* CHANGE: Removed space-y-3 & pb-24; added internal flex layouts to handle individual column scrolling */}
       <div className="bg-white flex-1 rounded-xl min-w-0 flex flex-col h-full overflow-hidden p-4 border border-gray-100 shadow-xs">
@@ -345,7 +341,7 @@ export default function PosPage() {
           />
         </div>
 
-        <div className="flex-none mb-3">
+        <div className="flex-none mb-2">
           <PosCategoryFilter
             categories={categories}
             selected={selectedCategory}
@@ -356,9 +352,9 @@ export default function PosPage() {
         </div>
 
         {/* CHANGE: Wrapped product results area into its own unique isolated scroll element */}
-        <div className="flex-1 overflow-y-auto min-h-0 py-1">
+        <div className="flex-1 overflow-y-auto py-1">
           {!inventoryId ? (
-            <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-4">
+            <div className="flex flex-col items-center justify-center text-center px-4">
               <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
                 <svg
                   className="w-8 h-8 text-gray-300"

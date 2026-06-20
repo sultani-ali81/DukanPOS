@@ -37,7 +37,7 @@ export function PosCategoryFilter({
   return (
     <>
       {/* ── DESKTOP ── */}
-      <div className="hidden lg:flex space-y-6">
+      <div className="hidden lg:flex mb-3">
         <div className="relative w-full shrink-0">
           <Search
             size={15}
