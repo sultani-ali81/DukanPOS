@@ -1,11 +1,6 @@
 import { useUtilsStore } from "@/lib/utilsStore";
 import type { PosProduct } from "@/queries/pos-inventory";
-import {
-  completeStockOut,
-  createSale,
-  createStockOut,
-  updateSale,
-} from "@/queries/sale";
+import { finalizeSale } from "@/queries/sale";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -120,8 +115,7 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
 
     setSubmitting(true);
     try {
-      // Step 1 — create the sale (backend validates stock against this inventory)
-      const sale = await createSale({
+      await finalizeSale({
         customerId,
         inventoryId,
         items: cart.map((i) => ({
@@ -130,26 +124,6 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
           unitPrice: i.price + i.price * 0.1,
         })),
       });
-
-      // Step 2 — create the stock-out record (status: Pending)
-      const saleItemMap = new Map(
-        sale.items.map((si) => [si.productId, si.id]),
-      );
-
-      await updateSale(sale.id);
-
-      const stockOut = await createStockOut({
-        saleId: sale.id,
-        inventoryId,
-        items: cart.map((i) => ({
-          saleItemId: saleItemMap.get(i.id)!,
-          quantity: i.quantity,
-        })),
-      });
-
-      // Step 3 — complete the stock-out (status: Done → deducts StockQuantity)
-      await completeStockOut(stockOut.id);
-
       toast.success("Sale completed and stock updated");
       clearCart();
       onSaleSuccess?.();

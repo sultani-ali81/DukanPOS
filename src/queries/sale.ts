@@ -2,30 +2,16 @@ import api from "@/lib/axios";
 
 // ── Sale ──────────────────────────────────────────────────────────────────────
 
-export interface SaleItemPayload {
-  productId: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-export interface CreateSalePayload {
-  customerId: string;
-  inventoryId: string;
-  items: SaleItemPayload[];
-}
-
-export interface CreatedSaleItem {
-  id: string;
-  productId: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-export interface CreateSaleResponse {
-  id: string;
-  message?: string;
-  items: CreatedSaleItem[];
-}
+import type {
+  CreateSalePayload,
+  CreateSaleResponse,
+  CreateStockOutPayload,
+  CreateStockOutResponse,
+  DashboardStats,
+  FinalizeSaleResponse,
+  SaleListItem,
+  SalesMeta,
+} from "@/types/sale";
 
 export async function createSale(
   payload: CreateSalePayload,
@@ -34,22 +20,11 @@ export async function createSale(
   return res.data;
 }
 
-// ── Stock-out ─────────────────────────────────────────────────────────────────
-
-export interface StockOutItemPayload {
-  saleItemId: string;
-  quantity: number;
-}
-
-export interface CreateStockOutPayload {
-  saleId: string;
-  inventoryId: string;
-  items: StockOutItemPayload[];
-}
-
-export interface CreateStockOutResponse {
-  id: string;
-  message?: string;
+export async function finalizeSale(
+  payload: CreateSalePayload,
+): Promise<FinalizeSaleResponse> {
+  const res = await api.post("/sales/checkout", payload);
+  return res.data;
 }
 
 export async function createStockOut(
@@ -71,59 +46,9 @@ export async function updateSale(id: string): Promise<{ message: string }> {
   return res.data;
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-
-export interface DashboardStats {
-  todaySales: {
-    total: number;
-    percentageChange: number;
-  };
-  todayProfit: {
-    total: number;
-    percentageChange: number;
-  };
-  lowStockProducts: {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    inventoryName: string;
-  }[];
-  outOfStockProducts: {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    inventoryName: string;
-  }[];
-}
-
-/** GET /sales/dashboard */
 export const getDashboardStats = (): Promise<DashboardStats> =>
   api.get("/sales/dashboard").then((r) => r.data);
 
-// ── Recent Sales ──────────────────────────────────────────────────────────────
-
-export interface SaleListItem {
-  id: string;
-  customerId: string;
-  inventoryId: string;
-  totalPrice: number;
-  status: string;
-  createdAt: string;
-  customer: { id: string; name: string };
-  items: { id: string; quantity: number; unitPrice: number }[];
-  sequenceId: string;
-}
-
-export interface SalesMeta {
-  currentPage: number;
-  itemsPerPage: number;
-  totalItems: number;
-  totalPages: number;
-}
-
-/** GET /sales — paginated, for the recent sales list */
 export const getRecentSales = (
   page = 1,
   itemsPerPage = 5,
