@@ -3,7 +3,6 @@ export interface Product {
   name: string;
   price: number;
   barcode?: string;
-  inStock?: boolean;
   category?: string;
   categoryId?: string;
   categories?: ProductCategory[];

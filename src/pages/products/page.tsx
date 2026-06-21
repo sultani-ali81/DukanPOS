@@ -207,7 +207,6 @@ export default function ProductsPage() {
                 <TableHead className="py-3 pl-3 w-2/5">Product</TableHead>
                 <TableHead className="py-3 w-1/5">Category</TableHead>
                 <TableHead className="py-3 w-[14%] ">Price</TableHead>
-                <TableHead className="py-3 w-[14%]">Status</TableHead>
                 <TableHead className="py-3 w-[12%] text-right">
                   Actions
                 </TableHead>
@@ -273,15 +272,6 @@ export default function ProductsPage() {
                       </TableCell>
                       <TableCell className="px-2 py-3.5 font-mono font-semibold text-primary">
                         {formatCurrency(p.price)}
-                      </TableCell>
-                      <TableCell className="px-2 py-3.5">
-                        <Badge
-                          variant={
-                            p.inStock === false ? "destructive" : "secondary"
-                          }
-                        >
-                          {p.inStock === false ? "Out of Stock" : "In Stock"}
-                        </Badge>
                       </TableCell>
                       <TableCell
                         className="px-2 py-3.5 text-right"
