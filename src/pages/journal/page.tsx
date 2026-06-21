@@ -275,21 +275,25 @@ export default function JournalPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-left tabular-nums">
-                          {dr > 0 ? (
+                          {entry.items[0].account.name === "Default Account" ? (
+                            <span className="font-medium text-emerald-600 dark">
+                              {formatCurrency(dr)}
+                            </span>
+                          ) : (
+                            <span className="font-medium text-destructive">
+                              {formatCurrency(dr)}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-left tabular-nums">
+                          {entry.items[1].account.name === "Default Account" ? (
                             <span className="font-medium text-destructive">
                               {formatCurrency(dr)}
                             </span>
                           ) : (
-                            "—"
-                          )}
-                        </TableCell>
-                        <TableCell className="text-left tabular-nums">
-                          {cr > 0 ? (
-                            <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                              {formatCurrency(cr)}
+                            <span className="font-medium text-emerald-600 dark">
+                              {formatCurrency(dr)}
                             </span>
-                          ) : (
-                            "—"
                           )}
                         </TableCell>
                       </TableRow>
