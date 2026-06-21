@@ -22,7 +22,7 @@ import {
   getProducts,
   updateProduct,
 } from "@/queries/products";
-import type { Product } from "@/types/product";
+import type { Product, ProductFormSubmitValues } from "@/types/product";
 import {
   Loader2,
   Package,
@@ -114,38 +114,26 @@ export default function ProductsPage() {
   }, [debouncedSearch]);
 
   // ── CRUD ────────────────────────────────────────────────────────────────
-
-  async function handleSubmit(
-    values: {
-      name: string;
-      price: number;
-      categoryName: string;
-      barcode?: string;
-    },
-    id?: string,
-  ) {
+  // handleSubmit — replaces the old version
+  async function handleSubmit(values: ProductFormSubmitValues, id?: string) {
     try {
       if (id) {
         await updateProduct(id, values);
         toast.success("Product updated", {
           description: `"${values.name}" has been updated.`,
         });
-        setProducts((prev) =>
-          prev.map((p) => (p.id === id ? { ...p, ...values } : p)),
-        );
       } else {
         await createProduct(values);
         toast.success("Product created", {
           description: `"${values.name}" has been added to the catalog.`,
         });
-        fetchData();
       }
+      fetchData();
     } catch {
       toast.error("Something went wrong", { description: "Please try again." });
       throw new Error("submit failed");
     }
   }
-
   async function handleDelete(product: Product) {
     setDeletingId(product.id);
     try {
@@ -187,7 +175,7 @@ export default function ProductsPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or barcode..."
+              placeholder="Search by name "
               className="w-64 pl-9"
             />
             {search && (
@@ -215,7 +203,7 @@ export default function ProductsPage() {
         <CardContent className="p-0">
           <Table className="table-fixed">
             <TableHeader>
-              <TableRow className="bg-muted/50">
+              <TableRow className="">
                 <TableHead className="py-3 pl-3 w-2/5">Product</TableHead>
                 <TableHead className="py-3 w-1/5">Category</TableHead>
                 <TableHead className="py-3 w-[14%] ">Price</TableHead>

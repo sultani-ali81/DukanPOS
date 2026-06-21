@@ -120,22 +120,6 @@ export const updateProduct = (
 export const deleteProduct = (id: string): Promise<{ message: string }> =>
   api.delete(`/products/${id}`).then((r) => r.data);
 
-// ── claim images ────────────────────────────────────────────────────────────
-
-export const claimProductImages = (
-  ids: string[],
-  productId: string,
-): Promise<void> =>
-  api
-    .post("/attachments/claim", {
-      ids,
-      entityId: productId,
-      entityType: "product",
-    })
-    .then((r) => r.data);
-
-// ── delete image ────────────────────────────────────────────────────────────
-
 export const deleteProductImage = (
   imageId: string,
 ): Promise<{ message: string }> =>

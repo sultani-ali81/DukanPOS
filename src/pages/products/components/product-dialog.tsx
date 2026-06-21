@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,34 +9,45 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { categories } from "@/lib/data";
-import { Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
-
-interface ProductFormValues {
-  name: string;
-  price: number;
-  categoryName: string;
-  barcode?: string;
-}
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { deleteProductImage, uploadProductImages } from "@/queries/products";
+import type {
+  Product,
+  ProductFormSubmitValues,
+  ProductFormValues,
+  ProductImage,
+} from "@/types/product";
+import { AlertCircle, Loader2, UploadCloud, X } from "lucide-react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 interface ProductDialogProps {
   open: boolean;
-  editingProduct?: {
-    id: string;
-    name: string;
-    price: number;
-    category?: string;
-    barcode?: string;
-  } | null;
+  editingProduct?: Product | null;
   categories: { id: string; name: string }[];
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: ProductFormValues, id?: string) => Promise<void>;
+  onSubmit: (values: ProductFormSubmitValues, id?: string) => Promise<void>;
+}
+
+interface UploadingImage {
+  key: string;
+  previewUrl: string;
+  id?: string;
+  status: "uploading" | "done" | "error";
 }
 
 export function ProductDialog({
   open,
   editingProduct,
+  categories,
   onOpenChange,
   onSubmit,
 }: ProductDialogProps) {
@@ -48,31 +57,156 @@ export function ProductDialog({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ProductFormValues>({
-    defaultValues: {
+    defaultValues: { name: "", price: 0, categoryName: "" },
+  });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
+  const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
+
+  // Reset form + image state every time the dialog opens, for whichever
+  // product (or none, if creating) it's currently pointed at. Revokes any
+  // leftover preview URLs from the previous session before clearing them.
+  useEffect(() => {
+    if (!open) return;
+    reset({
       name: editingProduct?.name ?? "",
       price: editingProduct?.price ?? 0,
       categoryName: editingProduct?.category ?? "",
-      barcode: editingProduct?.barcode ?? "",
-    },
-  });
+    });
+    setExistingImages(editingProduct?.images ?? []);
+    setUploadingImages((prev) => {
+      prev.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+      return [];
+    });
+  }, [open, editingProduct, reset]);
+
+  function addFiles(files: FileList | File[]) {
+    const imageFiles = Array.from(files).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (!imageFiles.length) return;
+
+    const entries = imageFiles.map((file) => ({
+      key: crypto.randomUUID(),
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    setUploadingImages((prev) => [
+      ...prev,
+      ...entries.map((e) => ({
+        key: e.key,
+        previewUrl: e.previewUrl,
+        status: "uploading" as const,
+      })),
+    ]);
+
+    uploadProductImages(imageFiles)
+      .then(({ ids }) => {
+        setUploadingImages((prev) =>
+          prev.map((img) => {
+            const idx = entries.findIndex((e) => e.key === img.key);
+            return idx !== -1
+              ? { ...img, id: ids[idx], status: "done" as const }
+              : img;
+          }),
+        );
+      })
+      .catch(() => {
+        setUploadingImages((prev) =>
+          prev.map((img) =>
+            entries.some((e) => e.key === img.key)
+              ? { ...img, status: "error" as const }
+              : img,
+          ),
+        );
+        toast.error("Image upload failed", {
+          description:
+            imageFiles.length > 1
+              ? `${imageFiles.length} images could not be uploaded.`
+              : imageFiles[0].name,
+        });
+      });
+  }
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+  }
+
+  function removeExistingImage(image: ProductImage) {
+    setExistingImages((prev) => prev.filter((img) => img.id !== image.id));
+    deleteProductImage(image.id).catch(() => {
+      toast.error("Could not remove image", {
+        description: "Please try again.",
+      });
+      setExistingImages((prev) => [...prev, image]);
+    });
+  }
+
+  function removeUploadingImage(key: string) {
+    setUploadingImages((prev) => {
+      const target = prev.find((img) => img.key === key);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((img) => img.key !== key);
+    });
+  }
+
+  const hasUploading = uploadingImages.some(
+    (img) => img.status === "uploading",
+  );
 
   async function submit(values: ProductFormValues) {
-    await onSubmit(values, editingProduct?.id);
+    if (hasUploading) {
+      toast.error("Please wait for images to finish uploading");
+      return;
+    }
+
+    const attachmentIds = [
+      ...existingImages.map((img) => img.id),
+      ...uploadingImages
+        .filter((img) => img.status === "done" && img.id)
+        .map((img) => img.id as string),
+    ];
+
+    await onSubmit(
+      {
+        ...values,
+        ...(attachmentIds.length ? { attachmentIds } : {}),
+      },
+      editingProduct?.id,
+    );
     onOpenChange(false);
-    reset();
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o);
-        if (!o) reset();
-      }}
-    >
-      <DialogContent>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
+        onPointerDownOutside={(e) => {
+          if (
+            (e.target as HTMLElement | null)?.closest(
+              '[data-slot="select-content"]',
+            )
+          ) {
+            e.preventDefault();
+          }
+        }}
+        onFocusOutside={(e) => {
+          if (
+            (e.target as HTMLElement | null)?.closest(
+              '[data-slot="select-content"]',
+            )
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
         <form onSubmit={handleSubmit(submit)}>
           <DialogHeader>
             <DialogTitle>{isEdit ? "Edit Product" : "Add Product"}</DialogTitle>
@@ -82,6 +216,7 @@ export function ProductDialog({
                 : "Enter the product details to add it to your catalog."}
             </DialogDescription>
           </DialogHeader>
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="p-name">
@@ -100,32 +235,28 @@ export function ProductDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="p-barcode">Barcode</Label>
-              <Input
-                id="p-barcode"
-                placeholder="Scan or enter barcode"
-                {...register("barcode")}
-              />
-            </div>
-
-            <div className="grid gap-2">
               <Label htmlFor="p-category">
                 Category <span className="text-destructive">*</span>
               </Label>
-              <select
-                id="p-category"
-                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                {...register("categoryName", {
-                  required: "Category is required",
-                })}
-              >
-                <option value="">Select a category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="categoryName"
+                rules={{ required: "Category is required" }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="p-category" className="w-full">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.categoryName && (
                 <p className="text-xs text-destructive">
                   {errors.categoryName.message}
@@ -154,20 +285,116 @@ export function ProductDialog({
                 </p>
               )}
             </div>
+
+            <div className="grid gap-2">
+              <Label>Product Images</Label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                className={cn(
+                  "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors",
+                  isDragging
+                    ? "border-primary bg-primary/5"
+                    : "border-input hover:border-primary/50 hover:bg-muted/50",
+                )}
+              >
+                <UploadCloud className="size-6 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    Click to upload
+                  </span>{" "}
+                  or drag and drop
+                </p>
+                <p className="text-xs text-muted-foreground/70">
+                  PNG or JPG, multiple images allowed
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) addFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+
+              {(existingImages.length > 0 || uploadingImages.length > 0) && (
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+                  {existingImages.map((img) => (
+                    <div
+                      key={img.id}
+                      className="group relative aspect-square overflow-hidden rounded-lg border"
+                    >
+                      <img
+                        src={img.imageUrlSigned ?? img.imageUrl}
+                        alt="Product"
+                        className="size-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(img)}
+                        className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Remove image"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {uploadingImages.map((img) => (
+                    <div
+                      key={img.key}
+                      className="group relative aspect-square overflow-hidden rounded-lg border"
+                    >
+                      <img
+                        src={img.previewUrl}
+                        alt="Uploading"
+                        className="size-full object-cover"
+                      />
+                      {img.status === "uploading" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <Loader2 className="size-4 animate-spin text-white" />
+                        </div>
+                      )}
+                      {img.status === "error" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-destructive/60">
+                          <AlertCircle className="size-4 text-white" />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeUploadingImage(img.key)}
+                        className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Remove image"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                reset();
-              }}
+              onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+            <Button type="submit" disabled={isSubmitting || hasUploading}>
+              {(isSubmitting || hasUploading) && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
               {isEdit ? "Save Changes" : "Create Product"}
             </Button>
           </DialogFooter>

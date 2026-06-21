@@ -94,7 +94,7 @@ export function PosCategoryFilter({
         </div>
 
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger asChild>
+          <SheetTrigger>
             <Button className="flex items-center gap-1.5 h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 shrink-0">
               <span>{selectedName}</span>
               <ChevronDown size={13} className="text-gray-400" />

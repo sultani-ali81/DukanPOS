@@ -58,7 +58,8 @@ export default function AppLayout() {
   const { profile, isLoading, fetchError } = useProfile();
   useEffect(() => {
     if (profile && !user && token) {
-      setAuth(profile, token);
+      const role = profile.role === "Admin" ? "Admin" : "Cashier";
+      setAuth({ ...profile, role }, token);
     }
     if (fetchError && user) {
       clearAuth();

@@ -10,7 +10,7 @@ import {
   getProductById,
   updateProduct,
 } from "@/queries/products";
-import type { Product } from "@/types/product";
+import type { Product, ProductFormSubmitValues } from "@/types/product";
 import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -67,20 +67,15 @@ export default function ProductDetailPage() {
     };
   }, [id]);
 
-  async function handleSubmit(values: {
-    name: string;
-    price: number;
-    categoryName: string;
-    barcode?: string;
-  }) {
+  async function handleSubmit(values: ProductFormSubmitValues) {
     if (!product) return;
     await updateProduct(product.id, values);
-    setProduct((prev) => (prev ? { ...prev, ...values } : prev));
+    const refreshed = await getProductById(product.id);
+    if (refreshed) setProduct(refreshed);
     toast.success("Product updated", {
       description: `"${values.name}" has been updated.`,
     });
   }
-
   async function handleDelete() {
     if (!product) return;
     setDeleting(true);

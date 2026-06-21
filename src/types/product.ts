@@ -17,19 +17,30 @@ export interface ProductCategory {
   name: string;
 }
 
-export interface ProductImage {
-  id: string;
-  imageUrl: string;
-  imageUrlSigned?: string;
+export interface ProductFormSubmitValues extends ProductFormValues {
+  attachmentIds?: string[];
 }
 
 export interface CreateProductPayload {
   name: string;
   price: number;
   categoryName: string;
+  attachmentIds?: string[];
 }
 export interface UpdateProductPayload {
   name?: string;
   price?: number;
   categoryName?: string;
+  attachmentIds?: string[];
+}
+export interface ProductFormValues {
+  name: string;
+  price: number;
+  categoryName: string;
+}
+
+export interface ProductImage {
+  id: string;
+  imageUrl: string;
+  imageUrlSigned?: string;
 }
