@@ -2,6 +2,14 @@ import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { formatCurrency } from "@/lib/data";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
 import {
@@ -11,7 +19,14 @@ import {
   updateProduct,
 } from "@/queries/products";
 import type { Product, ProductFormSubmitValues } from "@/types/product";
-import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Boxes,
+  Loader2,
+  Package,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,13 +35,14 @@ export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
-    [],
-  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
+    [],
+  );
+  const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
     if (!id) {
@@ -41,18 +57,14 @@ export default function ProductDetailPage() {
 
     (async () => {
       try {
-        const [data, catsRes] = await Promise.all([
-          getProductById(id),
-          getCategories(),
-        ]);
+        const data = await getProductById(id);
         if (cancelled) return;
         if (!data) {
           setError("Product not found");
           return;
         }
         setProduct(data);
-        const cats: { data: { id: string; name: string }[] } = catsRes.data;
-        setCategories(cats.data ?? []);
+        setActiveImage(0);
       } catch (err) {
         if (!cancelled) {
           setError((err as Error).message ?? "Failed to load product");
@@ -67,15 +79,28 @@ export default function ProductDetailPage() {
     };
   }, [id]);
 
+  // Categories only load once the edit dialog is actually opened, and only once.
+  useEffect(() => {
+    if (!dialogOpen || categories.length > 0) return;
+    getCategories().then((res) => {
+      const cats: { data: { id: string; name: string }[] } = res.data;
+      setCategories(cats.data ?? []);
+    });
+  }, [dialogOpen, categories.length]);
+
   async function handleSubmit(values: ProductFormSubmitValues) {
     if (!product) return;
     await updateProduct(product.id, values);
     const refreshed = await getProductById(product.id);
-    if (refreshed) setProduct(refreshed);
+    if (refreshed) {
+      setProduct(refreshed);
+      setActiveImage(0);
+    }
     toast.success("Product updated", {
-      description: `"${values.name}" has been updated.`,
+      description: `"${values.name ?? product.name}" has been updated.`,
     });
   }
+
   async function handleDelete() {
     if (!product) return;
     setDeleting(true);
@@ -119,6 +144,12 @@ export default function ProductDetailPage() {
     );
   }
 
+  const images = product.images ?? [];
+  const inventories = product.inventories ?? [];
+  const totalStock =
+    product.totalStock ?? inventories.reduce((s, i) => s + i.quantity, 0);
+  const isOutOfStock = totalStock <= 0;
+
   return (
     <div>
       <PageHeader
@@ -149,69 +180,156 @@ export default function ProductDetailPage() {
         </div>
       </PageHeader>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Summary cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Category</span>
-              <Badge variant="secondary">{product.category ?? "—"}</Badge>
-            </div>
-
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Selling Price</span>
-              <span className="font-semibold text-primary">
-                {formatCurrency(product.price)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Status</span>
-              <Badge
-                variant={
-                  product.inStock === false ? "destructive" : "secondary"
-                }
-              >
-                {product.inStock === false ? "Out of Stock" : "In Stock"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6 lg:grid-cols-5">
         {/* Images */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Images</CardTitle>
           </CardHeader>
           <CardContent>
-            {product.images && product.images.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {product.images.map((img) => (
+            {images.length > 0 ? (
+              <div className="space-y-3">
+                <div className="aspect-square w-full overflow-hidden rounded-lg border bg-muted">
                   <img
-                    key={img.id}
                     src={
-                      img.imageUrlSigned ?? img.imageUrl ?? "/placeholder.png"
+                      images[activeImage]?.imageUrlSigned ??
+                      images[activeImage]?.imageUrl
                     }
                     alt={product.name}
-                    className="aspect-square w-full rounded-lg object-cover border"
+                    className="size-full object-cover"
                   />
-                ))}
+                </div>
+                {images.length > 1 && (
+                  <div className="flex gap-2">
+                    {images.map((img, i) => (
+                      <button
+                        key={img.id}
+                        type="button"
+                        onClick={() => setActiveImage(i)}
+                        className={`size-14 shrink-0 overflow-hidden rounded-md border-2 transition-colors ${
+                          i === activeImage
+                            ? "border-primary"
+                            : "border-transparent hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <img
+                          src={img.imageUrlSigned ?? img.imageUrl}
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No images uploaded.
-              </p>
+              <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-muted-foreground">
+                <Package className="size-8 text-muted-foreground/40" />
+                <p className="text-sm">No images uploaded.</p>
+              </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Summary */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Category</p>
+                <Badge variant="secondary" className="mt-1.5">
+                  {product.category ?? "—"}
+                </Badge>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Selling Price</p>
+                <p className="mt-1 font-semibold text-primary">
+                  {formatCurrency(product.price)}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Total Stock</p>
+                <p className="mt-1 font-semibold">{totalStock} units</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Status</p>
+                <Badge
+                  variant={isOutOfStock ? "destructive" : "secondary"}
+                  className="mt-1.5"
+                >
+                  {totalStock < 10 && totalStock > 1
+                    ? "Low Stock"
+                    : totalStock > 10
+                      ? "In Stock"
+                      : "Out of Stock"}
+                </Badge>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Stock by location */}
+      <Card className="mt-6 overflow-hidden">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Boxes className="size-4 text-muted-foreground" />
+            Stock by Location
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {inventories.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-muted-foreground">
+              This product isn't stocked in any inventory yet.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="py-3 pl-6">Location</TableHead>
+                  <TableHead className="py-3 pr-6 text-right">
+                    Quantity
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {inventories.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell className="py-3 pl-6">{inv.name}</TableCell>
+                    <TableCell className="py-3 pr-6 text-right tabular-nums">
+                      <span
+                        className={
+                          inv.quantity === 0
+                            ? "font-medium text-red-500"
+                            : inv.quantity < 10
+                              ? "font-medium text-orange-500"
+                              : "font-medium text-green-500"
+                        }
+                      >
+                        {inv.quantity}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="border-t-2 font-semibold">
+                  <TableCell className="py-3 pl-6">Total</TableCell>
+                  <TableCell className="py-3 pr-6 text-right tabular-nums">
+                    {totalStock}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       <ProductDialog
         open={dialogOpen}
-        editingProduct={product}
         categories={categories}
+        editingProduct={product}
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
       />

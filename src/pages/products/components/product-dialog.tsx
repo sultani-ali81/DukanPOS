@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,7 +60,7 @@ export function ProductDialog({
     handleSubmit,
     reset,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useForm<ProductFormValues>({
     defaultValues: { name: "", price: 0, categoryName: "" },
   });
@@ -69,8 +71,8 @@ export function ProductDialog({
   const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
 
   // Reset form + image state every time the dialog opens, for whichever
-  // product (or none, if creating) it's currently pointed at. Revokes any
-  // leftover preview URLs from the previous session before clearing them.
+  // product (or none, if creating) it's currently pointed at. This also
+  // establishes the dirty-tracking baseline RHF compares against.
   useEffect(() => {
     if (!open) return;
     reset({
@@ -174,13 +176,32 @@ export function ProductDialog({
         .map((img) => img.id as string),
     ];
 
-    await onSubmit(
-      {
-        ...values,
-        ...(attachmentIds.length ? { attachmentIds } : {}),
-      },
-      editingProduct?.id,
-    );
+    let payload: ProductFormSubmitValues;
+
+    if (isEdit) {
+      const originalImageIds =
+        editingProduct?.images?.map((img) => img.id) ?? [];
+      const imagesChanged =
+        attachmentIds.length !== originalImageIds.length ||
+        !attachmentIds.every((id) => originalImageIds.includes(id));
+
+      payload = {};
+      if (dirtyFields.name) payload.name = values.name;
+      if (dirtyFields.price) payload.price = values.price;
+      if (dirtyFields.categoryName) payload.categoryName = values.categoryName;
+      if (imagesChanged) payload.attachmentIds = attachmentIds;
+
+      if (Object.keys(payload).length === 0) {
+        // Nothing actually changed — skip the request entirely.
+        onOpenChange(false);
+        return;
+      }
+    } else {
+      payload = { ...values };
+      if (attachmentIds.length) payload.attachmentIds = attachmentIds;
+    }
+
+    await onSubmit(payload, editingProduct?.id);
     onOpenChange(false);
   }
 

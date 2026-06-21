@@ -5,6 +5,7 @@ import type {
   Product,
   ProductCategory,
   ProductImage,
+  ProductInventory,
   UpdateProductPayload,
 } from "@/types/product";
 
@@ -28,6 +29,11 @@ function mapProduct(raw: Record<string, unknown>): Product {
   }));
   const categories: ProductCategory[] =
     (raw.categories as ProductCategory[] | undefined) ?? [];
+  const inventories = raw.inventories as ProductInventory[] | undefined;
+  const totalStock = inventories?.reduce(
+    (sum, inv) => sum + (inv.quantity ?? 0),
+    0,
+  );
 
   return {
     id: raw.id as string,
@@ -41,6 +47,8 @@ function mapProduct(raw: Record<string, unknown>): Product {
     categoryId: categories[0]?.id,
     images,
     primaryImage: images[0]?.imageUrlSigned ?? images[0]?.imageUrl ?? "",
+    inventories,
+    totalStock,
   };
 }
 
@@ -54,7 +62,7 @@ export const getProducts = (params?: {
     .get("/products", {
       params: {
         page: params?.page ?? 1,
-        itemsPerPage: params?.itemsPerPage ?? 20,
+        itemsPerPage: params?.itemsPerPage ?? 15,
         ...(params?.categoryName
           ? { search: params.categoryName }
           : params?.search
@@ -69,7 +77,7 @@ export const getProducts = (params?: {
       const raw = r.data as Record<string, unknown>;
       const meta: PaginationMeta = (raw.meta as PaginationMeta) ?? {
         currentPage: 1,
-        itemsPerPage: 20,
+        itemsPerPage: 15,
         totalItems: rawData.length,
         totalPages: 1,
       };
@@ -127,7 +135,7 @@ export const deleteProductImage = (
 
 // ── get categories for dropdown ─────────────────────────────────────────────
 
-export const getCategories = () => api.get("/categories?itemsPerPage=1000");
+export const getCategories = () => api.get("/categories?itemsPerPage=12");
 
 // ── unused (keep for compat) ────────────────────────────────────────────────
 

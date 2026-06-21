@@ -8,6 +8,8 @@ export interface Product {
   categories?: ProductCategory[];
   images?: ProductImage[];
   image?: string;
+  inventories?: ProductInventory[];
+  totalStock?: number;
   primaryImage?: string;
 }
 
@@ -16,9 +18,29 @@ export interface ProductCategory {
   name: string;
 }
 
-export interface ProductFormSubmitValues extends ProductFormValues {
-  attachmentIds?: string[];
+export interface ProductInventory {
+  id: string;
+  name: string;
+  quantity: number;
 }
+
+export interface ProductImage {
+  id: string;
+  imageUrl: string;
+  imageUrlSigned?: string;
+}
+
+export interface ProductFormValues {
+  name: string;
+  price: number;
+  categoryName: string;
+}
+
+// Partial because edits only send dirty fields — see dirtyFields logic
+// in ProductDialog. Create always sends the full set.
+export type ProductFormSubmitValues = Partial<ProductFormValues> & {
+  attachmentIds?: string[];
+};
 
 export interface CreateProductPayload {
   name: string;
@@ -31,15 +53,4 @@ export interface UpdateProductPayload {
   price?: number;
   categoryName?: string;
   attachmentIds?: string[];
-}
-export interface ProductFormValues {
-  name: string;
-  price: number;
-  categoryName: string;
-}
-
-export interface ProductImage {
-  id: string;
-  imageUrl: string;
-  imageUrlSigned?: string;
 }

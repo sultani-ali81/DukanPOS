@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -13,16 +14,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useProducts } from "@/hooks/use-products";
 import { formatCurrency } from "@/lib/data";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
 import {
   createProduct,
   deleteProduct,
   getCategories,
-  getProducts,
   updateProduct,
 } from "@/queries/products";
-import type { Product, ProductFormSubmitValues } from "@/types/product";
+import type {
+  CreateProductPayload,
+  Product,
+  ProductFormSubmitValues,
+} from "@/types/product";
 import {
   Loader2,
   Package,
@@ -36,10 +41,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-function TableSkeleton() {
+function TableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <>
-      {Array.from({ length: 8 }).map((_, i) => (
+      {Array.from({ length: rows }).map((_, i) => (
         <TableRow key={i}>
           <TableCell>
             <div className="flex items-center gap-3">
@@ -71,77 +76,65 @@ function TableSkeleton() {
 export default function ProductsPage() {
   const navigate = useNavigate();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const {
+    products,
+    totalPages,
+    page,
+    setPage,
+    search,
+    handleSearch,
+    clearSearch,
+    mutate,
+    isLoading,
+    PAGE_SIZE,
+  } = useProducts();
+
   const [categories, setCategories] = useState<{ id: string; name: string }[]>(
     [],
   );
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  // Fetch products + categories
-  async function fetchData() {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [productsRes, catsRes] = await Promise.all([
-        getProducts({ search: debouncedSearch }),
-        getCategories(),
-      ]);
-      setProducts(productsRes.data);
-      const cats: { data: { id: string; name: string }[] } = catsRes.data;
+    getCategories().then((res) => {
+      const cats: { data: { id: string; name: string }[] } = res.data;
       setCategories(cats.data ?? []);
-    } catch (err) {
-      setError((err as Error).message ?? "Failed to load products");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchData();
-  }, [debouncedSearch]);
+    });
+  }, []);
 
   // ── CRUD ────────────────────────────────────────────────────────────────
-  // handleSubmit — replaces the old version
+
   async function handleSubmit(values: ProductFormSubmitValues, id?: string) {
     try {
       if (id) {
         await updateProduct(id, values);
         toast.success("Product updated", {
-          description: `"${values.name}" has been updated.`,
+          description: `"${values.name ?? editingProduct?.name}" has been updated.`,
         });
       } else {
-        await createProduct(values);
+        // Cast is safe: the dialog only omits keys for partial edits, never
+        // for creates — create always sends the full ProductFormValues.
+        await createProduct(values as CreateProductPayload);
         toast.success("Product created", {
           description: `"${values.name}" has been added to the catalog.`,
         });
       }
-      fetchData();
+      mutate();
     } catch {
       toast.error("Something went wrong", { description: "Please try again." });
       throw new Error("submit failed");
     }
   }
+
   async function handleDelete(product: Product) {
     setDeletingId(product.id);
     try {
       await deleteProduct(product.id);
-      setProducts((prev) => prev.filter((p) => p.id !== product.id));
       toast.success("Product deleted", {
         description: `"${product.name}" has been removed.`,
       });
+      mutate();
     } catch {
       toast.error("Could not delete product", {
         description: "Please try again.",
@@ -174,13 +167,13 @@ export default function ProductsPage() {
             </span>
             <Input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name "
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search by name or barcode..."
               className="w-64 pl-9"
             />
             {search && (
               <button
-                onClick={() => setSearch("")}
+                onClick={clearSearch}
                 className="pointer-events-auto absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="size-4" />
@@ -193,20 +186,14 @@ export default function ProductsPage() {
         </div>
       </PageHeader>
 
-      {error && (
-        <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
       <Card className="overflow-hidden border">
         <CardContent className="p-0">
           <Table className="table-fixed">
             <TableHeader>
-              <TableRow className="">
+              <TableRow className="bg-muted/50">
                 <TableHead className="py-3 pl-3 w-2/5">Product</TableHead>
                 <TableHead className="py-3 w-1/5">Category</TableHead>
-                <TableHead className="py-3 w-[14%] ">Price</TableHead>
+                <TableHead className="py-3 w-[14%] text-right">Price</TableHead>
                 <TableHead className="py-3 w-[12%] text-right">
                   Actions
                 </TableHead>
@@ -214,7 +201,7 @@ export default function ProductsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableSkeleton />
+                <TableSkeleton rows={PAGE_SIZE} />
               ) : products.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="py-12 text-center">
@@ -270,7 +257,7 @@ export default function ProductsPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-2 py-3.5 font-mono font-semibold text-primary">
+                      <TableCell className="px-2 py-3.5 text-right font-mono font-semibold text-primary">
                         {formatCurrency(p.price)}
                       </TableCell>
                       <TableCell
@@ -311,6 +298,16 @@ export default function ProductsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-end">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
 
       <ProductDialog
         open={dialogOpen}

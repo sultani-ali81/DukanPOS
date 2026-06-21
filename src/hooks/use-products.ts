@@ -3,7 +3,7 @@ import { useSearch } from "@/hooks/use-search";
 import { getProducts } from "@/queries/products";
 import useSWR from "swr";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
 function productsKey(params: {
   search: string;
