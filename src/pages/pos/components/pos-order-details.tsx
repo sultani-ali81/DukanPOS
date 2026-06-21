@@ -164,7 +164,7 @@ export function PosOrderDetails({
     !!inventoryId;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-4 gap-3">
+    <div className="flex flex-col h-screen overflow-hidden p-4 gap-3">
       {/* Header — desktop only */}
       <div className="hidden lg:flex items-center justify-between shrink-0">
         <h2 className="text-base font-semibold text-gray-900">Order Details</h2>

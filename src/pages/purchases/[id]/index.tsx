@@ -1,4 +1,4 @@
-import { PurchaseDetailClient } from "@/components/purchase-detail-client";
+import { PurchaseDetailClient } from "@/pages/purchases/components/purchase-detail-client";
 import { useParams } from "react-router-dom";
 
 export default function ViewPurchase() {

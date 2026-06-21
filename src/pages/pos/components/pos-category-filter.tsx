@@ -7,8 +7,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ChevronDown, Search } from "lucide-react";
+import { ArrowLeft, ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 
 interface Category {
   id: string;
@@ -33,12 +34,13 @@ export function PosCategoryFilter({
   const [sheetOpen, setSheetOpen] = useState(false);
   const all = [{ id: "all", name: "All" }, ...categories];
   const selectedName = all.find((c) => c.id === selected)?.name ?? "All";
+  const navigate = useNavigate();
 
   return (
     <>
       {/* ── DESKTOP ── */}
-      <div className="hidden lg:flex mb-3">
-        <div className="relative w-full shrink-0">
+      <div className="hidden lg:flex mb-3 items-center gap-4">
+        <div className="relative w-full">
           <Search
             size={15}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -54,6 +56,13 @@ export function PosCategoryFilter({
             Search
           </Button>
         </div>
+        <Button
+          onClick={() => navigate("/purchases")}
+          className="cursor-pointer"
+        >
+          <ArrowLeft size={4}></ArrowLeft>
+          Exit POS
+        </Button>
       </div>
 
       <div className="hidden lg:flex items-center gap-3">

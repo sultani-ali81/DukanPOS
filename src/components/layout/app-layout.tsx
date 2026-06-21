@@ -66,6 +66,14 @@ export default function AppLayout() {
     }
   }, [profile, user, token, fetchError, setAuth, clearAuth]);
 
+  if (pathname === "/pos") {
+    return (
+      <div className="min-h-screen bg-gray-300 overflow-y-auto">
+        <PosPage />
+      </div>
+    );
+  }
+
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -93,12 +101,8 @@ export default function AppLayout() {
     .join("")
     .toUpperCase();
 
-  if (pathname === "/pos") {
-    <PosPage />;
-  }
-
   return (
-    <div className="flex min-h-screen gap-2.5 p-2.5 bg-gray-200">
+    <div className="flex min-h-screen gap-2.5 p-2.5 bg-gray-300">
       {/* Desktop sidebar — always visible on lg+ */}
       <aside className="hidden w-64 shrink-0 rounded-xl bg-white lg:sticky lg:top-2.5 lg:block lg:h-[calc(100vh-1.25rem)]">
         <SidebarNav />
@@ -203,7 +207,7 @@ export default function AppLayout() {
         </header>
 
         {/* Page content — the router fills this in */}
-        <main className="flex-1 overflow-y-auto rounded-lg bg-white p-4">
+        <main className="flex-1 overflow-y-auto rounded-lg bg-white p-2.5">
           <Outlet />
         </main>
       </div>

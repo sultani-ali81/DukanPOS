@@ -7,6 +7,7 @@ import { getPosInventory } from "@/queries/pos-inventory";
 import type { Category } from "@/types";
 import { ShoppingCart, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PosCategoryFilter } from "./components/pos-category-filter";
 import { PosInventoryCombobox } from "./components/pos-inventory-combobox";
@@ -139,6 +140,8 @@ export default function PosPage() {
   const { search, debouncedSearch, handleSearch } = useSearch({
     onSearch: resetToPage1,
   });
+
+  const navigate = useNavigate();
 
   // ── Cart / order ─────────────────────────────────────────────────────────────
 
@@ -327,11 +330,9 @@ export default function PosPage() {
   };
 
   return (
-    // CHANGE: Changed h-[calc(100vh-80px)] overflow-y-auto to fixed structural limits
-    <div className="h-[calc(100vh-64px)] w-full overflow-hidden flex flex-col lg:flex-row bg-bg-main gap-4">
+    <div className="fixed inset-0 p-2.5 overflow-hidden flex flex-col lg:flex-row rounded-xl gap-4">
       {/* ── Product list ── */}
-      {/* CHANGE: Removed space-y-3 & pb-24; added internal flex layouts to handle individual column scrolling */}
-      <div className="bg-white flex-1 rounded-xl min-w-0 flex flex-col h-full overflow-hidden p-4 border border-gray-100 shadow-xs">
+      <div className="bg-white flex-1 rounded-xl min-w-0 flex flex-col h-full p-4 border border-gray-200">
         {/* MOBILE: inventory picker always visible */}
         <div className="lg:hidden flex-none mb-3">
           <PosInventoryCombobox
@@ -410,7 +411,7 @@ export default function PosPage() {
 
       {/* ── DESKTOP: Order details (right panel) ── */}
       {/* CHANGE: Cleaned up inner margins, hardcoded matching calculations, and fixed full height structure layout */}
-      <div className="hidden lg:block w-[380px] xl:w-[420px] shrink-0 h-full overflow-hidden">
+      <div className="hidden lg:block max-w-[320px] xl:w-[400px] shrink-0 h-full overflow-hidden">
         <div className="bg-white rounded-xl h-full border border-gray-100 shadow-xs overflow-hidden">
           <PosOrderDetails
             inventoryId={inventoryId}
