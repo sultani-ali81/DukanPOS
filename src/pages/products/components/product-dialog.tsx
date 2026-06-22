@@ -169,12 +169,9 @@ export function ProductDialog({
       return;
     }
 
-    const attachmentIds = [
-      ...existingImages.map((img) => img.id),
-      ...uploadingImages
-        .filter((img) => img.status === "done" && img.id)
-        .map((img) => img.id as string),
-    ];
+    const attachmentIds = uploadingImages
+      .filter((img) => img.status === "done" && img.id)
+      .map((img) => img.id as string);
 
     let payload: ProductFormSubmitValues;
 

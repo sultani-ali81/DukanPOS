@@ -17,21 +17,6 @@ export interface Verify {
   code: string;
 }
 
-export interface EmployeeInfo {
-  id: string;
-  email: string;
-  name: string;
-  firstName: string | null;
-  lastName: string | null;
-  phone: string | null;
-  role: string | null;
-  imageUrl: string | null;
-  dob: string | null;
-  gender: string | null;
-  storeName: string | null;
-  createdAt: string | null;
-}
-
 export interface EditProfile {
   firstName: string;
   lastName: string;
@@ -42,6 +27,24 @@ export interface EditProfile {
   gender: string;
   dob: string;
   storeName: string;
+  oldPassword?: string;
+  password?: string;
+  attachmentId?: string;
+}
+export interface EmployeeInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  phone: string;
+  imageUrl: string;
+  gender: string;
+  dob: string;
+  createdAt?: string;
+  storeName: string;
+  oldPassword?: string;
+  password?: string;
+  attachmentId?: string;
 }
 
 export interface OrderFoodPayload {
