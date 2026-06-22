@@ -277,7 +277,7 @@ export default function ProductDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Boxes className="size-4 text-muted-foreground" />
-            Stock by Location
+            Stock by Inventory
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -289,7 +289,7 @@ export default function ProductDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="py-3 pl-6">Location</TableHead>
+                  <TableHead className="py-3 pl-6">Inventory</TableHead>
                   <TableHead className="py-3 pr-6 text-right">
                     Quantity
                   </TableHead>
