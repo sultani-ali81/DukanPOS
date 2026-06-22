@@ -164,7 +164,7 @@ export function PosOrderDetails({
     !!inventoryId;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden p-4 gap-3">
+    <div className="flex flex-col h-full p-4 gap-3">
       {/* Header — desktop only */}
       <div className="hidden lg:flex items-center justify-between shrink-0">
         <h2 className="text-base font-semibold text-gray-900">Order Details</h2>
@@ -338,7 +338,7 @@ export function PosOrderDetails({
               </div>
 
               {/* Footer */}
-              <div className="px-5 py-4 flex items-center gap-2 border-t border-gray-100">
+              <div className="px-5 py-4 flex items-center gap-2  border-t border-gray-100">
                 <AlertDialogCancel className="flex-1 h-11 rounded-xl border-gray-200 text-sm font-medium">
                   Cancel
                 </AlertDialogCancel>

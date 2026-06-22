@@ -21,6 +21,7 @@ import {
 import { MoreHorizontal, Plus, Search, XIcon } from "lucide-react";
 
 import { NumberDisplay } from "@/components/number-display";
+import { PageHeader } from "@/components/page-header";
 import { usePurchases } from "@/hooks/use-purchases";
 import { extractError } from "@/lib/error";
 import { deletePurchase, updatePurchaseStatus } from "@/queries/purchase";
@@ -138,7 +139,11 @@ export function PurchasesClient() {
 
   return (
     <div className="overflow-y-auto">
-      <div className="max-w-[1401px] mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+      <PageHeader
+        title="Purchases"
+        description="View and manage purchases"
+      ></PageHeader>
+      <div className="px-2 py-2 ">
         {/* Error banner */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center justify-between">
@@ -153,11 +158,11 @@ export function PurchasesClient() {
         )}
 
         {/* Table card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           {/* Toolbar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">
+              <h2 className="text-md font-semibold text-gray-900">
                 Purchase Records
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
@@ -215,7 +220,7 @@ export function PurchasesClient() {
               </Select>
               <Button
                 onClick={() => navigate("/Purchases/new")}
-                className="h-10 rounded-lg bg-black text-white hover:bg-black/90 text-sm gap-1.5"
+                className="h-10 rounded-lg text-white text-sm gap-1.5"
               >
                 <Plus className="w-4 h-4" />
                 Add Purchase

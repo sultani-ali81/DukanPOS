@@ -102,15 +102,15 @@ export default function AppLayout() {
     .toUpperCase();
 
   return (
-    <div className="flex min-h-screen gap-2.5 p-2.5 bg-gray-300">
+    <div className="flex gap-2.5 p-2.5 bg-gray-300">
       {/* Desktop sidebar — always visible on lg+ */}
-      <aside className="hidden w-64 shrink-0 rounded-xl bg-white lg:sticky lg:top-2.5 lg:block lg:h-[calc(100vh-1.25rem)]">
+      <aside className="hidden  w-64 shrink-0 rounded-lg bg-white lg:sticky lg:top-2.5 lg:block lg:h-[calc(100vh-1.25rem)]">
         <SidebarNav />
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+      <div className="flex flex-1 flex-col gap-2.5">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex min-h-[60px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
+        <header className="sticky top-0 fixed-inset z-30 flex min-h-[60px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
           {/* Mobile menu — Sheet with sidebar inside */}
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
@@ -207,7 +207,7 @@ export default function AppLayout() {
         </header>
 
         {/* Page content — the router fills this in */}
-        <main className="flex-1 overflow-y-auto rounded-lg bg-white p-2.5">
+        <main className="flex-1 overflow-y-auto rounded-lg bg-white p-5">
           <Outlet />
         </main>
       </div>

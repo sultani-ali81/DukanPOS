@@ -330,9 +330,9 @@ export default function PosPage() {
   };
 
   return (
-    <div className="fixed inset-0 p-2.5 overflow-hidden flex flex-col lg:flex-row rounded-xl gap-4">
+    <div className="fixed inset-0 p-2.5 overflow-hidden flex flex-col lg:flex-row gap-4">
       {/* ── Product list ── */}
-      <div className="bg-white flex-1 rounded-xl min-w-0 flex flex-col h-full p-4 border border-gray-200">
+      <div className="bg-white flex-1 rounded-lg min-w-0 flex flex-col h-full p-4 border border-gray-200">
         {/* MOBILE: inventory picker always visible */}
         <div className="lg:hidden flex-none mb-3">
           <PosInventoryCombobox
@@ -410,9 +410,8 @@ export default function PosPage() {
       </div>
 
       {/* ── DESKTOP: Order details (right panel) ── */}
-      {/* CHANGE: Cleaned up inner margins, hardcoded matching calculations, and fixed full height structure layout */}
       <div className="hidden lg:block max-w-[320px] xl:w-[400px] shrink-0 h-full overflow-hidden">
-        <div className="bg-white rounded-xl h-full border border-gray-100 shadow-xs overflow-hidden">
+        <div className="bg-white rounded-lg h-full border border-gray-100 overflow-hidden">
           <PosOrderDetails
             inventoryId={inventoryId}
             inventoryLabel={inventoryLabel}
