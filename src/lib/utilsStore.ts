@@ -6,6 +6,10 @@ type UtilsState = {
   setInventoryId: (id: string) => void;
   inventoryLabel: string;
   setInventoryLabel: (label: string) => void;
+  // Walk-in customer — persisted so it survives refresh
+  walkInCustomerId: string;
+  walkInCustomerLabel: string;
+  setWalkInCustomer: (id: string, label: string) => void;
   clearUtilsStore: () => void;
 };
 
@@ -14,23 +18,28 @@ export const useUtilsStore = create<UtilsState>()(
     (set, get) => ({
       inventoryId: "",
       inventoryLabel: "",
+      walkInCustomerId: "",
+      walkInCustomerLabel: "",
+      sessionId: "",
 
-      setInventoryId: (id: string) => {
-        set({ inventoryId: id });
-      },
-      getInventoryId: () => {
-        return get().inventoryId;
-      },
-      setInventoryLabel: (label: string) => {
-        set({ inventoryLabel: label });
-      },
-      getInventoryLabel: () => {
-        return get().inventoryLabel;
-      },
+      setInventoryId: (id: string) => set({ inventoryId: id }),
+      setInventoryLabel: (label: string) => set({ inventoryLabel: label }),
+
+      setWalkInCustomer: (id: string, label: string) =>
+        set({ walkInCustomerId: id, walkInCustomerLabel: label }),
+
       clearUtilsStore: () => {
         console.log("Clearing utils store");
-        set({ inventoryId: "", inventoryLabel: "" });
+        set({
+          inventoryId: "",
+          inventoryLabel: "",
+          walkInCustomerId: "",
+          walkInCustomerLabel: "",
+        });
       },
+      // keep legacy getters so nothing else breaks
+      getInventoryId: () => get().inventoryId,
+      getInventoryLabel: () => get().inventoryLabel,
     }),
     {
       name: "utils-storage",

@@ -1,26 +1,29 @@
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
+import { useUtilsStore } from "@/lib/utilsStore";
 import { getCustomers } from "@/queries/customer";
 import type { PosProduct } from "@/queries/pos-inventory";
 import { getPosInventory } from "@/queries/pos-inventory";
 import type { Category } from "@/types";
-import { ShoppingCart, X } from "lucide-react";
+import type { SaleReceipt } from "@/types/sale";
+import { Lock, ShoppingCart, Unlock, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PosCategoryFilter } from "./components/pos-category-filter";
 import { PosInventoryCombobox } from "./components/pos-inventory-combobox";
 import { PosOrderDetails } from "./components/pos-order-details";
 import { PosProductList } from "./components/pos-product-list";
+import { PosReceiptDialog } from "./components/pos-receipt-dialog";
+import {
+  CloseSessionDialog,
+  OpenSessionDialog,
+} from "./components/pos-session-dialog";
 import { usePosOrder } from "./components/use-pos-order";
 
 const ITEMS_PER_PAGE = 12;
 
 // ── Barcode WebSocket hook ────────────────────────────────────────────────────
-// Connects to the local Python barcode bridge (ws://localhost:8765).
-// Automatically reconnects every 2 s if the connection drops.
-// Falls back to the keyboard-buffer approach if WebSocket is unavailable.
 
 function useBarcodeScanner({
   onBarcode,
@@ -34,10 +37,8 @@ function useBarcodeScanner({
     onBarcodeRef.current = onBarcode;
   }, [onBarcode]);
 
-  // Track whether WS is connected so the keyboard fallback knows when to kick in
   const wsConnected = useRef(false);
 
-  // ── WebSocket path ──
   useEffect(() => {
     if (!enabled) return;
 
@@ -69,9 +70,7 @@ function useBarcodeScanner({
         if (!dead) reconnectTimer = setTimeout(connect, 2000);
       };
 
-      ws.onerror = () => {
-        ws?.close();
-      };
+      ws.onerror = () => ws?.close();
     }
 
     connect();
@@ -84,9 +83,6 @@ function useBarcodeScanner({
     };
   }, [enabled]);
 
-  // ── Keyboard fallback (works when WS is not yet connected) ──
-  // Buffers keystrokes and flushes on Enter, same as before.
-  // Ignored when an input/textarea/select has focus.
   const scanBuffer = useRef("");
   const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -94,11 +90,8 @@ function useBarcodeScanner({
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Let real inputs handle their own keystrokes
       const tag = (document.activeElement as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-
-      // If WS is live the Python bridge handles it — avoid double-firing
       if (wsConnected.current) return;
 
       if (e.key === "Enter") {
@@ -134,14 +127,25 @@ export default function PosPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-  const [customerLabel, setCustomerLabel] = useState("");
+
+  // ── Session state — driven from persisted store ───────────────────────────
+  const { sessionId, setSessionId, clearSessionId, setWalkInCustomer } =
+    useUtilsStore();
+  // hasSession is true when there is a persisted session id
+  const hasSession = !!sessionId;
+
+  const [openSessionOpen, setOpenSessionOpen] = useState(false);
+  const [closeSessionOpen, setCloseSessionOpen] = useState(false);
+
+  // ── Receipt dialog ───────────────────────────────────────────────────────────
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [lastReceipt, setLastReceipt] = useState<SaleReceipt | null>(null);
+  const [lastReceiptCreatedAt, setLastReceiptCreatedAt] = useState<string>("");
 
   const { page, setPage, resetToPage1 } = usePagination();
   const { search, debouncedSearch, handleSearch } = useSearch({
     onSearch: resetToPage1,
   });
-
-  const navigate = useNavigate();
 
   // ── Cart / order ─────────────────────────────────────────────────────────────
 
@@ -149,6 +153,8 @@ export default function PosPage() {
     cart,
     customerId,
     setCustomerId,
+    customerLabel,
+    setCustomerLabel,
     inventoryId,
     inventoryLabel,
     setInventoryId,
@@ -163,10 +169,15 @@ export default function PosPage() {
     submitting,
     handlePay,
   } = usePosOrder({
-    onSaleSuccess: () => loadInventoryRef.current(inventoryIdRef.current),
+    onSaleSuccess: (receipt, createdAt) => {
+      loadInventoryRef.current(inventoryIdRef.current);
+      setLastReceipt(receipt);
+      setLastReceiptCreatedAt(createdAt);
+      setReceiptDialogOpen(true);
+      setMobileSheetOpen(false);
+    },
   });
 
-  // Refs so closures never go stale
   const inventoryIdRef = useRef(inventoryId);
   useEffect(() => {
     inventoryIdRef.current = inventoryId;
@@ -210,7 +221,10 @@ export default function PosPage() {
     loadInventoryRef.current = loadInventory;
   }, [loadInventory]);
 
-  // ── On mount: restore inventory + pre-select walk-in customer ────────────────
+  // ── On mount: restore inventory + ensure walk-in customer is always set ───────
+  // customerId is seeded from the store inside usePosOrder, so it survives
+  // refresh. If it's still empty (first ever visit), fetch the first customer
+  // (walk-in) from the API and persist it to the store for all future visits.
 
   useEffect(() => {
     if (inventoryId) loadInventory(inventoryId);
@@ -219,8 +233,11 @@ export default function PosPage() {
       getCustomers({ page: 1, itemsPerPage: 10 })
         .then(({ data }) => {
           if (data.length > 0) {
-            setCustomerId(data[0].id);
-            setCustomerLabel(data[0].name);
+            const c = data[0];
+            setCustomerId(c.id);
+            setCustomerLabel(c.name);
+            // Persist walk-in so future sessions skip this API call
+            setWalkInCustomer(c.id, c.name);
           }
         })
         .catch(() => {});
@@ -244,10 +261,6 @@ export default function PosPage() {
     addToCartRef.current = addToCart;
   }, [addToCart]);
 
-  // ── Barcode scanner ───────────────────────────────────────────────────────────
-  // Receives barcodes from the Python WebSocket bridge (ws://localhost:8765).
-  // Falls back to keyboard buffering when the bridge is not running.
-
   useBarcodeScanner({
     enabled: true,
     onBarcode: (barcode) => {
@@ -255,17 +268,13 @@ export default function PosPage() {
         toast.warning("Select an inventory before scanning");
         return;
       }
-
-      // Match by sequence (if set) or product id
       const product = allProductsRef.current.find(
         (p) => (p.sequence ?? p.id) === barcode,
       );
-
       if (!product) {
         toast.warning(`Product not found: ${barcode}`);
         return;
       }
-
       addToCartRef.current(product);
     },
   });
@@ -326,14 +335,50 @@ export default function PosPage() {
 
   const handlePayAndClose = async () => {
     await handlePay();
-    setMobileSheetOpen(false);
+    // receipt dialog + sheet close handled inside onSaleSuccess
   };
+
+  // ── Session button helpers ────────────────────────────────────────────────────
+  // Open   → clickable only when NO active session
+  // Close  → clickable only when there IS an active session
+
+  const handleOpenSessionClick = () => {
+    if (hasSession) {
+      toast.warning("A session is already open. Close it first.");
+      return;
+    }
+    setOpenSessionOpen(true);
+  };
+
+  const handleCloseSessionClick = () => {
+    if (!hasSession) {
+      toast.warning("No active session to close.");
+      return;
+    }
+    setCloseSessionOpen(true);
+  };
+
+  // ── Session button shared styles ──────────────────────────────────────────────
+
+  const openBtnClass = [
+    "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
+    hasSession
+      ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
+      : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100",
+  ].join(" ");
+
+  const closeBtnClass = [
+    "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
+    !hasSession
+      ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
+      : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100",
+  ].join(" ");
 
   return (
     <div className="fixed inset-0 p-2.5 overflow-hidden flex flex-col lg:flex-row gap-4">
       {/* ── Product list ── */}
       <div className="bg-white flex-1 rounded-lg min-w-0 flex flex-col h-full p-4 border border-gray-200">
-        {/* MOBILE: inventory picker always visible */}
+        {/* MOBILE: inventory picker */}
         <div className="lg:hidden flex-none mb-3">
           <PosInventoryCombobox
             value={inventoryId}
@@ -342,7 +387,39 @@ export default function PosPage() {
           />
         </div>
 
+        {/* MOBILE: session buttons */}
+        <div className="lg:hidden flex-none flex items-center gap-2 mb-3">
+          <button onClick={handleOpenSessionClick} className={openBtnClass}>
+            <Unlock className="w-3.5 h-3.5" />
+            Open
+          </button>
+          <button onClick={handleCloseSessionClick} className={closeBtnClass}>
+            <Lock className="w-3.5 h-3.5" />
+            Close
+          </button>
+        </div>
+
         <div className="flex-none mb-2">
+          {/* DESKTOP: session buttons row (Exit POS is already inside PosCategoryFilter) */}
+          <div className="hidden lg:flex items-center gap-2 mb-3">
+            <button onClick={handleOpenSessionClick} className={openBtnClass}>
+              <Unlock className="w-3.5 h-3.5" />
+              Open Session
+            </button>
+            <button onClick={handleCloseSessionClick} className={closeBtnClass}>
+              <Lock className="w-3.5 h-3.5" />
+              Close Session
+            </button>
+
+            {/* Active session indicator */}
+            {hasSession && (
+              <span className="flex items-center gap-1 text-xs text-green-600 font-medium bg-green-50 border border-green-200 rounded-lg px-2.5 py-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                Session active
+              </span>
+            )}
+          </div>
+
           <PosCategoryFilter
             categories={categories}
             selected={selectedCategory}
@@ -352,7 +429,7 @@ export default function PosPage() {
           />
         </div>
 
-        {/* CHANGE: Wrapped product results area into its own unique isolated scroll element */}
+        {/* Product results */}
         <div className="flex-1 overflow-y-auto py-1">
           {!inventoryId ? (
             <div className="flex flex-col items-center justify-center text-center px-4">
@@ -396,7 +473,6 @@ export default function PosPage() {
           )}
         </div>
 
-        {/* CHANGE: Placed pagination inside fixed non-scroll footer view */}
         {!loadingInventory && inventoryId && totalPages > 1 && (
           <div className="flex-none pt-3 border-t border-gray-100 mt-2">
             <Pagination
@@ -492,6 +568,34 @@ export default function PosPage() {
           </div>
         </>
       )}
+
+      {/* ── Session dialogs ── */}
+      <OpenSessionDialog
+        open={openSessionOpen}
+        onOpenChange={setOpenSessionOpen}
+        onSuccess={(res) => {
+          // Persist session id to store — survives refresh
+          if (res.id) setSessionId(res.id);
+        }}
+      />
+      <CloseSessionDialog
+        open={closeSessionOpen}
+        onOpenChange={(isOpen) => {
+          setCloseSessionOpen(isOpen);
+        }}
+        onSuccess={() => {
+          // Clear persisted session id
+          clearSessionId();
+        }}
+      />
+
+      {/* ── Receipt dialog ── */}
+      <PosReceiptDialog
+        open={receiptDialogOpen}
+        onOpenChange={setReceiptDialogOpen}
+        receipt={lastReceipt}
+        createdAt={lastReceiptCreatedAt}
+      />
     </div>
   );
 }

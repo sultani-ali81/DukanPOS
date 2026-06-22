@@ -1,6 +1,7 @@
 import { useUtilsStore } from "@/lib/utilsStore";
 import type { PosProduct } from "@/queries/pos-inventory";
 import { finalizeSale } from "@/queries/sale";
+import type { SaleReceipt } from "@/types/sale";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -14,15 +15,27 @@ export interface PosCartItem {
 }
 
 interface UsePosOrderOptions {
-  onSaleSuccess?: () => void;
+  onSaleSuccess?: (receipt: SaleReceipt, createdAt: string) => void;
 }
 
 export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
   const [cart, setCart] = useState<PosCartItem[]>([]);
-  const [customerId, setCustomerId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
-  const { inventoryId, setInventoryId, inventoryLabel, setInventoryLabel } =
-    useUtilsStore();
+
+  const {
+    inventoryId,
+    setInventoryId,
+    inventoryLabel,
+    setInventoryLabel,
+    walkInCustomerId,
+    walkInCustomerLabel,
+  } = useUtilsStore();
+
+  // customerId / customerLabel live in local state so the combobox stays
+  // reactive, but they are seeded from the persisted walk-in values.
+  const [customerId, setCustomerId] = useState<string>(walkInCustomerId);
+  const [customerLabel, setCustomerLabel] =
+    useState<string>(walkInCustomerLabel);
 
   const addToCart = (product: PosProduct) => {
     setCart((prev) => {
@@ -70,7 +83,6 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
     );
   };
 
-  // Direct number input — clamps to stock, removes if 0
   const setItemQuantity = (productId: string, value: number) => {
     if (value <= 0) {
       setCart((prev) => prev.filter((i) => i.id !== productId));
@@ -90,9 +102,9 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
     setCart((prev) => prev.filter((i) => i.id !== productId));
   };
 
+  // Only clears the cart — customer stays selected (walk-in by default)
   const clearCart = () => {
     setCart([]);
-    setCustomerId("");
   };
 
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -115,7 +127,7 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
 
     setSubmitting(true);
     try {
-      await finalizeSale({
+      const res = await finalizeSale({
         customerId,
         inventoryId,
         items: cart.map((i) => ({
@@ -125,8 +137,9 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
         })),
       });
       toast.success("Sale completed and stock updated");
+      // Only clear cart — customer stays as-is (walk-in)
       clearCart();
-      onSaleSuccess?.();
+      onSaleSuccess?.(res.receipt, res.createdAt);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -141,6 +154,8 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
     cart,
     customerId,
     setCustomerId,
+    customerLabel,
+    setCustomerLabel,
     inventoryId,
     inventoryLabel,
     setInventoryId,

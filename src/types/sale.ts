@@ -10,11 +10,31 @@ export interface CreateSalePayload {
   items: SaleItemPayload[];
 }
 
-export interface FinalizeSaleResponse {
-  message?: String;
-  id: String;
+// ── Receipt ───────────────────────────────────────────────────────────────────
+
+export interface SaleReceiptItem {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subTotal: number;
+}
+
+export interface SaleReceipt {
+  receiptId: string;
+  storeName: string;
+  sequenceId: string;
+  customerName: string;
   totalAmount: number;
-  items: [CreateSaleResponse];
+  items: SaleReceiptItem[];
+}
+
+// ── Sale responses ────────────────────────────────────────────────────────────
+
+export interface FinalizeSaleResponse {
+  message?: string;
+  saleId: string;
+  receipt: SaleReceipt;
+  createdAt: string;
 }
 
 export interface CreatedSaleItem {

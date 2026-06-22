@@ -281,7 +281,8 @@ export function PosOrderDetails({
             <AlertDialogTrigger asChild>
               <Button
                 disabled={!canPay || submitting}
-                className="w-full h-12 bg-black text-white hover:bg-black/90 rounded-xl text-sm font-semibold mt-1 flex items-center gap-2"
+                className="w-full h-12 rounded-xl text-sm font-semibold mt-1 flex items-center gap-2"
+                variant="default"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 {submitting ? "Processing…" : `Pay ${total.toFixed(2)} AFN`}

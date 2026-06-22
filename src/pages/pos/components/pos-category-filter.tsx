@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -7,7 +6,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ArrowLeft, ChevronDown, Search } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -28,8 +27,6 @@ export function PosCategoryFilter({
   categories,
   selected,
   onSelect,
-  searchQuery,
-  onSearchChange,
 }: PosCategoryFilterProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const all = [{ id: "all", name: "All" }, ...categories];
@@ -40,22 +37,6 @@ export function PosCategoryFilter({
     <>
       {/* ── DESKTOP ── */}
       <div className="hidden lg:flex mb-3 items-center gap-4">
-        <div className="relative w-full">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-          />
-          <Input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search product..."
-            className="w-full h-11 pl-10 pr-3 rounded-md border border-gray-200 bg-white text-sm outline-none focus:ring-2 focus:ring-black/10"
-          />
-          <Button className="absolute right-1 top-1/2 -translate-y-1/2 px-6">
-            Search
-          </Button>
-        </div>
         <Button
           onClick={() => navigate("/purchases")}
           className="cursor-pointer"
@@ -86,22 +67,6 @@ export function PosCategoryFilter({
 
       {/* ── MOBILE ── */}
       <div className="lg:hidden space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            />
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search product..."
-              className="w-full h-10 pl-9 pr-4 rounded-xl border border-gray-200 bg-white text-sm"
-            />
-          </div>
-        </div>
-
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger>
             <Button className="flex items-center gap-1.5 h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 shrink-0">
