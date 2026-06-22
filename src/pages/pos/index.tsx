@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
@@ -7,8 +8,9 @@ import type { PosProduct } from "@/queries/pos-inventory";
 import { getPosInventory } from "@/queries/pos-inventory";
 import type { Category } from "@/types";
 import type { SaleReceipt } from "@/types/sale";
-import { Lock, ShoppingCart, Unlock, X } from "lucide-react";
+import { ArrowLeft, Lock, ShoppingCart, Unlock, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PosCategoryFilter } from "./components/pos-category-filter";
 import { PosInventoryCombobox } from "./components/pos-inventory-combobox";
@@ -20,6 +22,7 @@ import {
   OpenSessionDialog,
 } from "./components/pos-session-dialog";
 import { usePosOrder } from "./components/use-pos-order";
+import { usePosSession } from "./components/use-pos-session";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -122,17 +125,16 @@ function useBarcodeScanner({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PosPage() {
+  const navigate = useNavigate();
+
   const [allProducts, setAllProducts] = useState<PosProduct[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
-  // ── Session state — driven from persisted store ───────────────────────────
-  const { sessionId, setSessionId, clearSessionId, setWalkInCustomer } =
-    useUtilsStore();
-  // hasSession is true when there is a persisted session id
-  const hasSession = !!sessionId;
+  // ── Session state — derived live from hasSession(), never persisted ──────
+  const { hasActiveSession, refresh: refreshSession } = usePosSession();
 
   const [openSessionOpen, setOpenSessionOpen] = useState(false);
   const [closeSessionOpen, setCloseSessionOpen] = useState(false);
@@ -148,6 +150,8 @@ export default function PosPage() {
   });
 
   // ── Cart / order ─────────────────────────────────────────────────────────────
+
+  const { setWalkInCustomer } = useUtilsStore();
 
   const {
     cart,
@@ -341,9 +345,11 @@ export default function PosPage() {
   // ── Session button helpers ────────────────────────────────────────────────────
   // Open   → clickable only when NO active session
   // Close  → clickable only when there IS an active session
+  // Both are derived live from hasSession() via usePosSession(); there is no
+  // local persistence of a session id anywhere on this page.
 
   const handleOpenSessionClick = () => {
-    if (hasSession) {
+    if (hasActiveSession) {
       toast.warning("A session is already open. Close it first.");
       return;
     }
@@ -351,7 +357,7 @@ export default function PosPage() {
   };
 
   const handleCloseSessionClick = () => {
-    if (!hasSession) {
+    if (!hasActiveSession) {
       toast.warning("No active session to close.");
       return;
     }
@@ -362,22 +368,61 @@ export default function PosPage() {
 
   const openBtnClass = [
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
-    hasSession
+    hasActiveSession
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
       : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100",
   ].join(" ");
 
   const closeBtnClass = [
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
-    !hasSession
+    !hasActiveSession
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
       : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100",
   ].join(" ");
+
+  // ── Exit + session row — shared between desktop and mobile ───────────────────
+
+  const exitSessionRow = (
+    <div className="flex-none flex items-center justify-between gap-2 mb-3">
+      <Button
+        onClick={() => navigate("/purchases")}
+        className="flex items-center gap-1.5 h-9 px-3 rounded-xl transition-colors cursor-pointer"
+        variant="default"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        Exit POS
+      </Button>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleOpenSessionClick}
+          disabled={hasActiveSession}
+          className={openBtnClass}
+        >
+          <Unlock className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Open Session</span>
+          <span className="sm:hidden">Open</span>
+        </button>
+        <button
+          onClick={handleCloseSessionClick}
+          disabled={!hasActiveSession}
+          className={closeBtnClass}
+        >
+          <Lock className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Close Session</span>
+          <span className="sm:hidden">Close</span>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 p-2.5 overflow-hidden flex flex-col lg:flex-row gap-4">
       {/* ── Product list ── */}
       <div className="bg-white flex-1 rounded-lg min-w-0 flex flex-col h-full p-4 border border-gray-200">
+        {/* ── Exit POS + Open/Close Session row (left / right) ── */}
+        {exitSessionRow}
+
         {/* MOBILE: inventory picker */}
         <div className="lg:hidden flex-none mb-3">
           <PosInventoryCombobox
@@ -387,39 +432,7 @@ export default function PosPage() {
           />
         </div>
 
-        {/* MOBILE: session buttons */}
-        <div className="lg:hidden flex-none flex items-center gap-2 mb-3">
-          <button onClick={handleOpenSessionClick} className={openBtnClass}>
-            <Unlock className="w-3.5 h-3.5" />
-            Open
-          </button>
-          <button onClick={handleCloseSessionClick} className={closeBtnClass}>
-            <Lock className="w-3.5 h-3.5" />
-            Close
-          </button>
-        </div>
-
         <div className="flex-none mb-2">
-          {/* DESKTOP: session buttons row (Exit POS is already inside PosCategoryFilter) */}
-          <div className="hidden lg:flex items-center gap-2 mb-3">
-            <button onClick={handleOpenSessionClick} className={openBtnClass}>
-              <Unlock className="w-3.5 h-3.5" />
-              Open Session
-            </button>
-            <button onClick={handleCloseSessionClick} className={closeBtnClass}>
-              <Lock className="w-3.5 h-3.5" />
-              Close Session
-            </button>
-
-            {/* Active session indicator */}
-            {hasSession && (
-              <span className="flex items-center gap-1 text-xs text-green-600 font-medium bg-green-50 border border-green-200 rounded-lg px-2.5 py-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                Session active
-              </span>
-            )}
-          </div>
-
           <PosCategoryFilter
             categories={categories}
             selected={selectedCategory}
@@ -573,9 +586,9 @@ export default function PosPage() {
       <OpenSessionDialog
         open={openSessionOpen}
         onOpenChange={setOpenSessionOpen}
-        onSuccess={(res) => {
-          // Persist session id to store — survives refresh
-          if (res.id) setSessionId(res.id);
+        onSuccess={() => {
+          // Re-check session status from the API — nothing is persisted locally
+          refreshSession();
         }}
       />
       <CloseSessionDialog
@@ -584,8 +597,8 @@ export default function PosPage() {
           setCloseSessionOpen(isOpen);
         }}
         onSuccess={() => {
-          // Clear persisted session id
-          clearSessionId();
+          // Re-check session status from the API — nothing is persisted locally
+          refreshSession();
         }}
       />
 

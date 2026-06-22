@@ -122,7 +122,8 @@ export function OpenSessionDialog({
             Cancel
           </Button>
           <Button
-            className="flex-1 h-11 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold"
+            className="flex-1 h-11 rounded-xl text-sm font-semibold"
+            variant="default"
             onClick={handleSubmit}
             disabled={submitting}
           >
@@ -304,7 +305,8 @@ export function CloseSessionDialog({
             Cancel
           </Button>
           <Button
-            className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold"
+            className="flex-1 h-11 rounded-xl  text-sm font-semibold"
+            variant="default"
             onClick={handleSubmit}
             disabled={submitting}
           >
