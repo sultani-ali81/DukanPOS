@@ -7,12 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/data";
 import { getProducts } from "@/queries/products";
-import {
-  getDashboardStats,
-  getRecentSales,
-  type DashboardStats,
-  type SaleListItem,
-} from "@/queries/sale";
+import { getDashboardStats, getRecentSales } from "@/queries/sale";
+import type { DashboardStats, SaleListItem } from "@/types/sale";
 import {
   AlertTriangle,
   ArrowRight,

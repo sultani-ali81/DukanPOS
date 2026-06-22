@@ -203,7 +203,7 @@ export default function JournalPage() {
   );
 
   return (
-    <div className="p-4">
+    <div>
       <PageHeader
         title="Journal"
         description="Simple accounting entries for your shop."
