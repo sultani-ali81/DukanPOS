@@ -16,11 +16,13 @@ import { useDebounce } from "use-debounce";
 interface InventoryComboboxProps {
   value: string;
   onChange: (id: string) => void;
+  disabled?: boolean;
 }
 
 export default function InventoryCombobox({
   value,
   onChange,
+  disabled,
 }: InventoryComboboxProps) {
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [search, setSearch] = useState("");
@@ -57,11 +59,12 @@ export default function InventoryCombobox({
 
   return (
     <Combobox
-      open={open}
+      open={disabled ? false : open}
       onOpenChange={setOpen}
       value={selectedName}
       filter={() => true}
       onValueChange={(name: string | null) => {
+        if (disabled) return;
         const inv = inventories.find((i) => i.name === (name ?? ""));
         onChange(inv?.id ?? "");
         setSearch("");
@@ -69,8 +72,12 @@ export default function InventoryCombobox({
     >
       <ComboboxInput
         placeholder={selectedName || "Assign to inventory..."}
-        onChange={(e) => setSearch(e.target.value)}
-        showClear={!!value}
+        onChange={(e) => {
+          if (disabled) return;
+          setSearch(e.target.value);
+        }}
+        disabled={disabled}
+        showClear={!!value && !disabled}
         className="h-10 rounded-xl border border-gray-200 bg-transparent px-3 text-sm shadow-none focus:border-gray-300 focus:ring-3 focus:ring-gray-100"
       />
 

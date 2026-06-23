@@ -56,7 +56,7 @@ export const getPurchase = (id: string): Promise<PurchaseDetail> =>
 
 export const createPurchase = (
   payload: CreatePurchasePayload,
-): Promise<{ message: string }> => {
+): Promise<{ message: string; purchaseId: string }> => {
   const { purchaseDate, ...rest } = payload;
   return api
     .post("/purchase", { ...rest, customDate: purchaseDate })

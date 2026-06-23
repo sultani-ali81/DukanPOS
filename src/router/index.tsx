@@ -100,7 +100,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/Purchases",
+        path: "/purchases",
         element: (
           <RoleRoute allowed={["Admin"]}>
             <Purchases />
@@ -108,7 +108,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/Purchases/new",
+        path: "/purchases/new",
         element: (
           <RoleRoute allowed={["Admin"]}>
             <NewPurchasePage />
@@ -116,7 +116,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/Purchases/:id",
+        path: "/purchases/:id",
         element: (
           <RoleRoute allowed={["Admin"]}>
             <ViewPurchase />

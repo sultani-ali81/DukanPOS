@@ -35,7 +35,12 @@ export function usePurchases(): UsePurchasesReturn {
     onSearch: resetToPage1,
   });
 
-  const [status, setStatus] = useState<string>("ALL");
+  const [status, setStatusRaw] = useState<string>("ALL");
+
+  const setStatus = (value: string) => {
+    setStatusRaw(value);
+    resetToPage1();
+  };
 
   const swrKey = purchasesKey({
     search: debouncedSearch,
@@ -48,7 +53,7 @@ export function usePurchases(): UsePurchasesReturn {
     getPurchases({
       search: debouncedSearch,
       page,
-      itemsPerPage: 10,
+      itemsPerPage: PAGE_SIZE,
       status: status !== "ALL" ? status : undefined,
     }),
   );
