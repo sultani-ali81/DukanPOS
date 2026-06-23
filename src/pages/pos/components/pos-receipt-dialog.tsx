@@ -221,7 +221,8 @@ export function PosReceiptDialog({
             Close
           </Button>
           <Button
-            className="flex-1 h-11 rounded-xl bg-black hover:bg-black/90 text-white text-sm font-semibold flex items-center gap-2"
+            variant="default"
+            className="flex-1 h-11 rounded-xl text-sm font-semibold flex items-center gap-2"
             onClick={handlePrint}
           >
             <Printer className="w-4 h-4" />

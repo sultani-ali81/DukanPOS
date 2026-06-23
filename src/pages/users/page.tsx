@@ -140,7 +140,7 @@ function UserDialog({
             {!isEdit && (
               <div className="grid gap-2">
                 <Label htmlFor="user-email">
-                  Email <span className="text-destructive">*</span>
+                  Username <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="user-email"
@@ -433,7 +433,7 @@ export default function UsersPage() {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>User Name</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Actions</TableHead>

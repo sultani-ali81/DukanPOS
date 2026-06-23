@@ -28,7 +28,7 @@ export interface SaleReceipt {
   items: SaleReceiptItem[];
 }
 
-// ── Sale responses ────────────────────────────────────────────────────────────
+// ── Finalize sale response ────────────────────────────────────────────────────
 
 export interface FinalizeSaleResponse {
   message?: string;
@@ -66,12 +66,17 @@ export interface CreateStockOutResponse {
   message?: string;
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+export type DashboardRange = "today" | "yesterday" | "last-week" | "monthly";
+
 export interface DashboardStats {
-  todaySales: {
+  range: DashboardRange;
+  sales: {
     total: number;
     percentageChange: number;
   };
-  todayProfit: {
+  profit: {
     total: number;
     percentageChange: number;
   };
@@ -90,6 +95,8 @@ export interface DashboardStats {
     inventoryName: string;
   }[];
 }
+
+// ── Sales list ────────────────────────────────────────────────────────────────
 
 export interface SaleListItem {
   id: string;

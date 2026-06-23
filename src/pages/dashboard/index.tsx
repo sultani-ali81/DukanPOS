@@ -8,7 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/data";
 import { getProducts } from "@/queries/products";
 import { getDashboardStats, getRecentSales } from "@/queries/sale";
-import type { DashboardStats, SaleListItem } from "@/types/sale";
+import type {
+  DashboardRange,
+  DashboardStats,
+  SaleListItem,
+} from "@/types/sale";
 import {
   AlertTriangle,
   ArrowRight,
@@ -17,6 +21,9 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+// ── Skeletons ─────────────────────────────────────────────────────────────────
+
 function StatCardSkeleton() {
   return (
     <Card>
@@ -47,13 +54,22 @@ function SaleRowSkeleton() {
   );
 }
 
+// ── Range toggle ──────────────────────────────────────────────────────────────
+
+const RANGE_OPTIONS: { label: string; value: DashboardRange }[] = [
+  { label: "Today", value: "today" },
+  { label: "Yesterday", value: "yesterday" },
+  { label: "Last Week", value: "last-week" },
+  { label: "Monthly", value: "monthly" },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatTrend(pct: number): { value: string; positive: boolean } {
   const rounded = Math.round(pct);
   return {
-    value: `${rounded}% vs yesterday`,
-    positive: pct >= 50,
+    value: `${rounded}% vs previous period`,
+    positive: pct >= 0,
   };
 }
 
@@ -69,15 +85,20 @@ function formatDate(iso: string) {
 export default function DashboardPage() {
   const navigate = useNavigate();
 
+  const [range, setRange] = useState<DashboardRange>("today");
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentSales, setRecentSales] = useState<SaleListItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Initial load: stats + sales + products in parallel ───────────────────
+
   useEffect(() => {
+    setIsLoading(true);
     Promise.all([
-      getDashboardStats().catch((e) => {
+      getDashboardStats(range).catch((e) => {
         setError((e as Error).message ?? "Failed to load dashboard");
         return null;
       }),
@@ -93,11 +114,25 @@ export default function DashboardPage() {
         if (productsRes) setTotalProducts(productsRes.meta.totalItems ?? 0);
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Re-fetch only stats when range changes ────────────────────────────────
+
+  useEffect(() => {
+    // Skip on mount — initial load above handles it
+    setStatsLoading(true);
+    setError(null);
+    getDashboardStats(range)
+      .then((res) => setStats(res))
+      .catch((e) => setError((e as Error).message ?? "Failed to load stats"))
+      .finally(() => setStatsLoading(false));
+  }, [range]);
 
   const lowStockCount =
     (stats?.lowStockProducts?.length ?? 0) +
     (stats?.outOfStockProducts?.length ?? 0);
+
+  const showStatsLoading = isLoading || statsLoading;
 
   return (
     <div>
@@ -117,9 +152,27 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ── Range toggle ── */}
+      <div className="mb-4 flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1 w-fit">
+        {RANGE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setRange(opt.value)}
+            className={[
+              "h-8 rounded-lg px-3.5 text-sm font-medium transition-colors",
+              range === opt.value
+                ? "bg-white text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {isLoading ? (
+        {showStatsLoading ? (
           <>
             <StatCardSkeleton />
             <StatCardSkeleton />
@@ -129,16 +182,16 @@ export default function DashboardPage() {
         ) : (
           <>
             <StatCard
-              label="Today's Sales"
-              value={formatCurrency(stats?.todaySales?.total ?? 0)}
+              label="Sales"
+              value={formatCurrency(stats?.sales?.total ?? 0)}
               icon={DollarSign}
-              trend={formatTrend(stats?.todaySales?.percentageChange ?? 0)}
+              trend={formatTrend(stats?.sales?.percentageChange ?? 0)}
             />
             <StatCard
-              label="Today's Profit"
-              value={formatCurrency(stats?.todayProfit?.total ?? 0)}
+              label="Profit"
+              value={formatCurrency(stats?.profit?.total ?? 0)}
               icon={TrendingUp}
-              trend={formatTrend(stats?.todayProfit?.percentageChange ?? 0)}
+              trend={formatTrend(stats?.profit?.percentageChange ?? 0)}
             />
             <StatCard
               label="Out of Stock"
@@ -150,7 +203,6 @@ export default function DashboardPage() {
                   (stats?.outOfStockProducts?.length ?? 0) > 0
                     ? "Needs restocking"
                     : "All stocked",
-
                 positive: (stats?.outOfStockProducts?.length ?? 0) === 0,
               }}
             />
@@ -191,7 +243,7 @@ export default function DashboardPage() {
           </div>
         ) : recentSales.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
-            No sales recorded today yet.
+            No sales recorded yet.
           </div>
         ) : (
           <div className="space-y-2">
@@ -226,8 +278,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Low Stock + Out of Stock Alerts */}
-      {lowStockCount > 0 && !isLoading ? (
+      {/* Stock Alerts */}
+      {lowStockCount > 0 && !isLoading && !statsLoading ? (
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

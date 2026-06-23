@@ -45,6 +45,7 @@ export interface EmployeeInfo {
   oldPassword?: string;
   password?: string;
   attachmentId?: string;
+  twoFactorEnabled: boolean;
 }
 
 export interface OrderFoodPayload {
@@ -64,7 +65,7 @@ export interface InventoryItem {
   unit: string;
   price: number;
   status: StockStatus;
-  lastUpdated: string; // ISO yyyy-mm-dd
+  lastUpdated: string;
 }
 
 export interface Category {

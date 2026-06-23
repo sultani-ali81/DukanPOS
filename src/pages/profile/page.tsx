@@ -18,6 +18,7 @@ import { ArrowLeft, Loader2, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { EditProfileDialog } from "./edit-profile-dialog";
+import { TwoFactorCard } from "./two-factor-card";
 
 export default function ProfileClient() {
   const navigate = useNavigate();
@@ -77,13 +78,14 @@ export default function ProfileClient() {
         </Button>
       </PageHeader>
 
-      <div className="max-w-2xl">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        {/* ── Left: Personal information ── */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Personal Information</CardTitle>
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={openEdit}
             >
@@ -153,6 +155,9 @@ export default function ProfileClient() {
             </div>
           </CardContent>
         </Card>
+
+        {/* ── Right: 2FA — no props needed, reads from auth store ── */}
+        <TwoFactorCard />
       </div>
 
       <EditProfileDialog

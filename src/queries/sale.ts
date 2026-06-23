@@ -1,12 +1,11 @@
 import api from "@/lib/axios";
 
-// ── Sale ──────────────────────────────────────────────────────────────────────
-
 import type {
   CreateSalePayload,
   CreateSaleResponse,
   CreateStockOutPayload,
   CreateStockOutResponse,
+  DashboardRange,
   DashboardStats,
   FinalizeSaleResponse,
   SaleListItem,
@@ -46,8 +45,10 @@ export async function updateSale(id: string): Promise<{ message: string }> {
   return res.data;
 }
 
-export const getDashboardStats = (): Promise<DashboardStats> =>
-  api.get("/sales/dashboard").then((r) => r.data);
+export const getDashboardStats = (
+  range: DashboardRange = "today",
+): Promise<DashboardStats> =>
+  api.get("/sales/dashboard", { params: { range } }).then((r) => r.data);
 
 export const getRecentSales = (
   page = 1,

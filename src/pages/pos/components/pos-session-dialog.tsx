@@ -235,7 +235,8 @@ export function CloseSessionDialog({
 
           <div className="px-5 pb-5">
             <Button
-              className="w-full h-11 rounded-xl bg-black hover:bg-black/90 text-white text-sm font-semibold"
+              variant="default"
+              className="w-full h-11 rounded-xl text-sm font-semibold"
               onClick={handleClose}
             >
               Done
