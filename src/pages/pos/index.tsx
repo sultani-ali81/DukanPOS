@@ -8,10 +8,18 @@ import type { PosProduct } from "@/queries/pos-inventory";
 import { getPosInventory } from "@/queries/pos-inventory";
 import type { Category } from "@/types";
 import type { SaleReceipt } from "@/types/sale";
-import { ArrowLeft, Lock, ShoppingCart, Unlock, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  Lock,
+  ShoppingCart,
+  Unlock,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { PosCashMovementDialog } from "./components/pos-cash-movement-dialog";
 import { PosCategoryFilter } from "./components/pos-category-filter";
 import { PosInventoryCombobox } from "./components/pos-inventory-combobox";
 import { PosOrderDetails } from "./components/pos-order-details";
@@ -139,6 +147,9 @@ export default function PosPage() {
   const [openSessionOpen, setOpenSessionOpen] = useState(false);
   const [closeSessionOpen, setCloseSessionOpen] = useState(false);
 
+  // ── Cash movement dialog ──────────────────────────────────────────────────
+  const [cashMovementOpen, setCashMovementOpen] = useState(false);
+
   // ── Receipt dialog ───────────────────────────────────────────────────────────
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<SaleReceipt | null>(null);
@@ -226,9 +237,6 @@ export default function PosPage() {
   }, [loadInventory]);
 
   // ── On mount: restore inventory + ensure walk-in customer is always set ───────
-  // customerId is seeded from the store inside usePosOrder, so it survives
-  // refresh. If it's still empty (first ever visit), fetch the first customer
-  // (walk-in) from the API and persist it to the store for all future visits.
 
   useEffect(() => {
     if (inventoryId) loadInventory(inventoryId);
@@ -240,7 +248,6 @@ export default function PosPage() {
             const c = data[0];
             setCustomerId(c.id);
             setCustomerLabel(c.name);
-            // Persist walk-in so future sessions skip this API call
             setWalkInCustomer(c.id, c.name);
           }
         })
@@ -343,10 +350,6 @@ export default function PosPage() {
   };
 
   // ── Session button helpers ────────────────────────────────────────────────────
-  // Open   → clickable only when NO active session
-  // Close  → clickable only when there IS an active session
-  // Both are derived live from hasSession() via usePosSession(); there is no
-  // local persistence of a session id anywhere on this page.
 
   const handleOpenSessionClick = () => {
     if (hasActiveSession) {
@@ -364,7 +367,15 @@ export default function PosPage() {
     setCloseSessionOpen(true);
   };
 
-  // ── Session button shared styles ──────────────────────────────────────────────
+  const handleCashMovementClick = () => {
+    if (!hasActiveSession) {
+      toast.warning("Open a session before recording cash movements.");
+      return;
+    }
+    setCashMovementOpen(true);
+  };
+
+  // ── Button styles ─────────────────────────────────────────────────────────────
 
   const openBtnClass = [
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
@@ -378,6 +389,13 @@ export default function PosPage() {
     !hasActiveSession
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
       : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100",
+  ].join(" ");
+
+  const cashMovementBtnClass = [
+    "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
+    !hasActiveSession
+      ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
+      : "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100",
   ].join(" ");
 
   // ── Exit + session row — shared between desktop and mobile ───────────────────
@@ -403,6 +421,17 @@ export default function PosPage() {
           <span className="hidden sm:inline">Open Session</span>
           <span className="sm:hidden">Open</span>
         </button>
+
+        <button
+          onClick={handleCashMovementClick}
+          disabled={!hasActiveSession}
+          className={cashMovementBtnClass}
+        >
+          <ArrowLeftRight className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Cash Movement</span>
+          <span className="sm:hidden">Cash</span>
+        </button>
+
         <button
           onClick={handleCloseSessionClick}
           disabled={!hasActiveSession}
@@ -587,7 +616,6 @@ export default function PosPage() {
         open={openSessionOpen}
         onOpenChange={setOpenSessionOpen}
         onSuccess={() => {
-          // Re-check session status from the API — nothing is persisted locally
           refreshSession();
         }}
       />
@@ -597,9 +625,14 @@ export default function PosPage() {
           setCloseSessionOpen(isOpen);
         }}
         onSuccess={() => {
-          // Re-check session status from the API — nothing is persisted locally
           refreshSession();
         }}
+      />
+
+      {/* ── Cash movement dialog ── */}
+      <PosCashMovementDialog
+        open={cashMovementOpen}
+        onOpenChange={setCashMovementOpen}
       />
 
       {/* ── Receipt dialog ── */}

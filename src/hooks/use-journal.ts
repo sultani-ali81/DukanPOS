@@ -2,7 +2,8 @@ import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
 import { getJournalEntries, getJournalEntry } from "@/queries/journal";
 import type { JournalEntry } from "@/types/journal";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import useSWR from "swr";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -40,24 +41,13 @@ export interface UseJournalsReturn {
 }
 
 export function useJournals(): UseJournalsReturn {
-  const [journals, setJournals] = useState<JournalEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [meta, setMeta] = useState({
-    currentPage: 1,
-    itemsPerPage: ITEMS_PER_PAGE,
-    totalItems: 0,
-    totalPages: 1,
-    totalCount: 0,
-  });
-
-  // detail dialog
+  // ── Detail dialog ────────────────────────────────────────────────────────────
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // ── Pagination + search ──────────────────────────────────────────────────────
   const { page, goToPage, resetToPage1 } = usePagination({
     initialPage: 1,
     initialItemsPerPage: ITEMS_PER_PAGE,
@@ -68,39 +58,38 @@ export function useJournals(): UseJournalsReturn {
     onSearch: resetToPage1,
   });
 
-  const debouncedRef = useRef(debouncedSearch);
-  useEffect(() => {
-    debouncedRef.current = debouncedSearch;
-  }, [debouncedSearch]);
+  // ── SWR list fetch ───────────────────────────────────────────────────────────
+  // Key changes whenever page or debouncedSearch changes — SWR re-fetches automatically.
+  const swrKey = ["journal-entries", page, debouncedSearch] as const;
 
-  const fetchJournals = () => {
-    setLoading(true);
-    setError(null);
+  const {
+    data,
+    isLoading,
+    error: swrError,
+  } = useSWR(swrKey, ([, p, q]) =>
     getJournalEntries({
-      page,
+      page: p,
       itemsPerPage: ITEMS_PER_PAGE,
-      search: debouncedRef.current || undefined,
-    })
-      .then(({ data, meta: m }) => {
-        setJournals(data);
-        setMeta(m);
-      })
-      .catch((err) => {
-        setError(
-          err?.response?.data?.message ??
-            err.message ??
-            "Failed to load journal entries",
-        );
-      })
-      .finally(() => setLoading(false));
+      search: q || undefined,
+    }),
+  );
+
+  const journals = data?.data ?? [];
+  const meta = data?.meta ?? {
+    currentPage: 1,
+    itemsPerPage: ITEMS_PER_PAGE,
+    totalItems: 0,
+    totalPages: 1,
+    totalCount: 0,
   };
 
-  useEffect(() => {
-    fetchJournals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, debouncedSearch]);
+  const error: string | null = swrError
+    ? (swrError?.response?.data?.message ??
+      swrError?.message ??
+      "Failed to load journal entries")
+    : null;
 
-  // derived stats from loaded data (all pages)
+  // ── Derived stats ────────────────────────────────────────────────────────────
   const stats = useMemo((): JournalStats => {
     const now = new Date();
     const thisMonth = journals.filter((je) => {
@@ -130,6 +119,7 @@ export function useJournals(): UseJournalsReturn {
     };
   }, [journals, meta]);
 
+  // ── Detail open/close ────────────────────────────────────────────────────────
   const openDetail = (je: JournalEntry) => {
     setSelectedEntry(je);
     setDetailOpen(true);
@@ -147,7 +137,7 @@ export function useJournals(): UseJournalsReturn {
 
   return {
     journals,
-    loading,
+    loading: isLoading,
     error,
     stats,
     page,

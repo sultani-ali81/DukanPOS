@@ -10,7 +10,7 @@ export interface DashboardStats {
     total: number;
     percentageChange: number;
   };
-  lowStockProducts: {
+  lowStockProducts?: {
     id: string;
     name: string;
     price: number;
