@@ -5,8 +5,6 @@ import type {
   CreateSaleResponse,
   CreateStockOutPayload,
   CreateStockOutResponse,
-  DashboardRange,
-  DashboardStats,
   FinalizeSaleResponse,
   SaleListItem,
   SalesMeta,
@@ -44,11 +42,6 @@ export async function updateSale(id: string): Promise<{ message: string }> {
   const res = await api.put(`/sales/${id}`, { status: "Done" });
   return res.data;
 }
-
-export const getDashboardStats = (
-  range: DashboardRange = "today",
-): Promise<DashboardStats> =>
-  api.get("/dashboard", { params: { range } }).then((r) => r.data);
 
 export const getRecentSales = (
   page = 1,

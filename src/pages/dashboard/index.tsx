@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/data";
+import { getDashboardStats } from "@/queries/dashboard";
 import { getProducts } from "@/queries/products";
-import { getDashboardStats, getRecentSales } from "@/queries/sale";
-import type { DashboardRange, DashboardStats } from "@/types/sale";
+import type { DashboardRange, DashboardStats } from "@/types/dashboard";
 import {
   AlertTriangle,
   ArrowRight,
@@ -72,7 +72,6 @@ export default function DashboardPage() {
         setError((e as Error).message ?? "Failed to load dashboard");
         return null;
       }),
-      getRecentSales(1, 5).catch(() => ({ data: [], meta: {} })),
       getProducts({ page: 1, itemsPerPage: 1 }).catch(() => ({
         data: [],
         meta: { totalItems: 0 },
@@ -87,7 +86,6 @@ export default function DashboardPage() {
   // ── Re-fetch only stats when range changes ────────────────────────────────
 
   useEffect(() => {
-    // Skip on mount — initial load above handles it
     setStatsLoading(true);
     setError(null);
     getDashboardStats(range)
