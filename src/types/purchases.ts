@@ -73,6 +73,7 @@ export interface PurchaseListItem {
   itemsPerPage: number;
   /** Stock-in records associated with this purchase */
   stockIns?: StockInResponse[];
+  inventoryId?: string | null;
 }
 
 // ── Detail (returned by GET /purchase/:id) ────────────────────────────────────
@@ -85,6 +86,7 @@ export interface CreatePurchasePayload {
   customerId: string;
   /** ISO date string from the date picker */
   purchaseDate: string;
+  inventoryId?: string;
   items: PurchaseItemPayload[];
 }
 

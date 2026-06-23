@@ -98,9 +98,9 @@
 
   --border: oklch(0.24 0.015 285 / 12%);
   --input: oklch(0.24 0.015 285 / 16%);
-  --ring: oklch(0.62 0.24 290);
+  --ring: oklch(23.538% 0.10872 272.315);
 
-  --chart-1: oklch(0.62 0.24 290);
+  --chart-1: oklch(26.399% 0.12294 271.924);
   --chart-2: oklch(0.7 0.18 275);
   --chart-3: oklch(34.463% 0.07877 310.725);
   --chart-4: oklch(0.76 0.12 260);
@@ -117,7 +117,7 @@
 
   /* FIX: Light mode sidebar border visible separation */
   --sidebar-border: oklch(0.24 0.015 285 / 10%);
-  --sidebar-ring: oklch(0.62 0.24 290);
+  --sidebar-ring: oklch(11.571% 0.04438 297.649);
 }
 
 .dark {
@@ -276,7 +276,7 @@
 
     box-shadow:
       0 8px 32px rgba(139, 92, 246, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      inset 0 1px 0 rgba(253, 249, 249, 0.08);
   }
 }
 .satoshi {

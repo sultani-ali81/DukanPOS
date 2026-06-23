@@ -13,6 +13,7 @@ interface InlineComboboxProps {
   onInputChange: (v: string) => void;
   onSelect: (id: string, label: string, sub: string) => void;
   error?: string;
+  disabled?: boolean;
 }
 
 export function InlineCombobox({
@@ -25,6 +26,7 @@ export function InlineCombobox({
   onInputChange,
   onSelect,
   error,
+  disabled,
 }: InlineComboboxProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -49,10 +51,12 @@ export function InlineCombobox({
           placeholder={placeholder}
           className={`h-11 pl-9 pr-3 rounded-xl border-gray-200 text-sm ${error ? "border-red-400" : ""}`}
           onFocus={() => {
+            if (disabled) return;
             onFocus();
             setOpen(true);
           }}
           onChange={(e) => {
+            if (disabled) return;
             onInputChange(e.target.value);
             setOpen(true);
           }}

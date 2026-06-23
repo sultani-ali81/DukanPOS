@@ -143,7 +143,8 @@ export function PurchasesClient() {
         title="Purchases"
         description="View and manage purchases"
       ></PageHeader>
-      <div className="px-2 py-2 ">
+
+      <div>
         {/* Error banner */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center justify-between">
@@ -158,7 +159,7 @@ export function PurchasesClient() {
         )}
 
         {/* Table card */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Toolbar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100">
             <div>
@@ -203,7 +204,7 @@ export function PurchasesClient() {
                 </div>
               )}
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="rounded-sm border-gray-200 text-sm w-36">
+                <SelectTrigger className=" border-gray-200 text-sm w-36">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -219,8 +220,8 @@ export function PurchasesClient() {
                 </SelectContent>
               </Select>
               <Button
-                onClick={() => navigate("/Purchases/new")}
-                className="h-10 rounded-lg text-white text-sm gap-1.5"
+                onClick={() => navigate("/purchases/new")}
+                className="h-10 text-sm gap-1.5"
               >
                 <Plus className="w-4 h-4" />
                 Add Purchase
@@ -270,7 +271,7 @@ export function PurchasesClient() {
                     return (
                       <div
                         key={item.id}
-                        onClick={() => navigate(`/Purchases/${item.id}`)}
+                        onClick={() => navigate(`/purchases/${item.id}`)}
                         className="grid grid-cols-7 justify-items-center items-center text-center py-4 px-2 hover:bg-gray-50/80 transition-colors cursor-pointer"
                       >
                         {/* Purchase # */}
@@ -319,7 +320,7 @@ export function PurchasesClient() {
                               variant="ghost"
                               size="sm"
                               disabled={loadingId === item.id}
-                              className="h-8 w-8 p-0 rounded-lg hover:bg-gray-100 disabled:opacity-40"
+                              className="h-8 w-8 p-0 rounded-lg cursor-pointer hover:bg-primary/20"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <MoreHorizontal
@@ -336,7 +337,7 @@ export function PurchasesClient() {
                               className="text-xs cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/Purchases/${item.id}`);
+                                navigate(`/purchases/${item.id}`);
                               }}
                             >
                               View

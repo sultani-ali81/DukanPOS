@@ -49,10 +49,10 @@ export function PurchaseItemRow({
     Number(watchedItem?.quantity || 0) * Number(watchedItem?.unitPrice || 0);
 
   return (
-    <div className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/50">
+    <div className="border border-gray-200 rounded-xl p-4 space-y-3">
       {/* Product */}
       <div className="space-y-1.5">
-        <Label className="text-xs text-gray-500">Product</Label>
+        <Label className="text-sm text-gray-700">Product</Label>
         <Controller
           control={control}
           name={`items.${index}.productId`}
