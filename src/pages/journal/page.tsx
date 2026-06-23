@@ -2,12 +2,6 @@ import { NewJournalEntryDialog } from "@/components/new-journal-entry-dialog";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
@@ -25,7 +19,16 @@ import {
   getStatusVariant,
 } from "@/lib/status";
 import type { JournalItem } from "@/types/journal";
-import { BookOpenCheck, Loader2 } from "lucide-react";
+import { BookOpenCheck } from "lucide-react";
+import { JournalDetailDialog } from "./journal-detail-dialog";
+
+function entryDebit(items: JournalItem[]) {
+  return items.reduce((s, i) => s + (i.debit ?? 0), 0);
+}
+
+function entryCredit(items: JournalItem[]) {
+  return items.reduce((s, i) => s + (i.credit ?? 0), 0);
+}
 
 function formatDate(iso?: string) {
   if (!iso) return "—";
@@ -34,14 +37,6 @@ function formatDate(iso?: string) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function entryDebit(items: JournalItem[]) {
-  return items.reduce((s, i) => s + (i.debit ?? 0), 0);
-}
-
-function entryCredit(items: JournalItem[]) {
-  return items.reduce((s, i) => s + (i.credit ?? 0), 0);
 }
 
 function TableSkeleton() {
@@ -67,114 +62,6 @@ function TableSkeleton() {
         </TableRow>
       ))}
     </>
-  );
-}
-
-function JournalDetailDialog({
-  open,
-  onClose,
-  entry,
-  loading,
-}: {
-  open: boolean;
-  onClose: () => void;
-  entry: ReturnType<typeof useJournals>["selectedEntry"];
-  loading: boolean;
-}) {
-  if (!entry) return null;
-
-  const seqId = entry.sequence
-    ? `${entry.sequence.prefix}-${String(entry.sequence.lastIndex).padStart(4, "0")}`
-    : "—";
-
-  const dr = entryDebit(entry.items ?? []);
-  const cr = entryCredit(entry.items ?? []);
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="!max-w-3xl w-[90vw]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BookOpenCheck className="size-4 text-muted-foreground" />
-            <span className="font-mono">{seqId}</span>
-            <Badge
-              variant={getStatusVariant(entry.status)}
-              className={getStatusClassName(entry.status)}
-            >
-              {getStatusLabel(entry.status)}
-            </Badge>
-          </DialogTitle>
-        </DialogHeader>
-
-        <p className="text-xs text-muted-foreground -mt-2">
-          {formatDate(entry.createdAt)}
-        </p>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-10">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="h-8 py-1.5 text-xs">Account</TableHead>
-                <TableHead className="h-8 py-1.5 text-xs">Type</TableHead>
-                <TableHead className="h-8 py-1.5 text-right text-xs">
-                  Debit
-                </TableHead>
-                <TableHead className="h-8 py-1.5 text-right text-xs">
-                  Credit
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(entry.items ?? []).map((item) => (
-                <TableRow key={item.id} className="h-8">
-                  <TableCell className="py-1.5 font-medium text-sm">
-                    {item.account?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="py-1.5">
-                    <Badge variant="outline" className="text-xs">
-                      {item.account?.type ?? "—"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="py-1.5 text-right tabular-nums text-sm">
-                    {(item.debit ?? 0) > 0 ? (
-                      <span className="font-medium text-destructive">
-                        {formatCurrency(item.debit)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-1.5 text-right tabular-nums text-sm">
-                    {(item.credit ?? 0) > 0 ? (
-                      <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(item.credit)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              <TableRow className="h-8 border-t-2 font-bold">
-                <TableCell colSpan={2} className="py-1.5 text-sm">
-                  Total
-                </TableCell>
-                <TableCell className="py-1.5 text-right text-sm text-destructive tabular-nums">
-                  {formatCurrency(dr)}
-                </TableCell>
-                <TableCell className="py-1.5 text-right text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
-                  {formatCurrency(cr)}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -275,26 +162,14 @@ export default function JournalPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-left tabular-nums">
-                          {entry.items[0].account.name === "Default Account" ? (
-                            <span className="font-medium text-emerald-600 dark">
-                              {formatCurrency(dr)}
-                            </span>
-                          ) : (
-                            <span className="font-medium text-destructive">
-                              {formatCurrency(dr)}
-                            </span>
-                          )}
+                          <span className="font-medium text-destructive">
+                            {formatCurrency(dr)}
+                          </span>
                         </TableCell>
                         <TableCell className="text-left tabular-nums">
-                          {entry.items[1].account.name === "Default Account" ? (
-                            <span className="font-medium text-destructive">
-                              {formatCurrency(dr)}
-                            </span>
-                          ) : (
-                            <span className="font-medium text-emerald-600 dark">
-                              {formatCurrency(dr)}
-                            </span>
-                          )}
+                          <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(cr)}
+                          </span>
                         </TableCell>
                       </TableRow>
                     );

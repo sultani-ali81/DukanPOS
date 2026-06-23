@@ -8,11 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/data";
 import { getProducts } from "@/queries/products";
 import { getDashboardStats, getRecentSales } from "@/queries/sale";
-import type {
-  DashboardRange,
-  DashboardStats,
-  SaleListItem,
-} from "@/types/sale";
+import type { DashboardRange, DashboardStats } from "@/types/sale";
 import {
   AlertTriangle,
   ArrowRight,
@@ -39,21 +35,6 @@ function StatCardSkeleton() {
   );
 }
 
-function SaleRowSkeleton() {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
-      <div className="space-y-1.5">
-        <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-        <div className="h-3 w-36 animate-pulse rounded bg-muted" />
-      </div>
-      <div className="space-y-1 text-right">
-        <div className="h-4 w-16 animate-pulse rounded bg-muted" />
-        <div className="h-3 w-12 animate-pulse rounded bg-muted ml-auto" />
-      </div>
-    </div>
-  );
-}
-
 // ── Range toggle ──────────────────────────────────────────────────────────────
 
 const RANGE_OPTIONS: { label: string; value: DashboardRange }[] = [
@@ -73,22 +54,11 @@ function formatTrend(pct: number): { value: string; positive: boolean } {
   };
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function DashboardPage() {
   const navigate = useNavigate();
 
   const [range, setRange] = useState<DashboardRange>("today");
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentSales, setRecentSales] = useState<SaleListItem[]>([]);
-  const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,10 +78,8 @@ export default function DashboardPage() {
         meta: { totalItems: 0 },
       })),
     ])
-      .then(([statsRes, salesRes, productsRes]) => {
+      .then(([statsRes]) => {
         if (statsRes) setStats(statsRes);
-        if (salesRes) setRecentSales(salesRes.data);
-        if (productsRes) setTotalProducts(productsRes.meta.totalItems ?? 0);
       })
       .finally(() => setIsLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -217,64 +185,6 @@ export default function DashboardPage() {
               }}
             />
           </>
-        )}
-      </div>
-
-      {/* Recent Sales */}
-      <div className="mt-6">
-        <div className="mb-3 flex flex-row items-center justify-between">
-          <h3 className="text-base font-semibold text-foreground">
-            Recent Sales
-          </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/reports")}
-          >
-            View all
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <SaleRowSkeleton key={i} />
-            ))}
-          </div>
-        ) : recentSales.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
-            No sales recorded yet.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {recentSales.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    #{s.sequenceId}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {s.customer?.name ?? "Walk-in"} · {s.items?.length ?? 0}{" "}
-                    items · {formatDate(s.createdAt)}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-foreground">
-                    {formatCurrency(s.totalPrice ?? 0)}
-                  </p>
-                  <Badge
-                    variant={s.status === "Completed" ? "secondary" : "outline"}
-                    className="mt-0.5 text-xs"
-                  >
-                    {s.status ?? "—"}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
         )}
       </div>
 

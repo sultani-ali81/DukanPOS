@@ -9,27 +9,30 @@ export interface JournalAccount {
 export interface JournalPurchaseProduct {
   id: string;
   name: string;
-  scannerId: string | null;
+  scannerId?: string | null;
+  barcode?: string | null;
   price: number;
   store: string;
 }
 
 export interface JournalPurchaseItem {
   id: string;
-  purchase: string;
+  purchase?: string;
+  sale?: string;
   product: JournalPurchaseProduct;
   quantity: number;
-  received: number | null;
+  received?: number | null;
   unitPrice: number;
   createdAt: string;
+  updatedAt?: string | null;
 }
 
-export interface JournalPurchase {
+export interface JournalSaleOrPurchase {
   id: string;
   sequence: string;
   customer: string;
   store: string;
-  customDate: string;
+  customDate?: string;
   status: string;
   createdAt?: string;
   updatedAt?: string | null;
@@ -39,7 +42,8 @@ export interface JournalPurchase {
 export interface JournalItem {
   id: string;
   journalEntry: string;
-  purchase: JournalPurchase;
+  purchase: JournalSaleOrPurchase | null;
+  sale: JournalSaleOrPurchase | null;
   account: JournalAccount;
   credit: number | null;
   debit: number | null;

@@ -13,6 +13,7 @@
     "@base-ui/react": "^1.5.0",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-checkbox": "^1.3.5",
+    "@react-pdf/renderer": "^4.5.1",
     "@tailwindcss/vite": "^4.3.1",
     "axios": "^1.18.0",
     "class-variance-authority": "^0.7.1",
@@ -35,6 +36,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.1",
     "use-debounce": "^10.1.1",
+    "vaul": "^1.1.2",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },

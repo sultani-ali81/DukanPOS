@@ -16,9 +16,9 @@ import { useState } from "react";
 interface Props {
   open: boolean;
   onClose: () => void;
-  title: string; // e.g. "Verify Email" / "Two-Factor Auth"
-  description: string; // e.g. "We sent a code to john@email.com"
-  onVerify: (code: string) => Promise<void>; // caller handles the API call
+  title: string;
+  description: string;
+  onVerify: (code: string) => Promise<void>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -82,7 +82,8 @@ export default function OtpDialog({
           {error && <p className="text-red-500 text-xs">{error}</p>}
 
           <Button
-            className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white"
+            variant="default"
+            className="w-full h-11"
             onClick={handleVerify}
             disabled={loading || code.length < 6}
           >

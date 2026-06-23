@@ -48,7 +48,7 @@ export async function updateSale(id: string): Promise<{ message: string }> {
 export const getDashboardStats = (
   range: DashboardRange = "today",
 ): Promise<DashboardStats> =>
-  api.get("/sales/dashboard", { params: { range } }).then((r) => r.data);
+  api.get("/dashboard", { params: { range } }).then((r) => r.data);
 
 export const getRecentSales = (
   page = 1,

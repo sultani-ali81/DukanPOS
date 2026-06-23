@@ -4,7 +4,7 @@ import { getJournalEntries, getJournalEntry } from "@/queries/journal";
 import type { JournalEntry } from "@/types/journal";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const ITEMS_PER_PAGE = 15;
+const ITEMS_PER_PAGE = 20;
 
 export interface JournalStats {
   totalEntries: number;
