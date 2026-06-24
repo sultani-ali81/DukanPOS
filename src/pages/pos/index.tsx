@@ -32,7 +32,7 @@ import {
 import { usePosOrder } from "./components/use-pos-order";
 import { usePosSession } from "./components/use-pos-session";
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 20;
 
 // ── Barcode WebSocket hook ────────────────────────────────────────────────────
 

@@ -1,27 +1,31 @@
-export type DashboardRange = "today" | "yesterday" | "last-week" | "monthly";
+export type DashboardRange =
+  | "today"
+  | "yesterday"
+  | "last-week"
+  | "monthly"
+  | "custom";
+
+export interface DailyStats {
+  date: string;
+  dayName: string;
+  sales: { total: number };
+  profit: { total: number };
+}
+
+export interface DashboardStockProduct {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  inventoryName: string;
+}
 
 export interface DashboardStats {
   range: DashboardRange;
-  sales: {
-    total: number;
-    percentageChange: number;
-  };
-  profit: {
-    total: number;
-    percentageChange: number;
-  };
-  lowStockProducts?: {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    inventoryName: string;
-  }[];
-  outOfStockProducts: {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    inventoryName: string;
-  }[];
+  customRange?: { from: string; to: string };
+  sales: { total: number; percentageChange: number };
+  profit: { total: number; percentageChange: number };
+  lowStockProducts?: DashboardStockProduct[];
+  outOfStockProducts?: DashboardStockProduct[];
+  dailyBreakdown?: DailyStats[];
 }

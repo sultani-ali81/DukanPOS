@@ -244,7 +244,6 @@ export default function InventoryDetailPage() {
                 <TableHead className="w-14">Image</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Categories</TableHead>
-                <TableHead>Barcode</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead className="text-right">Status</TableHead>
@@ -317,12 +316,6 @@ export default function InventoryDetailPage() {
                           )}
                         </div>
                       </TableCell>
-
-                      {/* Barcode */}
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {product.barcode ?? "—"}
-                      </TableCell>
-
                       {/* Price */}
                       <TableCell className="text-right tabular-nums">
                         {formatCurrency(product.price)}
