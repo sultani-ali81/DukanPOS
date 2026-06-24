@@ -1,8 +1,7 @@
-// ── Public domain types ───────────────────────────────────────────────────────
+// src/types/inventory.ts
 
 export type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 
-/** Lightweight summary used in the paginated list (GET /inventory). */
 export interface InventoryItem {
   id: string;
   name: string;
@@ -11,10 +10,9 @@ export interface InventoryItem {
   unit: string;
   price: number;
   status: StockStatus;
-  lastUpdated: string; // ISO yyyy-mm-dd
+  lastUpdated: string;
 }
 
-/** Inventory summary as returned by GET /inventory (list). */
 export interface Inventory {
   id: string;
   name: string;
@@ -22,19 +20,27 @@ export interface Inventory {
   items: InventoryItem[];
 }
 
-/**
- * A product inside a single inventory, as returned by GET /inventory/:id.
- * The backend joins product fields with the StockQuantity row for that inventory.
- */
+export interface InventoryProductCategory {
+  id: string;
+  name: string;
+}
+
+export interface InventoryProductImage {
+  id: string;
+  imageUrlSigned: string;
+}
+
 export interface InventoryProduct {
   id: string;
   name: string;
   price: number;
-  quantity: number; // from StockQuantity
-  image?: string;
+  quantity: number;
+  barcode?: string | null;
+  sequence?: string | null;
+  categories: InventoryProductCategory[];
+  images: InventoryProductImage[];
 }
 
-/** Full inventory detail returned by GET /inventory/:id. */
 export interface InventoryDetail {
   id: string;
   name: string;
@@ -60,8 +66,6 @@ export interface PaginatedInventories {
   meta: PaginationMeta;
 }
 
-// ── Query param types ─────────────────────────────────────────────────────────
-
 export interface GetInventoriesParams {
   page?: number;
   itemsPerPage?: number;
@@ -69,10 +73,7 @@ export interface GetInventoriesParams {
   totalPages?: number;
 }
 
-// ── Raw API response shapes (internal — not exported) ─────────────────────────
-// These mirror exactly what the backend sends before mapping. They live here so
-// the query file stays focused on logic, and so they're co-located with the
-// domain types they map into.
+// ── Raw API response shapes ───────────────────────────────────────────────────
 
 export interface RawInventoryItem {
   id: string;
@@ -100,6 +101,10 @@ export interface RawInventoryDetailProduct {
   name: string;
   price: number;
   quantity: number;
+  barcode?: string | null;
+  sequence?: string | null;
+  categories?: { id: string; name: string }[];
+  images?: { id: string; imageUrlSigned: string }[];
 }
 
 export interface RawInventoryDetail {

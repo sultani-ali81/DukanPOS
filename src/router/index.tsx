@@ -1,9 +1,9 @@
 import AppLayout from "@/components/layout/app-layout";
-
 import Login from "@/pages/(auth)/login";
 import CategoriesPage from "@/pages/categories";
 import ContactsPage from "@/pages/contacts";
 import Dashboard from "@/pages/dashboard";
+import InventoryDetailPage from "@/pages/inventory/[id]/page";
 import InventoryPage from "@/pages/inventory/page";
 import JournalPage from "@/pages/journal/page";
 import PosPage from "@/pages/pos";
@@ -96,6 +96,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allowed={["Admin"]}>
             <InventoryPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: "/inventory/:id",
+        element: (
+          <RoleRoute allowed={["Admin"]}>
+            <InventoryDetailPage />
           </RoleRoute>
         ),
       },

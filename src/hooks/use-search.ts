@@ -13,15 +13,13 @@ export function useSearch({
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, debounceMs);
 
-  const isFirstRender = useRef(true);
+  const prevDebouncedRef = useRef(debouncedSearch);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+    if (debouncedSearch === prevDebouncedRef.current) return;
+    prevDebouncedRef.current = debouncedSearch;
     onSearch?.();
-  }, [debouncedSearch]);
+  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (value: string) => {
     setSearch(value);

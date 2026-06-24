@@ -1,3 +1,4 @@
+// src/queries/inventory.ts
 import api from "@/lib/axios";
 import type {
   GetInventoriesParams,
@@ -12,7 +13,6 @@ import type {
   RawInventoryItem,
 } from "@/types/inventory";
 
-// Re-export so callers that import from this module continue to work.
 export type {
   GetInventoriesParams,
   Inventory,
@@ -50,12 +50,10 @@ function mapInventories(raw: unknown[]): Inventory[] {
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
-/** GET /inventory — returns paginated inventories for the current store */
 export const getInventories = (
   params: GetInventoriesParams = {},
 ): Promise<PaginatedInventories> => {
   const { page = 1, itemsPerPage = 10, search } = params;
-
   const query: Record<string, string | number> = { page, itemsPerPage };
   if (search) query.search = search;
 
@@ -108,12 +106,6 @@ export const getInventories = (
   });
 };
 
-/**
- * GET /inventory/:id
- *
- * Returns the full inventory with its products and per-inventory stock
- * quantities, exactly as the backend's `findOne` method serialises them.
- */
 export const getInventory = (id: string): Promise<InventoryDetail> =>
   api.get<RawInventoryDetail>(`/inventory/${id}`).then((r) => {
     const raw = r.data;
@@ -127,25 +119,26 @@ export const getInventory = (id: string): Promise<InventoryDetail> =>
           name: p.name,
           price: p.price,
           quantity: p.quantity,
+          barcode: p.barcode ?? null,
+          sequence: p.sequence ?? null,
+          categories: p.categories ?? [],
+          images: p.images ?? [],
         }),
       ),
     };
     return detail;
   });
 
-/** POST /inventory — create a new inventory */
 export const createInventory = (data: {
   name: string;
   address: string;
 }): Promise<{ id: string }> => api.post("/inventory", data).then((r) => r.data);
 
-/** PUT /inventory/:id — update an inventory */
 export const updateInventory = (
   id: string,
   data: { name: string; address: string },
 ): Promise<{ message: string }> =>
   api.put(`/inventory/${id}`, data).then((r) => r.data);
 
-/** DELETE /inventory/:id — delete an inventory */
 export const deleteInventory = (id: string): Promise<{ message: string }> =>
   api.delete(`/inventory/${id}`).then((r) => r.data);

@@ -1,5 +1,5 @@
-// src/hooks/usePagination.ts
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 
 export interface PaginationMeta {
   currentPage: number;
@@ -12,32 +12,63 @@ export interface PaginationMeta {
 export interface UsePaginationOptions {
   initialPage?: number;
   initialItemsPerPage?: number;
+  pageParam?: string; // default: "page"
 }
 
 export function usePagination(options: UsePaginationOptions = {}) {
-  const [page, setPage] = useState(options.initialPage ?? 1);
-  const [itemsPerPage] = useState(options.initialItemsPerPage ?? 10);
+  const {
+    initialPage = 1,
+    initialItemsPerPage = 10,
+    pageParam = "page",
+  } = options;
 
-  const goToPage = useCallback((pageNum: number) => {
-    setPage(Math.max(1, pageNum));
-  }, []);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const nextPage = useCallback((totalPages: number) => {
-    setPage((p) => Math.min(totalPages, p + 1));
-  }, []);
+  const rawParam = searchParams.get(pageParam);
+  const page = rawParam
+    ? Math.max(1, parseInt(rawParam, 10) || 1)
+    : initialPage;
 
-  const prevPage = useCallback(() => {
-    setPage((p) => Math.max(1, p - 1));
-  }, []);
+  const setPage = useCallback(
+    (pageNum: number) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          const clamped = Math.max(1, pageNum);
+          if (clamped === initialPage) {
+            next.delete(pageParam);
+          } else {
+            next.set(pageParam, String(clamped));
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams, pageParam, initialPage],
+  );
 
-  const resetToPage1 = useCallback(() => {
-    setPage(1);
-  }, []);
+  const goToPage = useCallback(
+    (pageNum: number) => setPage(Math.max(1, pageNum)),
+    [setPage],
+  );
+
+  const nextPage = useCallback(
+    (totalPages: number) => setPage(Math.min(totalPages, page + 1)),
+    [setPage, page],
+  );
+
+  const prevPage = useCallback(
+    () => setPage(Math.max(1, page - 1)),
+    [setPage, page],
+  );
+
+  const resetToPage1 = useCallback(() => setPage(1), [setPage]);
 
   return {
     page,
     setPage,
-    itemsPerPage,
+    itemsPerPage: initialItemsPerPage,
     goToPage,
     nextPage,
     prevPage,
