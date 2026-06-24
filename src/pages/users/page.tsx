@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneNumberInput } from "@/components/ui/phoneinput";
 import {
   Table,
   TableBody,
@@ -32,7 +33,8 @@ import type {
 } from "@/types/user";
 import { Loader2, Pencil, Plus, Trash2, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
+import type { Value as PhoneValue } from "react-phone-number-input";
 import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ function UserDialog({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<UserFormValues>({
     defaultValues: {
@@ -126,7 +129,7 @@ function UserDialog({
               </Label>
               <Input
                 id="user-name"
-                placeholder="e.g. Maryam Karimi"
+                placeholder="John Smith"
                 {...register("name", { required: "Name is required" })}
               />
               {errors.name && (
@@ -145,7 +148,7 @@ function UserDialog({
                 <Input
                   id="user-email"
                   type="email"
-                  placeholder="e.g. maryam@shop.com"
+                  placeholder="john@gmail.com"
                   {...register("email", {
                     required: "Email is required",
                     pattern: {
@@ -190,11 +193,18 @@ function UserDialog({
 
             {/* Phone */}
             <div className="grid gap-2">
-              <Label htmlFor="user-phone">Phone</Label>
-              <Input
-                id="user-phone"
-                placeholder="e.g. 0788 333 444"
-                {...register("phone")}
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field }) => (
+                  <PhoneNumberInput
+                    label="Phone"
+                    id="user-phone"
+                    value={field.value as PhoneValue}
+                    placeholder="700000000"
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </div>
 

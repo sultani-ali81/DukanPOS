@@ -1,10 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,39 +8,45 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { type User } from "@/lib/data"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PhoneNumberInput } from "@/components/ui/phoneinput";
+import { type User } from "@/lib/data";
+import { useState } from "react";
+import type { Value as PhoneValue } from "react-phone-number-input";
+import { toast } from "sonner";
 
 export function EditUserDialog({
   user,
   open,
   onOpenChange,
 }: {
-  user: User | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  user: User | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [role, setRole] = useState<User["role"]>("Cashier")
-  const [active, setActive] = useState(true)
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState<PhoneValue>("");
+  const [role, setRole] = useState<User["role"]>("Cashier");
+  const [active, setActive] = useState(true);
 
   // Sync local state whenever a new user is opened.
-  const [lastUserId, setLastUserId] = useState<string | null>(null)
+  const [lastUserId, setLastUserId] = useState<string | null>(null);
   if (user && user.id !== lastUserId) {
-    setLastUserId(user.id)
-    setName(user.name)
-    setPhone(user.phone)
-    setRole(user.role)
-    setActive(user.active)
+    setLastUserId(user.id);
+    setName(user.name);
+    setPhone(user.phone as PhoneValue);
+    setRole(user.role);
+    setActive(user.active);
   }
 
   function handleSave(e: React.FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     toast.success("User updated", {
       description: `${name}'s profile has been updated successfully.`,
-    })
-    onOpenChange(false)
+    });
+    onOpenChange(false);
   }
 
   return (
@@ -53,7 +55,9 @@ export function EditUserDialog({
         <form onSubmit={handleSave}>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>Update staff account details and role.</DialogDescription>
+            <DialogDescription>
+              Update staff account details and role.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -66,11 +70,11 @@ export function EditUserDialog({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-user-phone">Phone</Label>
-              <Input
-                id="edit-user-phone"
+              <Label htmlFor="user-phone">Phone</Label>
+              <PhoneNumberInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. 0788 333 444"
+                onChange={setPhone}
               />
             </div>
             <div className="grid gap-2">
@@ -100,7 +104,11 @@ export function EditUserDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">Save Changes</Button>
@@ -108,5 +116,5 @@ export function EditUserDialog({
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

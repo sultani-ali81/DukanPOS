@@ -12,12 +12,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneNumberInput } from "@/components/ui/phoneinput";
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import type { Value as PhoneValue } from "react-phone-number-input";
 import { toast } from "sonner";
 
 export function AddUserDialog() {
   const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState<PhoneValue>("");
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -49,7 +52,11 @@ export function AddUserDialog() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="user-phone">Phone</Label>
-              <Input id="user-phone" placeholder="e.g. 0788 333 444" />
+              <PhoneNumberInput
+                value={phone}
+                placeholder="e.g. 0788 333 444"
+                onChange={setPhone}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="user-role">Role</Label>

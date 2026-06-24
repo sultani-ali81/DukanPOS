@@ -137,7 +137,7 @@ export default function CustomerDialog({
               />
               <Input
                 {...register("name")}
-                placeholder="e.g. John"
+                placeholder="John Smith"
                 className="pl-9 h-11 rounded-xl border-gray-200"
               />
             </div>
@@ -176,7 +176,7 @@ export default function CustomerDialog({
               />
               <Input
                 {...register("address")}
-                placeholder="e.g. Kabul"
+                placeholder=" Kabul"
                 className="pl-9 h-11 rounded-xl border-gray-200"
               />
             </div>

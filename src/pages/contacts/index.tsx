@@ -1,9 +1,13 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+
 import { Button } from "@/components/ui/button";
+
 import { Card } from "@/components/ui/card";
+
 import { Checkbox } from "@/components/ui/checkbox";
+
 import {
   Dialog,
   DialogContent,
@@ -12,8 +16,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
+
+import { PhoneNumberInput } from "@/components/ui/phoneinput";
+
+import type { Value as PhoneValue } from "react-phone-number-input";
+
 import {
   Table,
   TableBody,
@@ -22,19 +33,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { useCustomerDialog } from "@/hooks/use-customer-dialog";
+
 import { useCustomers } from "@/hooks/use-customers";
+
 import type { Customer } from "@/types/customer";
+
 import { Loader2, Pencil, Plus, Search, Trash2, UserX, X } from "lucide-react";
+
+import { useEffect } from "react";
+
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+
+import { Controller, useForm } from "react-hook-form";
+
 import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ContactFormValues {
   name: string;
+
   phone: string;
+
   address: string;
 }
 
@@ -42,42 +64,62 @@ interface ContactFormValues {
 
 interface ContactDialogProps {
   open: boolean;
+
   editingCustomer: Customer | null;
+
   onOpenChange: (open: boolean) => void;
+
   onSubmit: (values: ContactFormValues, id?: string) => Promise<void>;
 }
 
 function ContactDialog({
   open,
+
   editingCustomer,
+
   onOpenChange,
+
   onSubmit,
 }: ContactDialogProps) {
   const {
     register,
+
     handleSubmit,
+
     reset,
+
+    control,
+
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     defaultValues: {
-      name: editingCustomer?.name ?? "",
-      phone: editingCustomer?.phone ?? "",
-      address: editingCustomer?.address ?? "",
+      name: "",
+
+      phone: "",
+
+      address: "",
     },
   });
 
-  // Sync form when editingCustomer changes (dialog opens for edit)
-  useState(() => {
+  // Sync form values whenever the dialog opens or the target customer changes
+
+  useEffect(() => {
+    if (!open) return;
+
     reset({
       name: editingCustomer?.name ?? "",
+
       phone: editingCustomer?.phone ?? "",
+
       address: editingCustomer?.address ?? "",
     });
-  });
+  }, [open, editingCustomer, reset]);
 
   async function submit(values: ContactFormValues) {
     await onSubmit(values, editingCustomer?.id);
+
     onOpenChange(false);
+
     reset();
   }
 
@@ -86,6 +128,7 @@ function ContactDialog({
       open={open}
       onOpenChange={(o) => {
         onOpenChange(o);
+
         if (!o) reset();
       }}
     >
@@ -95,71 +138,83 @@ function ContactDialog({
             <DialogTitle>
               {editingCustomer ? "Edit Contact" : "Add Contact"}
             </DialogTitle>
+
             <DialogDescription>
               {editingCustomer
                 ? `Update details for ${editingCustomer.name}.`
                 : "Add a new customer to your contacts."}
             </DialogDescription>
           </DialogHeader>
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="contact-name">
                 Name <span className="text-destructive">*</span>
               </Label>
+
               <Input
                 id="contact-name"
-                placeholder="e.g. Ahmad Wali"
+                placeholder="John Smith"
                 {...register("name", { required: "Name is required" })}
               />
+
               {errors.name && (
                 <p className="text-xs text-destructive">
                   {errors.name.message}
                 </p>
               )}
             </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="contact-phone">
-                Phone <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="contact-phone"
-                placeholder="e.g. 0700 123 456"
-                {...register("phone", {
-                  required: "Phone is required",
-                  pattern: {
-                    value: /^[\d\s+]+$/,
-                    message: "Enter a valid phone number",
-                  },
-                })}
+              <Controller
+                control={control}
+                name="phone"
+                rules={{ required: "Phone is required" }}
+                render={({ field }) => (
+                  <PhoneNumberInput
+                    label="Phone *"
+                    value={field.value as PhoneValue}
+                    placeholder="700000000"
+                    onChange={field.onChange}
+                    error={!!errors.phone}
+                  />
+                )}
               />
+
               {errors.phone && (
                 <p className="text-xs text-destructive">
                   {errors.phone.message}
                 </p>
               )}
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="contact-address">Address</Label>
+
               <Input
                 id="contact-address"
-                placeholder="e.g. Shahr-e Naw, Kabul"
+                placeholder="Shahr-e Naw, Kabul"
                 {...register("address")}
               />
             </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => {
                 onOpenChange(false);
+
                 reset();
               }}
             >
               Cancel
             </Button>
+
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+
               {editingCustomer ? "Save Changes" : "Add Contact"}
             </Button>
           </DialogFooter>
@@ -177,18 +232,23 @@ function CustomerSkeletonRow() {
       <TableCell>
         <div className="h-4 w-4 animate-pulse rounded bg-muted" />
       </TableCell>
+
       <TableCell>
         <div className="h-4 w-36 animate-pulse rounded bg-muted" />
       </TableCell>
+
       <TableCell>
         <div className="h-4 w-28 animate-pulse rounded bg-muted" />
       </TableCell>
+
       <TableCell>
         <div className="h-4 w-40 animate-pulse rounded bg-muted" />
       </TableCell>
+
       <TableCell>
         <div className="flex gap-1">
           <div className="h-8 w-8 animate-pulse rounded bg-muted" />
+
           <div className="h-8 w-8 animate-pulse rounded bg-muted" />
         </div>
       </TableCell>
@@ -201,32 +261,49 @@ function CustomerSkeletonRow() {
 export default function ContactsPage() {
   const {
     customers,
+
     isLoading,
+
     search,
+
     handleSearch,
+
     clearSearch,
+
     mutate,
+
     total,
+
     page,
+
     setPage,
+
     PAGE_SIZE,
   } = useCustomers();
 
   const {
     dialogOpen,
+
     setDialogOpen,
+
     editingCustomer,
+
     handleOpenCreate,
+
     handleOpenEdit,
+
     handleSubmit,
+
     handleDelete,
   } = useCustomerDialog(mutate);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const allSelected =
     customers.length > 0 && selected.size === customers.length;
+
   const someSelected = selected.size > 0 && selected.size < customers.length;
 
   function toggleAll() {
@@ -236,8 +313,10 @@ export default function ContactsPage() {
   function toggleOne(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
+
       if (next.has(id)) next.delete(id);
       else next.add(id);
+
       return next;
     });
   }
@@ -252,10 +331,14 @@ export default function ContactsPage() {
 
   async function onDelete(id: string, name: string) {
     setDeletingId(id);
+
     try {
       await handleDelete(id);
+
       selected.delete(id);
+
       setSelected(new Set(selected));
+
       toast.success("Contact deleted", {
         description: `${name} has been removed.`,
       });
@@ -277,16 +360,19 @@ export default function ContactsPage() {
       </PageHeader>
 
       {/* Search */}
+
       <div className="mb-4 relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
           <Search className="size-4" />
         </span>
+
         <Input
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search categories..."
+          placeholder="Search contacts..."
           className="pl-9 pr-8"
         />
+
         {search && (
           <button
             onClick={clearSearch}
@@ -298,11 +384,13 @@ export default function ContactsPage() {
       </div>
 
       {/* Bulk selection bar */}
+
       {selected.size > 0 && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-muted/50 px-4 py-2 text-sm">
           <span className="font-medium text-foreground">
             {selected.size} selected
           </span>
+
           <Button
             variant="outline"
             size="sm"
@@ -324,12 +412,17 @@ export default function ContactsPage() {
                   aria-label="Select all contacts"
                 />
               </TableHead>
+
               <TableHead className="text-left">Name</TableHead>
+
               <TableHead className="text-left">Phone</TableHead>
+
               <TableHead className="text-left">Address</TableHead>
+
               <TableHead className="text-left">Actions</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {isLoading ? (
               Array.from({ length: PAGE_SIZE }).map((_, i) => (
@@ -339,11 +432,13 @@ export default function ContactsPage() {
               <TableRow>
                 <TableCell colSpan={5} className="py-12 text-center">
                   <UserX className="mx-auto mb-2 size-8 text-muted-foreground/50" />
+
                   <p className="text-sm text-muted-foreground">
                     {search
                       ? `No customers match "${search}"`
                       : "No customers yet."}
                   </p>
+
                   {!search && (
                     <Button
                       variant="link"
@@ -359,7 +454,9 @@ export default function ContactsPage() {
             ) : (
               customers.map((c) => {
                 const isSelected = selected.has(c.id);
+
                 const isDeleting = deletingId === c.id;
+
                 return (
                   <TableRow
                     key={c.id}
@@ -373,12 +470,15 @@ export default function ContactsPage() {
                         aria-label={`Select ${c.name}`}
                       />
                     </TableCell>
+
                     <TableCell className="font-medium text-left text-foreground">
                       {c.name}
                     </TableCell>
+
                     <TableCell className="text-left text-muted-foreground">
                       {c.phone}
                     </TableCell>
+
                     <TableCell className="text-left text-muted-foreground">
                       {c.address || (
                         <span className="italic text-muted-foreground/60">
@@ -386,6 +486,7 @@ export default function ContactsPage() {
                         </span>
                       )}
                     </TableCell>
+
                     <TableCell className="text-left">
                       <div className="flex items-center gap-1">
                         <Button
@@ -397,6 +498,7 @@ export default function ContactsPage() {
                         >
                           <Pencil className="size-4" />
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="icon"
@@ -422,12 +524,14 @@ export default function ContactsPage() {
       </Card>
 
       {/* Pagination */}
+
       {total > PAGE_SIZE && (
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Showing {(page - 1) * PAGE_SIZE + 1}–
             {Math.min(page * PAGE_SIZE, total)} of {total}
           </span>
+
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -437,6 +541,7 @@ export default function ContactsPage() {
             >
               Previous
             </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -450,6 +555,7 @@ export default function ContactsPage() {
       )}
 
       {/* Add / Edit dialog */}
+
       <ContactDialog
         open={dialogOpen}
         editingCustomer={editingCustomer}

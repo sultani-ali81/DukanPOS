@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneNumberInput } from "@/components/ui/phoneinput";
 import {
   Select,
   SelectContent,
@@ -29,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import type { Value as PhoneValue } from "react-phone-number-input";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -391,10 +391,19 @@ export function EditProfileDialog({
               {/* ── Phone + DOB ───────────────────────────────────────── */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="ep-phone">
-                    Phone <span className="text-destructive">*</span>
-                  </Label>
-                  <Input id="ep-phone" {...register("phone")} />
+                  <Controller
+                    control={control}
+                    name="phone"
+                    render={({ field }) => (
+                      <PhoneNumberInput
+                        label="Phone *"
+                        value={field.value as PhoneValue}
+                        placeholder="700 000 000"
+                        onChange={field.onChange}
+                        error={!!errors.phone}
+                      />
+                    )}
+                  />
                   {errors.phone && (
                     <p className="text-xs text-destructive">
                       {errors.phone.message}

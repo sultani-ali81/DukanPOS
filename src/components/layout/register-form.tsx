@@ -7,8 +7,12 @@ import OtpDialog from "@/components/otp-dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PhoneNumberInput } from "@/components/ui/phoneinput";
 
-import { Eye, EyeOff, Lock, Mail, Phone, Store, User } from "lucide-react";
+import type { Value } from "react-phone-number-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
+
+import { Eye, EyeOff, Lock, Mail, Store, User } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 type ApiError = {
@@ -51,6 +55,11 @@ export default function RegisterForm() {
     if (!values.storeName) return setError("Please enter store name");
 
     if (!values.email) return setError("Please enter email");
+
+    if (!values.phone) return setError("Please enter phone number");
+
+    if (!isValidPhoneNumber(values.phone))
+      return setError("Enter a valid phone number");
 
     if (!values.password) return setError("Please enter password");
 
@@ -186,14 +195,11 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          placeholder="Phone Number"
-                          className={fieldClass}
-                          {...field}
-                        />
-                      </div>
+                      <PhoneNumberInput
+                        value={field.value as Value}
+                        placeholder="700000000"
+                        onChange={field.onChange}
+                      />
                     </FormControl>
                   </FormItem>
                 )}
