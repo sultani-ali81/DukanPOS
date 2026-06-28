@@ -32,22 +32,27 @@ interface FlowStep {
 
 function getFlowSteps(purchase: PurchaseDetail): FlowStep[] {
   const status = purchase.status;
-  const isStockInAllowed = status === "Done" || status === "Pending";
   const receivedQty = (purchase.items ?? []).reduce(
     (s, i) => s + (i.received ?? 0),
     0,
   );
   const totalQty = (purchase.items ?? []).reduce((s, i) => s + i.quantity, 0);
   const allReceived = purchase.items?.length > 0 && receivedQty >= totalQty;
+  const hasStockIns = (purchase.stockIns ?? []).length > 0;
 
   const draftState: FlowStepState = status === "Draft" ? "active" : "done";
+
   const confirmedState: FlowStepState =
     status === "Draft" ? "pending" : allReceived ? "done" : "active";
-  const stockedInState: FlowStepState = !isStockInAllowed
-    ? "pending"
-    : allReceived
-      ? "done"
-      : "active";
+
+  // Only becomes active once the user has actually triggered stock-in
+  // (hasStockIns), not simply because the purchase was confirmed.
+  const stockedInState: FlowStepState =
+    status === "Draft" || !hasStockIns
+      ? "pending"
+      : allReceived
+        ? "done"
+        : "active";
 
   return [
     { label: "Draft", icon: Circle, state: draftState },
@@ -112,13 +117,17 @@ export function PurchaseFlowCard({
         <CardTitle>Purchase Flow</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex items-start">
           {steps.map((step, idx, arr) => {
             const Icon = step.icon;
             const isLast = idx === arr.length - 1;
             return (
-              <div key={step.label} className="flex items-center">
-                <div className="flex flex-col items-center gap-1">
+              <>
+                {/* Step column: always fixed width, never stretches */}
+                <div
+                  key={step.label}
+                  className="flex flex-col items-center gap-1 w-16 shrink-0"
+                >
                   <div
                     className={`flex size-9 items-center justify-center rounded-full border-2 transition-all ${
                       step.state === "done"
@@ -131,7 +140,7 @@ export function PurchaseFlowCard({
                     <Icon className="size-5" />
                   </div>
                   <p
-                    className={`text-xs font-semibold text-center ${
+                    className={`text-xs font-semibold text-center leading-tight ${
                       step.state === "done" || step.state === "active"
                         ? "text-primary"
                         : "text-muted-foreground"
@@ -140,16 +149,17 @@ export function PurchaseFlowCard({
                     {step.label}
                   </p>
                 </div>
+                {/* Connector: only between steps, stretches to fill remaining space */}
                 {!isLast && (
                   <div
-                    className={`h-0.5 w-16 sm:w-24 mb-5 ${
+                    className={`flex-1 h-0.5 mt-4 shrink-0 ${
                       step.state === "done"
                         ? "bg-primary"
                         : "bg-muted-foreground/20"
                     }`}
                   />
                 )}
-              </div>
+              </>
             );
           })}
         </div>

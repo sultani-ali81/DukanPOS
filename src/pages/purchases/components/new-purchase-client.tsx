@@ -75,33 +75,28 @@ function NewPurchaseFlowCard({
   total: number;
   isSubmitting: boolean;
 }) {
+  const step1Done = hasSupplier && hasDate;
+
   const steps: FlowStep[] = [
     {
       label: "Supplier & Date",
       description: "Select a supplier and purchase date",
-      state: hasSupplier && hasDate ? "done" : "active",
-    },
-    {
-      label: "Add Items",
-      description: "Add products with quantities and prices",
-      state: !(hasSupplier && hasDate)
-        ? "pending"
-        : hasItems
-          ? "done"
-          : "active",
+      state: step1Done ? "done" : "active",
     },
     {
       label: "Select Inventory",
       description: "Choose where items will be stocked in",
-      state: !hasItems ? "pending" : hasInventory ? "done" : "active",
+      state: !step1Done ? "pending" : hasInventory ? "done" : "active",
+    },
+    {
+      label: "Add Items",
+      description: "Add products with quantities and prices",
+      state: !step1Done ? "pending" : hasItems ? "done" : "active",
     },
     {
       label: "Ready to Save",
       description: "Review and save the purchase",
-      state:
-        hasSupplier && hasDate && hasItems && hasInventory
-          ? "active"
-          : "pending",
+      state: step1Done && hasInventory && hasItems ? "active" : "pending",
     },
   ];
 

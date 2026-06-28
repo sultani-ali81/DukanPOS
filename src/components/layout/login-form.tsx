@@ -122,12 +122,6 @@ export default function LoginForm() {
         }
       >
         <div className="w-full max-w-sm">
-          {/* Brand */}
-          <div className="mb-8 flex items-center gap-2">
-            <img src="logo.svg" alt="Logo" className="h-7 w-7" />
-            <span className="text-lg font-bold text-primary/90">POS</span>
-          </div>
-
           <h1 className="text-center text-3xl font-bold text-primary">
             Welcome Back
           </h1>

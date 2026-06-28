@@ -5,11 +5,11 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -64,7 +64,6 @@ export function PurchaseDetailClient() {
   const [confirming, setConfirming] = useState(false);
   const [stockingIn, setStockingIn] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
-
   const [cancelling, setCancelling] = useState(false);
 
   const handleCancelPurchase = async () => {
@@ -84,6 +83,7 @@ export function PurchaseDetailClient() {
       setCancelling(false);
     }
   };
+
   // ── Load / refresh ────────────────────────────────────────────────────────
 
   const loadPurchase = (silently = false) => {
@@ -121,18 +121,15 @@ export function PurchaseDetailClient() {
   };
 
   // ── Stock-In ──────────────────────────────────────────────────────────────
-  // Uses all items at full quantity and the inventoryId from router state.
 
   const handleCreateStockIn = async () => {
     if (!purchase || !inventoryId) return;
     setStockingIn(true);
     try {
-      // 1. Confirm the purchase first if it's still Draft
       if (purchase.status === "Draft") {
         await updatePurchaseStatus(purchase.id, { status: "Done" });
       }
 
-      // 2. Create the stock-in record
       await createStockIn({
         purchaseId: purchase.id,
         inventoryId,
@@ -142,7 +139,6 @@ export function PurchaseDetailClient() {
         })),
       });
 
-      // 3. Re-fetch to get the stockInId the backend assigned
       const detail = await getPurchase(purchase.id);
       const pendingStockIn = detail.stockIns?.find(
         (s) => s.status === "Pending",
@@ -151,7 +147,6 @@ export function PurchaseDetailClient() {
       if (!pendingStockIn)
         throw new Error("Stock-in record not found after creation.");
 
-      // 4. Immediately approve the stock-in
       await updateStockIn(pendingStockIn.stockInId, { status: "Done" });
 
       toast.success("Items moved to inventory", {
@@ -208,13 +203,13 @@ export function PurchaseDetailClient() {
     );
   }
 
-  const status = purchase.status;
+  const stockIns = purchase.stockIns ?? [];
+  const hasStockIns = stockIns.length > 0;
+  const grandTotal = purchase.totalPrice;
   const totalItems = purchase.items.reduce(
     (sum, item) => sum + item.quantity,
     0,
   );
-  const stockIns = purchase.stockIns ?? [];
-  const hasStockIns = stockIns.length > 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -254,36 +249,63 @@ export function PurchaseDetailClient() {
               <CardTitle>Purchased Items</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-44">Product</TableHead>
-                      <TableHead className="text-right">Unit Price</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Line Total</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="pl-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Product
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-right">
+                      Unit Price
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-right">
+                      Qty
+                    </TableHead>
+                    <TableHead className="pr-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-right">
+                      Line Total
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchase.items.map((item, idx) => (
+                    <TableRow
+                      key={item.id}
+                      className={
+                        idx % 2 === 0 ? "bg-background" : "bg-muted/20"
+                      }
+                    >
+                      <TableCell className="pl-6 py-3.5 font-medium text-foreground">
+                        {item.product?.name}
+                      </TableCell>
+                      <TableCell className="py-3.5 text-right text-muted-foreground">
+                        {fmtCurrency(item.unitPrice)}
+                      </TableCell>
+                      <TableCell className="py-3.5 text-right font-semibold text-foreground">
+                        {item.quantity}
+                      </TableCell>
+                      <TableCell className="pr-6 py-3.5 text-right font-semibold text-foreground">
+                        {fmtCurrency(item.unitPrice * item.quantity)}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {purchase.items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
-                          {item.product?.name}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {fmtCurrency(item.unitPrice)}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {item.quantity}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {fmtCurrency(item.unitPrice * item.quantity)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow className="border-t-2 border-border bg-muted/30">
+                    <TableCell
+                      className="pl-6 py-3.5 text-sm font-semibold text-foreground"
+                      colSpan={2}
+                    >
+                      Total
+                    </TableCell>
+                    <TableCell className="py-3.5 text-right font-semibold text-foreground">
+                      {totalItems}
+                    </TableCell>
+                    <TableCell className="pr-6 py-3.5 text-right text-lg font-bold text-primary">
+                      {fmtCurrency(grandTotal)}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
             </CardContent>
           </Card>
 
@@ -292,150 +314,65 @@ export function PurchaseDetailClient() {
             <CardHeader>
               <CardTitle>Purchase Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label className="flex items-center gap-1.5">
-                  <Truck className="size-3.5" /> Supplier
-                </Label>
-                <p className="text-sm font-semibold text-foreground">
-                  {purchase.customer?.name ?? "—"}
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label className="flex items-center gap-1.5">
-                  <Calendar className="size-3.5" /> Date
-                </Label>
-                <p className="text-sm font-semibold text-foreground">
-                  {fmtDate(purchase.customDate)}
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label className="flex items-center gap-1.5">
-                  <Hash className="size-3.5" /> Reference
-                </Label>
-                <p className="text-sm font-semibold text-foreground">
-                  #{purchase.sequenceId}
-                </p>
-              </div>
-              {inventoryId && (
-                <div className="grid gap-2">
-                  <Label className="flex items-center gap-1.5">
-                    <Warehouse className="size-3.5" /> Destination Inventory
-                  </Label>
-                  <p className="text-sm font-semibold text-foreground">
-                    {/* Name isn't available here without a fetch — show id as fallback */}
-                    {stockIns[0]?.inventoryName ?? inventoryId}
-                  </p>
+            <CardContent className="p-0">
+              <dl>
+                <div className="flex items-center justify-between px-6 py-3.5 border-b border-border">
+                  <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Truck className="size-3.5 shrink-0" />
+                    Supplier
+                  </dt>
+                  <dd className="text-sm font-semibold text-foreground">
+                    {purchase.customer?.name ?? "—"}
+                  </dd>
                 </div>
-              )}
-              <div className="flex items-center justify-between border-t border-border pt-4 text-sm">
-                <span className="text-muted-foreground">Total Items</span>
-                <span className="font-medium text-foreground">
-                  {totalItems}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-base font-bold text-foreground">
-                  Grand Total
-                </span>
-                <span className="text-2xl font-bold text-primary">
-                  {fmtCurrency(purchase.totalPrice)}
-                </span>
-              </div>
+
+                <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-muted/20">
+                  <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="size-3.5 shrink-0" />
+                    Purchase Date
+                  </dt>
+                  <dd className="text-sm font-semibold text-foreground">
+                    {fmtDate(purchase.customDate)}
+                  </dd>
+                </div>
+
+                <div className="flex items-center justify-between px-6 py-3.5 border-b border-border">
+                  <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Hash className="size-3.5 shrink-0" />
+                    Reference
+                  </dt>
+                  <dd className="text-sm font-mono font-semibold text-foreground">
+                    #{purchase.sequenceId}
+                  </dd>
+                </div>
+
+                {inventoryId && (
+                  <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-muted/20">
+                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Warehouse className="size-3.5 shrink-0" />
+                      Destination Inventory
+                    </dt>
+                    <dd className="text-sm font-semibold text-foreground">
+                      {stockIns[0]?.inventoryName ?? inventoryId}
+                    </dd>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between px-6 py-4 bg-muted/30 rounded-b-xl">
+                  <dt className="text-base font-bold text-foreground">
+                    Grand Total
+                  </dt>
+                  <dd className="text-2xl font-bold text-primary">
+                    {fmtCurrency(grandTotal)}
+                  </dd>
+                </div>
+              </dl>
             </CardContent>
           </Card>
-
-          {/* Stock-In Records */}
-          {hasStockIns && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Stock-In Records</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {stockIns.map((stockIn: StockInRecord, idx: number) => {
-                  const products: StockInProduct[] = stockIn.products ?? [];
-                  const totalQty = products.reduce(
-                    (sum, p) => sum + p.quantity,
-                    0,
-                  );
-                  const isPending = stockIn.status === "Pending";
-                  const isDone = stockIn.status === "Done";
-                  const isApproving = approvingId === stockIn.stockInId;
-
-                  return (
-                    <div
-                      key={stockIn.stockInId}
-                      className="flex items-center justify-between rounded-lg border border-border px-4 py-3 gap-4"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex size-8 items-center justify-center rounded-full ${
-                            isDone ? "bg-primary/10" : "bg-muted"
-                          }`}
-                        >
-                          <Package
-                            className={`size-4 ${isDone ? "text-primary" : "text-muted-foreground"}`}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">
-                            Stock-In #{idx + 1}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {products.length} line
-                            {products.length !== 1 ? "s" : ""} · {totalQty} unit
-                            {totalQty !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
-                            isDone
-                              ? "bg-green-50 text-green-700 border border-green-200"
-                              : isPending
-                                ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                                : "bg-red-50 text-red-500 border border-red-200"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              isDone
-                                ? "bg-green-500"
-                                : isPending
-                                  ? "bg-yellow-400"
-                                  : "bg-red-400"
-                            }`}
-                          />
-                          {stockIn.status}
-                        </span>
-
-                        {isPending && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() =>
-                              handleApproveStockIn(stockIn.stockInId)
-                            }
-                            disabled={isApproving}
-                            className="h-8 text-xs gap-1.5"
-                          >
-                            <CheckCircle2 className="size-3.5" />
-                            {isApproving ? "Confirming…" : "Confirm"}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Right sidebar */}
-        <div className="space-y-6">
+        <div className="flex-col w-sm sm:pl-3 space-y-6">
           <PurchaseFlowCard
             purchase={purchase}
             onConfirm={handleConfirmPurchase}
@@ -446,6 +383,96 @@ export function PurchaseDetailClient() {
             stockingIn={stockingIn}
             inventoryId={inventoryId}
           />
+          {/* Stock-In Records */}
+          {hasStockIns && (
+            <Card className="w-sm">
+              <CardHeader>
+                <CardTitle>Stock-In Records</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {stockIns.map((stockIn: StockInRecord, idx: number) => {
+                    const products: StockInProduct[] = stockIn.products ?? [];
+                    const totalQty = products.reduce(
+                      (sum, p) => sum + p.quantity,
+                      0,
+                    );
+                    const isPending = stockIn.status === "Pending";
+                    const isDone = stockIn.status === "Done";
+                    const isApproving = approvingId === stockIn.stockInId;
+
+                    return (
+                      <div
+                        key={stockIn.stockInId}
+                        className="flex items-center justify-between px-6 py-4 gap-4"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex size-8 items-center justify-center rounded-full ${
+                              isDone ? "bg-primary/10" : "bg-muted"
+                            }`}
+                          >
+                            <Package
+                              className={`size-4 ${isDone ? "text-primary" : "text-muted-foreground"}`}
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">
+                              Stock-In #{idx + 1}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {products.length} line
+                              {products.length !== 1 ? "s" : ""} · {totalQty}{" "}
+                              unit
+                              {totalQty !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+                              isDone
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : isPending
+                                  ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                                  : "bg-red-50 text-red-500 border border-red-200"
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isDone
+                                  ? "bg-green-500"
+                                  : isPending
+                                    ? "bg-yellow-400"
+                                    : "bg-red-400"
+                              }`}
+                            />
+                            {stockIn.status}
+                          </span>
+
+                          {isPending && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() =>
+                                handleApproveStockIn(stockIn.stockInId)
+                              }
+                              disabled={isApproving}
+                              className="h-8 text-xs gap-1.5"
+                            >
+                              <CheckCircle2 className="size-3.5" />
+                              {isApproving ? "Confirming…" : "Confirm"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

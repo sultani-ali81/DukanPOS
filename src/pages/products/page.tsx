@@ -1,5 +1,3 @@
-"use client";
-
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -188,7 +186,7 @@ export default function ProductsPage() {
 
       <Card className="overflow-hidden border">
         <CardContent className="p-0">
-          <Table className="table-fixed">
+          <Table className="table-fixed min-w-[630-px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="py-3 pl-3 w-2/5">Product</TableHead>
