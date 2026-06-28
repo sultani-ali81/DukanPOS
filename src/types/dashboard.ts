@@ -12,6 +12,13 @@ export interface DailyStats {
   profit: { total: number };
 }
 
+export interface DashboardSession {
+  status: "open" | "closed";
+  openingAmount?: number;
+  closingAmount?: number;
+  expectedAmount: number;
+}
+
 export interface DashboardStockProduct {
   id: string;
   name: string;
@@ -28,4 +35,5 @@ export interface DashboardStats {
   lowStockProducts?: DashboardStockProduct[];
   outOfStockProducts?: DashboardStockProduct[];
   dailyBreakdown?: DailyStats[];
+  session?: DashboardSession;
 }

@@ -12,15 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { formatCurrency } from "@/lib/data";
 
-import type { DashboardRange } from "@/types/dashboard";
+import type { DashboardRange, DashboardSession } from "@/types/dashboard";
+import { Banknote, Lock, Unlock } from "lucide-react";
 
-import {
-  AlertTriangle,
-  ArrowRight,
-  BarChart3,
-  DollarSign,
-  TrendingUp,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, TrendingUp } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -84,9 +79,83 @@ function formatTrend(pct: number): { value: string; positive: boolean } {
     positive: pct >= 0,
   };
 }
+function SessionCard({ session }: { session: DashboardSession }) {
+  const isOpen = session.status === "open";
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      {/* Status */}
+      <Card>
+        <CardContent className="p-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Session Status</p>
+            <p
+              className={`text-2xl font-bold ${isOpen ? "text-green-600" : "text-gray-500"}`}
+            >
+              {isOpen ? "Open" : "Closed"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isOpen ? "Store is accepting sales" : "Store session is closed"}
+            </p>
+          </div>
+          <div
+            className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${isOpen ? "bg-green-50" : "bg-gray-100"}`}
+          >
+            {isOpen ? (
+              <Unlock className={`size-5 text-green-600`} />
+            ) : (
+              <Lock className={`size-5 text-gray-400`} />
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Opening / Closing amount */}
+      <Card>
+        <CardContent className="p-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">
+              {isOpen ? "Opening Amount" : "Closing Amount"}
+            </p>
+            <p className="text-2xl font-bold text-foreground">
+              {formatCurrency(
+                isOpen
+                  ? (session.openingAmount ?? 0)
+                  : (session.closingAmount ?? 0),
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isOpen ? "Cash at session start" : "Cash at session end"}
+            </p>
+          </div>
+          <div className="size-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+            <Banknote className="size-5 text-blue-500" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Expected amount */}
+      <Card>
+        <CardContent className="p-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">
+              Expected Amount
+            </p>
+            <p className="text-2xl font-bold text-indigo-600">
+              {formatCurrency(session.expectedAmount)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Opening + all sales collected
+            </p>
+          </div>
+          <div className="size-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+            <TrendingUp className="size-5 text-indigo-500" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 export default function DashboardPage() {
   const navigate = useNavigate();
 
@@ -151,7 +220,7 @@ export default function DashboardPage() {
                 "h-8 rounded-lg px-3.5 text-sm font-medium transition-colors",
 
                 range === opt.value && !isCustomActive
-                  ? "bg-white text-foreground shadow-sm"
+                  ? "bg-primary text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               ].join(" ")}
             >
@@ -194,7 +263,7 @@ export default function DashboardPage() {
             <StatCard
               label="Sales"
               value={formatCurrency(stats?.sales?.total ?? 0)}
-              icon={DollarSign}
+              icon={Banknote}
               trend={formatTrend(stats?.sales?.percentageChange ?? 0)}
             />
 
@@ -234,6 +303,8 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {!loading && stats?.session && <SessionCard session={stats.session} />}
 
       {/* ── Chart — always visible, shows active range breakdown or falls back to last 7 days ── */}
 

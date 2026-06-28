@@ -1,5 +1,3 @@
-// src/components/stat-card.tsx
-
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
@@ -14,7 +12,7 @@ export function StatCard({
 }: {
   label: string;
   value: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   trend?: { value: string; positive: boolean };
   accent?: "primary" | "emerald" | "amber" | "rose";
 }) {
@@ -50,7 +48,7 @@ export function StatCard({
             accentClasses[accent],
           )}
         >
-          <Icon className="size-6" />
+          {Icon ? <Icon className="size-6" /> : null}
         </div>
       </CardContent>
     </Card>
