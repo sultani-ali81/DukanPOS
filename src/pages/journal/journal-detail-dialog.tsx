@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+
 import {
   Table,
   TableBody,
@@ -7,17 +8,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { useJournals } from "@/hooks/use-journal";
+
 import { useMediaQuery } from "@/hooks/use-media-query";
+
 import { formatCurrency } from "@/lib/data";
+
 import {
   getStatusClassName,
   getStatusLabel,
   getStatusVariant,
 } from "@/lib/status";
+
 import type { JournalEntry, JournalItem } from "@/types/journal";
+
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+
 import { Portal } from "@radix-ui/react-dialog";
+
 import {
   BookOpenCheck,
   Loader2,
@@ -28,17 +37,22 @@ import {
 
 function formatDate(iso?: string) {
   if (!iso) return "—";
+
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
+
     day: "numeric",
+
     year: "numeric",
   });
 }
 
 function formatTime(iso?: string) {
   if (!iso) return "";
+
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "2-digit",
+
     minute: "2-digit",
   });
 }
@@ -54,8 +68,10 @@ function entryCredit(items: JournalItem[]) {
 function getTransaction(entry: JournalEntry) {
   for (const item of entry.items) {
     if (item.sale) return { type: "sale" as const, tx: item.sale };
+
     if (item.purchase) return { type: "purchase" as const, tx: item.purchase };
   }
+
   return null;
 }
 
@@ -63,15 +79,21 @@ function getTransaction(entry: JournalEntry) {
 
 function JournalDetailContent({
   entry,
+
   loading,
 }: {
   entry: ReturnType<typeof useJournals>["selectedEntry"];
+
   loading: boolean;
 }) {
   const dr = entryDebit(entry?.items ?? []);
+
   const cr = entryCredit(entry?.items ?? []);
+
   const transaction = entry ? getTransaction(entry) : null;
+
   const txItems = transaction?.tx.items ?? [];
+
   const grandTotal =
     entry?.totalCurrBill ??
     txItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
@@ -91,43 +113,53 @@ function JournalDetailContent({
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
             {transaction?.type === "sale" ? "Items Sold" : "Items Purchased"}
           </p>
+
           <div className="rounded-lg border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="h-8 py-1.5 text-xs">Product</TableHead>
+
                   <TableHead className="h-8 py-1.5 text-right text-xs w-12">
                     Qty
                   </TableHead>
+
                   <TableHead className="h-8 py-1.5 text-right text-xs w-20">
                     Unit
                   </TableHead>
+
                   <TableHead className="h-8 py-1.5 text-right text-xs w-20">
                     Total
                   </TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {txItems.map((txItem) => (
                   <TableRow key={txItem.id} className="h-9">
                     <TableCell className="py-2 font-medium text-sm max-w-[120px] truncate">
                       {txItem.product?.name ?? "—"}
                     </TableCell>
+
                     <TableCell className="py-2 text-right tabular-nums text-sm">
                       {txItem.quantity}
                     </TableCell>
+
                     <TableCell className="py-2 text-right tabular-nums text-sm">
                       {formatCurrency(txItem.unitPrice)}
                     </TableCell>
+
                     <TableCell className="py-2 text-right tabular-nums text-sm font-semibold">
                       {formatCurrency(txItem.quantity * txItem.unitPrice)}
                     </TableCell>
                   </TableRow>
                 ))}
+
                 <TableRow className="border-t-2 bg-muted/30">
                   <TableCell colSpan={3} className="py-2 text-sm font-bold">
                     Total
                   </TableCell>
+
                   <TableCell className="py-2 text-right text-sm font-bold tabular-nums">
                     {formatCurrency(grandTotal)}
                   </TableCell>
@@ -142,31 +174,38 @@ function JournalDetailContent({
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
           Ledger
         </p>
+
         <div className="rounded-lg border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="h-8 py-1.5 text-xs">Account</TableHead>
+
                 <TableHead className="h-8 py-1.5 text-xs w-20">Type</TableHead>
+
                 <TableHead className="h-8 py-1.5 text-right text-xs w-20">
                   Debit
                 </TableHead>
+
                 <TableHead className="h-8 py-1.5 text-right text-xs w-20">
                   Credit
                 </TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {entry.items.map((item) => (
                 <TableRow key={item.id} className="h-9">
                   <TableCell className="py-2 font-medium text-sm max-w-[120px] truncate">
                     {item.account?.name ?? "—"}
                   </TableCell>
+
                   <TableCell className="py-2">
                     <Badge variant="outline" className="text-xs capitalize">
                       {item.account?.type ?? "—"}
                     </Badge>
                   </TableCell>
+
                   <TableCell className="py-2 text-right tabular-nums text-sm">
                     {(item.debit ?? 0) > 0 ? (
                       <span className="font-medium text-destructive">
@@ -176,6 +215,7 @@ function JournalDetailContent({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
+
                   <TableCell className="py-2 text-right tabular-nums text-sm">
                     {(item.credit ?? 0) > 0 ? (
                       <span className="font-medium text-emerald-600 dark:text-emerald-400">
@@ -187,13 +227,16 @@ function JournalDetailContent({
                   </TableCell>
                 </TableRow>
               ))}
+
               <TableRow className="border-t-2 bg-muted/30">
                 <TableCell colSpan={2} className="py-2 text-sm font-bold">
                   Total
                 </TableCell>
+
                 <TableCell className="py-2 text-right text-sm font-bold text-destructive tabular-nums">
                   {formatCurrency(dr)}
                 </TableCell>
+
                 <TableCell className="py-2 text-right text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                   {formatCurrency(cr)}
                 </TableCell>
@@ -216,13 +259,16 @@ function JournalDetailHeader({
   const seqId = entry?.sequence
     ? `${entry.sequence.prefix}-${String(entry.sequence.lastIndex).padStart(4, "0")}`
     : "—";
+
   const transaction = entry ? getTransaction(entry) : null;
 
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <BookOpenCheck className="size-4 text-muted-foreground shrink-0" />
+
         <span className="font-mono font-semibold text-sm">{seqId}</span>
+
         {entry && (
           <Badge
             variant={getStatusVariant(entry.status)}
@@ -231,6 +277,7 @@ function JournalDetailHeader({
             {getStatusLabel(entry.status)}
           </Badge>
         )}
+
         {transaction && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             {transaction.type === "sale" ? (
@@ -238,12 +285,15 @@ function JournalDetailHeader({
             ) : (
               <ShoppingBag className="size-3.5" />
             )}
+
             <span className="capitalize">{transaction.type}</span>
           </span>
         )}
       </div>
+
       {entry?.createdAt && (
         <p className="text-xs text-muted-foreground pl-5">
+          <span className="font-medium text-foreground">Created</span>{" "}
           {formatDate(entry.createdAt)} · {formatTime(entry.createdAt)}
         </p>
       )}
@@ -255,33 +305,51 @@ function JournalDetailHeader({
 
 function JournalDetailMobileDialog({
   open,
+
   onClose,
+
   entry,
+
   loading,
 }: {
   open: boolean;
+
   onClose: () => void;
+
   entry: ReturnType<typeof useJournals>["selectedEntry"];
+
   loading: boolean;
 }) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(v) => !v && onClose()}>
       <Portal>
         {/* Overlay covers full screen */}
+
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+
         {/* Content centered in viewport */}
+
         <DialogPrimitive.Content
           className="
+
             fixed z-50
+
             top-0 bottom-0 left-0 right-0
+
             flex flex-col
+
             bg-background
+
             overflow-hidden
+
           "
           style={{
             maxWidth: "100%",
+
             maxHeight: "100%",
+
             margin: "16px",
+
             borderRadius: "16px",
           }}
         >
@@ -289,6 +357,7 @@ function JournalDetailMobileDialog({
             <DialogPrimitive.Title className="m-0">
               <JournalDetailHeader entry={entry} />
             </DialogPrimitive.Title>
+
             <DialogPrimitive.Close
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors shrink-0"
@@ -296,6 +365,7 @@ function JournalDetailMobileDialog({
               <X className="w-4 h-4" />
             </DialogPrimitive.Close>
           </div>
+
           <div className="overflow-y-auto flex-1 px-4 py-5">
             <JournalDetailContent entry={entry} loading={loading} />
           </div>
@@ -311,13 +381,19 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 function JournalDetailDesktopDialog({
   open,
+
   onClose,
+
   entry,
+
   loading,
 }: {
   open: boolean;
+
   onClose: () => void;
+
   entry: ReturnType<typeof useJournals>["selectedEntry"];
+
   loading: boolean;
 }) {
   return (
@@ -328,6 +404,7 @@ function JournalDetailDesktopDialog({
             <JournalDetailHeader entry={entry} />
           </DialogTitle>
         </div>
+
         <div className="overflow-y-auto flex-1 px-6 py-5">
           <JournalDetailContent entry={entry} loading={loading} />
         </div>
@@ -340,13 +417,19 @@ function JournalDetailDesktopDialog({
 
 export function JournalDetailDialog({
   open,
+
   onClose,
+
   entry,
+
   loading,
 }: {
   open: boolean;
+
   onClose: () => void;
+
   entry: ReturnType<typeof useJournals>["selectedEntry"];
+
   loading: boolean;
 }) {
   const isDesktop = useMediaQuery("(min-width: 640px)");

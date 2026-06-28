@@ -1,7 +1,11 @@
 import { usePagination } from "@/hooks/use-pagination";
+
 import { useSearch } from "@/hooks/use-search";
+
 import { getInventories, getInventory } from "@/queries/inventory";
+
 import { getProductById } from "@/queries/products";
+
 import type {
   Inventory,
   InventoryDetail,
@@ -10,9 +14,12 @@ import type {
   PaginationMeta,
   StockStatus,
 } from "@/types/inventory";
+
 import type { Product } from "@/types/product";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+
+import { useMemo, useState } from "react";
+
+import useSWR from "swr";
 
 export type {
   Inventory,
@@ -24,271 +31,345 @@ export type {
 
 export interface UseInventoryReturn {
   inventories: Inventory[];
+
   paginationMeta: PaginationMeta;
+
   loading: boolean;
+
   error: string | null;
+
   selectedInventory: InventoryDetail | null;
+
   detailLoading: boolean;
+
   detailError: string | null;
+
   stats: Array<{ label: string; value: string; date: string; sub: string }>;
+
   filtered: InventoryProduct[];
+
   page: number;
+
   itemsPerPage: number;
+
   totalPages: number;
+
   totalItems: number;
+
   goToPage: (page: number) => void;
+
   listSearch: string;
+
   setListSearch: (value: string) => void;
+
   clearListSearch: () => void;
+
   listSearchOpen: boolean;
+
   setListSearchOpen: (open: boolean) => void;
+
   inventoryDialogOpen: boolean;
+
   inventoryDialogTarget: Inventory | null;
+
   openAddInventoryDialog: () => void;
+
   openEditInventoryDialog: (inv: Inventory) => void;
+
   closeInventoryDialog: () => void;
 
   productDialogOpen: boolean;
+
   selectedProduct: InventoryProduct | null;
+
   productDetail: Product | null;
+
   productDetailLoading: boolean;
+
   openProductDialog: (product: InventoryProduct) => void;
+
   closeProductDialog: () => void;
 
   itemDialogOpen: boolean;
+
   setItemDialogOpen: (open: boolean) => void;
 
   status: string;
+
   setStatus: (status: string) => void;
+
   search: string;
+
   setSearch: (value: string) => void;
+
   searchOpen: boolean;
+
   setSearchOpen: (open: boolean) => void;
+
   selectedRow: string | null;
+
   setSelectedRow: (id: string | null) => void;
 
   handleInventoryAdded: (newId: string) => void;
+
   handleInventoryUpdated: (id: string) => void;
+
   handleInventoryDeleted: () => void;
+
   handleItemAdded: () => void;
+
   switchInventory: (id: string | null) => void;
+
   selectedInventoryId: string | null;
 }
 
 const ITEMS_PER_PAGE = 10;
 
+// ── Local UI state only (no data) ──────────────────────────────────────────────
+
+interface UseInventoryUIState {
+  selectedInventoryId: string | null;
+
+  setSelectedInventoryId: (id: string | null) => void;
+
+  listSearchOpen: boolean;
+
+  setListSearchOpen: (open: boolean) => void;
+
+  inventoryDialogOpen: boolean;
+
+  inventoryDialogTarget: Inventory | null;
+
+  setInventoryDialogOpen: (open: boolean) => void;
+
+  setInventoryDialogTarget: (inv: Inventory | null) => void;
+
+  itemDialogOpen: boolean;
+
+  setItemDialogOpen: (open: boolean) => void;
+
+  productDialogOpen: boolean;
+
+  selectedProduct: InventoryProduct | null;
+
+  productDetail: Product | null;
+
+  setProductDialogOpen: (open: boolean) => void;
+
+  setSelectedProduct: (product: InventoryProduct | null) => void;
+
+  setProductDetail: (product: Product | null) => void;
+
+  status: string;
+
+  setStatus: (status: string) => void;
+
+  search: string;
+
+  setSearch: (value: string) => void;
+
+  searchOpen: boolean;
+
+  setSearchOpen: (open: boolean) => void;
+
+  selectedRow: string | null;
+
+  setSelectedRow: (id: string | null) => void;
+}
+
+function useInventoryUI(): UseInventoryUIState {
+  const [selectedInventoryId, setSelectedInventoryId] = useState<string | null>(
+    null,
+  );
+
+  const [listSearchOpen, setListSearchOpen] = useState(false);
+
+  const [inventoryDialogOpen, setInventoryDialogOpen] = useState(false);
+
+  const [inventoryDialogTarget, setInventoryDialogTarget] =
+    useState<Inventory | null>(null);
+
+  const [itemDialogOpen, setItemDialogOpen] = useState(false);
+
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+
+  const [selectedProduct, setSelectedProduct] =
+    useState<InventoryProduct | null>(null);
+
+  const [productDetail, setProductDetail] = useState<Product | null>(null);
+
+  const [status, setStatus] = useState("all");
+
+  const [search, setSearch] = useState("");
+
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
+
+  return {
+    selectedInventoryId,
+
+    setSelectedInventoryId,
+
+    listSearchOpen,
+
+    setListSearchOpen,
+
+    inventoryDialogOpen,
+
+    inventoryDialogTarget,
+
+    setInventoryDialogOpen,
+
+    setInventoryDialogTarget,
+
+    itemDialogOpen,
+
+    setItemDialogOpen,
+
+    productDialogOpen,
+
+    selectedProduct,
+
+    productDetail,
+
+    setProductDialogOpen,
+
+    setSelectedProduct,
+
+    setProductDetail,
+
+    status,
+
+    setStatus,
+
+    search,
+
+    setSearch,
+
+    searchOpen,
+
+    setSearchOpen,
+
+    selectedRow,
+
+    setSelectedRow,
+  };
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
 export function useInventory(): UseInventoryReturn {
-  // ── List state ────────────────────────────────────────────────────────────
-  const [inventories, setInventories] = useState<Inventory[]>([]);
-  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
-    currentPage: 1,
-    itemsPerPage: ITEMS_PER_PAGE,
-    totalItems: 0,
-    totalPages: 1,
-    totalCount: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedInventoryId = searchParams.get("id");
-
-  const [selectedInventory, setSelectedInventory] =
-    useState<InventoryDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-
-  const { page, setPage, resetToPage1, goToPage } = usePagination({
+  const { page, setPage, goToPage, resetToPage1 } = usePagination({
     initialPage: 1,
+
     initialItemsPerPage: ITEMS_PER_PAGE,
   });
 
   const {
     search: listSearch,
+
     debouncedSearch: listSearchDebounced,
+
     handleSearch: setListSearch,
+
     clearSearch: clearListSearch,
   } = useSearch({ debounceMs: 400, onSearch: resetToPage1 });
-  const [listSearchOpen, setListSearchOpen] = useState(false);
 
-  const [inventoryDialogOpen, setInventoryDialogOpen] = useState(false);
-  const [inventoryDialogTarget, setInventoryDialogTarget] =
-    useState<Inventory | null>(null);
-  const [itemDialogOpen, setItemDialogOpen] = useState(false);
-  const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] =
-    useState<InventoryProduct | null>(null);
-  const [productDetail, setProductDetail] = useState<Product | null>(null);
-  const [productDetailLoading, setProductDetailLoading] = useState(false);
+  const ui = useInventoryUI();
 
-  const [status, setStatus] = useState("all");
-  const [search, setSearch] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedRow, setSelectedRow] = useState<string | null>(null);
+  // ── SWR: inventories list ─────────────────────────────────────────────────
 
-  const listSearchDebouncedRef = useRef(listSearchDebounced);
-  useEffect(() => {
-    listSearchDebouncedRef.current = listSearchDebounced;
-  }, [listSearchDebounced]);
+  const listKey = [
+    "inventories",
 
-  const fetchInventories = (opts?: { page?: number }) => {
-    setLoading(true);
-    setError(null);
+    { page, itemsPerPage: ITEMS_PER_PAGE, search: listSearchDebounced },
+  ] as const;
 
-    const targetPage = opts?.page ?? page;
+  const {
+    data: listData,
 
-    getInventories({
-      page: targetPage,
-      itemsPerPage: ITEMS_PER_PAGE,
-      search: listSearchDebouncedRef.current || undefined,
-    })
-      .then(({ data, meta }) => {
-        setInventories(data);
-        setPaginationMeta(meta);
-      })
-      .catch(
-        (err: {
-          response?: { data?: { message?: string } };
-          message?: string;
-        }) => {
-          setError(
-            err?.response?.data?.message ??
-              err.message ??
-              "Failed to load inventories",
-          );
-        },
-      )
-      .finally(() => setLoading(false));
+    isLoading: listLoading,
+
+    error: listError,
+
+    mutate: mutateInventories,
+  } = useSWR(listKey, ([, params]) => getInventories(params));
+
+  const inventories = listData?.data ?? [];
+
+  const paginationMeta: PaginationMeta = listData?.meta ?? {
+    currentPage: 1,
+
+    itemsPerPage: ITEMS_PER_PAGE,
+
+    totalItems: 0,
+
+    totalPages: 1,
+
+    totalCount: 0,
   };
 
-  useEffect(() => {
-    fetchInventories({ page });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, listSearchDebounced]);
+  const loading = listLoading && !listData;
 
-  const fetchInventoryDetail = (id: string) => {
-    setDetailLoading(true);
-    setDetailError(null);
-    setSelectedInventory(null);
+  const error = listError
+    ? (listError?.response?.data?.message ??
+      listError?.message ??
+      "Failed to load inventories")
+    : null;
 
-    getInventory(id)
-      .then((detail) => {
-        setSelectedInventory(detail);
-      })
-      .catch(
-        (err: {
-          response?: { data?: { message?: string } };
-          message?: string;
-        }) => {
-          setDetailError(
-            err?.response?.data?.message ??
-              err.message ??
-              "Failed to load inventory detail",
-          );
-        },
-      )
-      .finally(() => setDetailLoading(false));
-  };
+  // ── SWR: single inventory detail ───────────────────────────────────────────
 
-  useEffect(() => {
-    if (selectedInventoryId) {
-      fetchInventoryDetail(selectedInventoryId);
-    }
-  }, []);
+  const detailKey = ui.selectedInventoryId
+    ? (["inventory", ui.selectedInventoryId] as const)
+    : null;
 
-  const openAddInventoryDialog = () => {
-    setInventoryDialogTarget(null);
-    setInventoryDialogOpen(true);
-  };
+  const {
+    data: selectedInventory,
 
-  const openEditInventoryDialog = (inv: Inventory) => {
-    setInventoryDialogTarget(inv);
-    setInventoryDialogOpen(true);
-  };
+    isLoading: detailLoading,
 
-  const closeInventoryDialog = () => {
-    setInventoryDialogOpen(false);
-    setInventoryDialogTarget(null);
-  };
+    error: detailError,
 
-  const openProductDialog = (product: InventoryProduct) => {
-    setSelectedProduct(product);
-    setProductDialogOpen(true);
-    setProductDetail(null);
-    setProductDetailLoading(true);
+    mutate: mutateDetail,
+  } = useSWR(detailKey, ([, id]) => getInventory(id));
 
-    getProductById(product.id)
-      .then((detail: Product | void) => {
-        setProductDetail(detail?.id ? detail : null);
-      })
-      .catch((err) => {
-        console.error("Failed to load product details:", err);
-      })
-      .finally(() => {
-        setProductDetailLoading(false);
-      });
-  };
+  // ── SWR: product detail (only when dialog open with a product) ────────────
 
-  const closeProductDialog = () => {
-    setProductDialogOpen(false);
-    setSelectedProduct(null);
-    setProductDetail(null);
-  };
+  const productKey =
+    ui.productDialogOpen && ui.selectedProduct
+      ? (["product", ui.selectedProduct.id] as const)
+      : null;
 
-  const handleInventoryAdded = () => {
-    closeInventoryDialog();
-    fetchInventories();
-  };
+  const {
+    data: productDetail,
 
-  const handleInventoryUpdated = (id: string) => {
-    closeInventoryDialog();
-    fetchInventories();
-    fetchInventoryDetail(id);
-  };
+    isLoading: productDetailLoading,
 
-  const handleInventoryDeleted = () => {
-    closeInventoryDialog();
-    setPage(1);
-    fetchInventories({ page: 1 });
-    switchInventory(null);
-  };
+    error: productDetailError,
+  } = useSWR(productKey, ([, id]) => getProductById(id));
 
-  const handleItemAdded = () => {
-    setItemDialogOpen(false);
-    if (selectedInventoryId !== null) {
-      fetchInventoryDetail(selectedInventoryId);
-    }
-  };
-
-  const switchInventory = (id: string | null) => {
-    if (id === null) {
-      setSearchParams({});
-    } else {
-      setSearchParams({ id });
-    }
-    setStatus("all");
-    setSearch("");
-    setSelectedRow(null);
-
-    if (id !== null) {
-      fetchInventoryDetail(id);
-    } else {
-      setSelectedInventory(null);
-      setDetailError(null);
-    }
-  };
+  // ── Derived stats + filter (memoized) ──────────────────────────────────────
 
   const stats = useMemo(() => {
     const products = selectedInventory?.products ?? [];
+
     const total = products.length;
+
     const today = new Date().toLocaleDateString("en-US", {
       weekday: "long",
+
       day: "2-digit",
+
       month: "long",
+
       year: "numeric",
     });
+
     const totalQty = products.reduce((sum, p) => sum + p.quantity, 0);
+
     const outOfStock = products.filter((p) => p.quantity === 0).length;
+
     const lowStock = products.filter(
       (p) => p.quantity > 0 && p.quantity <= 10,
     ).length;
@@ -296,20 +377,31 @@ export function useInventory(): UseInventoryReturn {
     return [
       {
         label: "Total Products",
+
         value: String(total),
+
         date: today,
+
         sub: `${totalQty} units in stock`,
       },
+
       {
         label: "Low Stock Alerts",
+
         value: String(lowStock),
+
         date: today,
+
         sub: "Needs restocking",
       },
+
       {
         label: "Out of Stock",
+
         value: String(outOfStock),
+
         date: today,
+
         sub: "Urgent action needed",
       },
     ];
@@ -317,79 +409,200 @@ export function useInventory(): UseInventoryReturn {
 
   const filtered = useMemo((): InventoryProduct[] => {
     const products = selectedInventory?.products ?? [];
+
     return products.filter((product) => {
       const matchesStatus =
-        status === "all" ||
-        (status === "In Stock" && product.quantity > 10) ||
-        (status === "Low Stock" &&
+        ui.status === "all" ||
+        (ui.status === "In Stock" && product.quantity > 10) ||
+        (ui.status === "Low Stock" &&
           product.quantity > 0 &&
           product.quantity <= 10) ||
-        (status === "Out of Stock" && product.quantity === 0);
+        (ui.status === "Out of Stock" && product.quantity === 0);
 
       const matchesSearch =
-        !search ||
-        product.name.toLowerCase().includes(search.toLowerCase()) ||
-        product.id.toLowerCase().includes(search.toLowerCase());
+        !ui.search ||
+        product.name.toLowerCase().includes(ui.search.toLowerCase()) ||
+        product.id.toLowerCase().includes(ui.search.toLowerCase());
 
       return matchesStatus && matchesSearch;
     });
-  }, [selectedInventory, status, search]);
+  }, [selectedInventory, ui.status, ui.search]);
+
+  // ── Dialog actions (SWR mutate replaces manual refetch) ────────────────────
+
+  const openAddInventoryDialog = () => {
+    ui.setInventoryDialogTarget(null);
+
+    ui.setInventoryDialogOpen(true);
+  };
+
+  const openEditInventoryDialog = (inv: Inventory) => {
+    ui.setInventoryDialogTarget(inv);
+
+    ui.setInventoryDialogOpen(true);
+  };
+
+  const closeInventoryDialog = () => {
+    ui.setInventoryDialogOpen(false);
+
+    ui.setInventoryDialogTarget(null);
+  };
+
+  const openProductDialog = (product: InventoryProduct) => {
+    ui.setSelectedProduct(product);
+
+    ui.setProductDialogOpen(true);
+
+    // product detail auto-fetches via productKey SWR
+  };
+
+  const closeProductDialog = () => {
+    ui.setProductDialogOpen(false);
+
+    ui.setSelectedProduct(null);
+
+    ui.setProductDetail(null);
+  };
+
+  const handleInventoryAdded = (_newId: string) => {
+    closeInventoryDialog();
+
+    mutateInventories(); // SWR re-fetches the list
+  };
+
+  const handleInventoryUpdated = (id: string) => {
+    closeInventoryDialog();
+
+    mutateInventories();
+
+    if (ui.selectedInventoryId === id) {
+      mutateDetail();
+    }
+  };
+
+  const handleInventoryDeleted = () => {
+    closeInventoryDialog();
+
+    setPage(1);
+
+    mutateInventories();
+
+    ui.setSelectedInventoryId(null);
+  };
+
+  const handleItemAdded = () => {
+    ui.setItemDialogOpen(false);
+
+    if (ui.selectedInventoryId) {
+      mutateDetail();
+    }
+  };
+
+  const switchInventory = (id: string | null) => {
+    ui.setSelectedInventoryId(id);
+
+    ui.setStatus("all");
+
+    ui.setSearch("");
+
+    ui.setSelectedRow(null);
+  };
 
   return {
     inventories,
+
     paginationMeta,
+
     loading,
+
     error,
 
-    selectedInventory,
+    selectedInventory: selectedInventory ?? null,
+
     detailLoading,
-    detailError,
+
+    detailError: detailError
+      ? (detailError?.response?.data?.message ??
+        detailError?.message ??
+        "Failed to load inventory detail")
+      : null,
+
     stats,
+
     filtered,
 
     page,
+
     itemsPerPage: ITEMS_PER_PAGE,
+
     totalPages: paginationMeta.totalPages,
+
     totalItems: paginationMeta.totalItems,
+
     goToPage,
 
     listSearch,
-    setListSearch,
-    clearListSearch,
-    listSearchOpen,
-    setListSearchOpen,
 
-    inventoryDialogOpen,
-    inventoryDialogTarget,
+    setListSearch,
+
+    clearListSearch,
+
+    listSearchOpen: ui.listSearchOpen,
+
+    setListSearchOpen: ui.setListSearchOpen,
+
+    inventoryDialogOpen: ui.inventoryDialogOpen,
+
+    inventoryDialogTarget: ui.inventoryDialogTarget,
+
     openAddInventoryDialog,
+
     openEditInventoryDialog,
+
     closeInventoryDialog,
 
-    productDialogOpen,
-    selectedProduct,
-    productDetail,
+    productDialogOpen: ui.productDialogOpen,
+
+    selectedProduct: ui.selectedProduct,
+
+    productDetail: productDetail ?? null,
+
     productDetailLoading,
+
     openProductDialog,
+
     closeProductDialog,
 
-    itemDialogOpen,
-    setItemDialogOpen,
+    itemDialogOpen: ui.itemDialogOpen,
 
-    status,
-    setStatus,
-    search,
-    setSearch,
-    searchOpen,
-    setSearchOpen,
-    selectedRow,
-    setSelectedRow,
+    setItemDialogOpen: ui.setItemDialogOpen,
+
+    status: ui.status,
+
+    setStatus: ui.setStatus,
+
+    search: ui.search,
+
+    setSearch: ui.setSearch,
+
+    searchOpen: ui.searchOpen,
+
+    setSearchOpen: ui.setSearchOpen,
+
+    selectedRow: ui.selectedRow,
+
+    setSelectedRow: ui.setSelectedRow,
 
     handleInventoryAdded,
+
     handleInventoryUpdated,
+
     handleInventoryDeleted,
+
     handleItemAdded,
+
     switchInventory,
 
-    selectedInventoryId,
+    selectedInventoryId: ui.selectedInventoryId,
   };
 }
