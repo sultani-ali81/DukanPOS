@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useUtilsStore } from "./utilsStore";
 type User = {
-  name: string;
+  name?: string;
   id: string;
   email: string;
   role: "Admin" | "Cashier";
