@@ -21,7 +21,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import CustomerDialog from "@/pages/contacts/components/AddCustomerDialog";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -35,6 +34,7 @@ import {
 import { NumberDisplay } from "@/components/number-display";
 import { useCustomers } from "@/hooks/use-customers";
 import { extractError } from "@/lib/error";
+import { ContactDialog } from "@/pages/contacts/components/contact-dialog";
 import { InlineCombobox } from "@/pages/purchases/components/inline-combobox";
 import InventoryCombobox from "@/pages/purchases/components/inventory-combobox";
 import {
@@ -480,10 +480,11 @@ export function NewPurchaseClient() {
         </form>
       </Form>
 
-      <CustomerDialog
+      <ContactDialog
         open={customerDialogOpen}
         onOpenChange={setCustomerDialogOpen}
         onSubmit={handleCreateCustomer}
+        editingCustomer={null}
       />
     </div>
   );

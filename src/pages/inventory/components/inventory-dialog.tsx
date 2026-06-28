@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Inventory } from "@/types/inventory";
 import { Loader2, Warehouse } from "lucide-react";
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
 export interface InventoryFormValues {
@@ -45,12 +45,12 @@ export function InventoryDialog({
     },
   });
 
-  useState(() => {
+  useEffect(() => {
     reset({
       name: editingInventory?.name ?? "",
       address: editingInventory?.address ?? "",
     });
-  });
+  }, [editingInventory]);
 
   async function submit(values: InventoryFormValues) {
     await onSubmit(values, editingInventory?.id);

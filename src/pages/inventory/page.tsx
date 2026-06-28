@@ -64,7 +64,7 @@ export default function InventoryPage() {
         toast.success("Inventory created", {
           description: `"${values.name}" is ready.`,
         });
-        handleInventoryAdded(id as string);
+        handleInventoryAdded();
       }
     } catch {
       toast.error("Something went wrong", { description: "Please try again." });
