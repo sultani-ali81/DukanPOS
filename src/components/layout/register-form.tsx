@@ -15,12 +15,17 @@ import { isValidPhoneNumber } from "react-phone-number-input";
 import { Eye, EyeOff, Lock, Mail, Store, User } from "lucide-react";
 import { useForm } from "react-hook-form";
 
+import { useAuthStore } from "@/lib/store";
+import { decodeToken } from "@/lib/utils";
+
 type ApiError = {
   response?: { data?: { message?: string | string[] } };
 };
 
 export default function RegisterForm() {
   const navigate = useNavigate();
+
+  const { setAuth } = useAuthStore();
 
   const formHook = useForm({
     defaultValues: {
@@ -308,12 +313,31 @@ export default function RegisterForm() {
         title="Verify Email"
         description={`Enter the OTP sent to ${userEmail}`}
         onVerify={async (code: string) => {
-          await api.post("/auth/verify-register", {
-            email: userEmail,
-            code,
-          });
+          const res = await api.post<{ message: string; token: string }>(
+            "/auth/verify-register",
+            { email: userEmail, code },
+          );
 
-          navigate("/dashboard");
+          const token = res.data.token;
+          if (!token) throw new Error("No token received");
+
+          const decoded = decodeToken<{
+            id: string;
+            email: string;
+            role: string;
+          }>(token);
+          if (!decoded) throw new Error("Invalid token");
+
+          setAuth(
+            {
+              id: decoded.id,
+              email: decoded.email,
+              role: decoded.role as "Admin" | "Cashier",
+            },
+            token,
+          );
+
+          navigate(decoded.role === "Cashier" ? "/pos" : "/dashboard");
         }}
       />
     </>
