@@ -6,7 +6,7 @@ const fetcher = (url: string) => api.get(url).then((res) => res.data);
 
 export function useProfile() {
   const { data, isLoading, error, mutate } = useSWR<EmployeeInfo>(
-    "/auth/me",
+    "/employees/me",
     fetcher,
     { revalidateOnFocus: false },
   );

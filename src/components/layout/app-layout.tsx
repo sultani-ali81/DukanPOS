@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/sheet";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuthStore } from "@/lib/store";
-import PosPage from "@/pages/pos";
 import {
   Bell,
   Globe,
@@ -47,13 +46,13 @@ export default function AppLayout() {
     navigate("/", { replace: true });
   };
 
-  if (pathname === "/pos") {
-    return (
-      <div className="min-h-screen bg-gray-300 overflow-y-auto">
-        <PosPage />
-      </div>
-    );
-  }
+  // if (pathname === "/pos") {
+  //   return (
+  //     <div className="min-h-screen bg-gray-300 overflow-y-auto">
+  //       <PosPage />
+  //     </div>
+  //   );
+  // }
 
   const initials = (user?.name ?? user?.role ?? "?")
     .split(" ")

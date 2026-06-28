@@ -30,6 +30,16 @@ export const router = createBrowserRouter([
     ),
   },
 
+  // POS lives outside AppLayout — full-screen UI, no shell
+  {
+    path: "/pos",
+    element: (
+      <PrivateRoute>
+        <PosPage />
+      </PrivateRoute>
+    ),
+  },
+
   ...authRoutes,
 
   {
@@ -153,14 +163,6 @@ export const router = createBrowserRouter([
           <RoleRoute allowed={["Admin"]}>
             <UsersPage />
           </RoleRoute>
-        ),
-      },
-      {
-        path: "/pos",
-        element: (
-          <PrivateRoute>
-            <PosPage />
-          </PrivateRoute>
         ),
       },
     ],
