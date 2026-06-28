@@ -1,7 +1,4 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
-
 import {
   Dialog,
   DialogContent,
@@ -10,17 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-import {
-  DialogContent as DialogContentRoot,
-  DialogHeader as DialogHeaderRoot,
-  Dialog as DialogRoot,
-  DialogTitle as DialogTitleRoot,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-
 import { Label } from "@/components/ui/label";
-
 import {
   Select,
   SelectContent,
@@ -28,146 +16,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { cn } from "@/lib/utils";
-
-import { createCategory } from "@/queries/category";
-
 import { deleteProductImage, uploadProductImages } from "@/queries/products";
-
 import type {
   Product,
   ProductFormSubmitValues,
   ProductFormValues,
   ProductImage,
 } from "@/types/product";
-
 import { AlertCircle, Loader2, Plus, UploadCloud, X } from "lucide-react";
-
 import { useEffect, useRef, useState, type DragEvent } from "react";
-
 import { Controller, useForm } from "react-hook-form";
-
 import { toast } from "sonner";
+
+import { CategoryDialog } from "@/pages/categories/components/category-dialog";
+// ^ adjust this path to match where category-dialog.tsx actually lives in your project
 
 interface ProductDialogProps {
   open: boolean;
-
   editingProduct?: Product | null;
-
   categories: { id: string; name: string }[];
-
   onOpenChange: (open: boolean) => void;
-
   onSubmit: (values: ProductFormSubmitValues, id?: string) => Promise<void>;
-
   onCategoryCreated?: (category: { id: string; name: string }) => void;
-}
-
-// ─── Inline Add Category Dialog ────────────────────────────────────────────────
-
-function AddCategoryDialog({
-  open,
-
-  onOpenChange,
-
-  onCreated,
-}: {
-  open: boolean;
-
-  onOpenChange: (open: boolean) => void;
-
-  onCreated: (category: { id: string; name: string }) => void;
-}) {
-  const [name, setName] = useState("");
-
-  const [loading, setLoading] = useState(false);
-
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!name.trim()) return;
-
-    setLoading(true);
-
-    setError("");
-
-    try {
-      const res = await createCategory({ name: name.trim() });
-
-      onCreated({ id: res.id, name: name.trim() });
-
-      setName("");
-
-      onOpenChange(false);
-
-      toast.success("Category created");
-    } catch {
-      setError("Could not create category. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <DialogRoot open={open} onOpenChange={onOpenChange}>
-      <DialogContentRoot>
-        <form onSubmit={handleSubmit}>
-          <DialogHeaderRoot>
-            <DialogTitleRoot>Add Category</DialogTitleRoot>
-          </DialogHeaderRoot>
-
-          <div className="space-y-3 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="new-cat-name">Category Name</Label>
-
-              <Input
-                id="new-cat-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Beverages"
-                autoFocus
-              />
-
-              {error && <p className="text-xs text-destructive">{error}</p>}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-
-            <Button type="submit" disabled={loading || !name.trim()}>
-              {loading && <Loader2 className="size-4 animate-spin" />}
-              Create
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContentRoot>
-    </DialogRoot>
-  );
 }
 
 // ─── Product Dialog ────────────────────────────────────────────────────────────
 
 export function ProductDialog({
   open,
-
   editingProduct,
-
   categories,
-
   onOpenChange,
-
   onSubmit,
-
   onCategoryCreated,
 }: ProductDialogProps) {
   const isEdit = !!editingProduct;
@@ -182,38 +63,27 @@ export function ProductDialog({
 
   const {
     register,
-
     handleSubmit,
-
     reset,
-
     control,
-
     setValue,
-
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm<ProductFormValues>({
     defaultValues: { name: "", price: 0, categoryName: "" },
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [isDragging, setIsDragging] = useState(false);
-
   const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
-
   const [uploadingImages, setUploadingImages] = useState<UploadingImage[]>([]);
 
   // Reset form + image state every time the dialog opens.
-
   useEffect(() => {
     if (!open) return;
 
     reset({
       name: editingProduct?.name ?? "",
-
       price: editingProduct?.price ?? 0,
-
       categoryName: editingProduct?.category ?? "",
     });
 
@@ -221,7 +91,6 @@ export function ProductDialog({
 
     setUploadingImages((prev) => {
       prev.forEach((img) => URL.revokeObjectURL(img.previewUrl));
-
       return [];
     });
   }, [open, editingProduct, reset]);
@@ -235,18 +104,14 @@ export function ProductDialog({
 
     const entries = imageFiles.map((file) => ({
       key: crypto.randomUUID(),
-
       previewUrl: URL.createObjectURL(file),
     }));
 
     setUploadingImages((prev) => [
       ...prev,
-
       ...entries.map((e) => ({
         key: e.key,
-
         previewUrl: e.previewUrl,
-
         status: "uploading" as const,
       })),
     ]);
@@ -256,14 +121,12 @@ export function ProductDialog({
         setUploadingImages((prev) =>
           prev.map((img) => {
             const idx = entries.findIndex((e) => e.key === img.key);
-
             return idx !== -1
               ? { ...img, id: ids[idx], status: "done" as const }
               : img;
           }),
         );
       })
-
       .catch(() => {
         setUploadingImages((prev) =>
           prev.map((img) =>
@@ -284,9 +147,7 @@ export function ProductDialog({
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
-
     setIsDragging(false);
-
     if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
   }
 
@@ -297,7 +158,6 @@ export function ProductDialog({
       toast.error("Could not remove image", {
         description: "Please try again.",
       });
-
       setExistingImages((prev) => [...prev, image]);
     });
   }
@@ -305,9 +165,7 @@ export function ProductDialog({
   function removeUploadingImage(key: string) {
     setUploadingImages((prev) => {
       const target = prev.find((img) => img.key === key);
-
       if (target) URL.revokeObjectURL(target.previewUrl);
-
       return prev.filter((img) => img.key !== key);
     });
   }
@@ -319,14 +177,11 @@ export function ProductDialog({
   async function submit(values: ProductFormValues) {
     if (hasUploading) {
       toast.error("Please wait for images to finish uploading");
-
       return;
     }
 
     const attachmentIds = uploadingImages
-
       .filter((img) => img.status === "done" && img.id)
-
       .map((img) => img.id as string);
 
     let payload: ProductFormSubmitValues;
@@ -342,47 +197,52 @@ export function ProductDialog({
       payload = {};
 
       if (dirtyFields.name) payload.name = values.name;
-
       if (dirtyFields.price) payload.price = values.price;
-
       if (dirtyFields.categoryName) payload.categoryName = values.categoryName;
-
       if (imagesChanged) payload.attachmentIds = attachmentIds;
 
       if (Object.keys(payload).length === 0) {
         onOpenChange(false);
-
         return;
       }
     } else {
       payload = { ...values };
-
       if (attachmentIds.length) payload.attachmentIds = attachmentIds;
     }
 
     await onSubmit(payload, editingProduct?.id);
-
     onOpenChange(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+      {/*
+        Manual backdrop: ProductDialog runs modal={false} so that a nested
+        modal dialog (CategoryDialog) can open on top without the two
+        competing focus traps fighting each other and force-closing this one.
+        Giving up modal also means Radix won't render its own DialogOverlay
+        here, so we render an equivalent blurred backdrop ourselves.
+      */}
+      {open && (
+        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
+      )}
+
       <DialogContent
         className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
         onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement | null;
           if (
-            (e.target as HTMLElement | null)?.closest(
-              '[data-slot="select-content"]',
-            )
+            target?.closest('[data-slot="select-content"]') ||
+            target?.closest('[role="dialog"]')
           ) {
             e.preventDefault();
           }
         }}
         onFocusOutside={(e) => {
+          const target = e.target as HTMLElement | null;
           if (
-            (e.target as HTMLElement | null)?.closest(
-              '[data-slot="select-content"]',
-            )
+            target?.closest('[data-slot="select-content"]') ||
+            target?.closest('[role="dialog"]')
           ) {
             e.preventDefault();
           }
@@ -391,9 +251,8 @@ export function ProductDialog({
         <form onSubmit={handleSubmit(submit)}>
           <DialogHeader>
             <DialogTitle>{isEdit ? "Edit Product" : "Add Product"}</DialogTitle>
-
             <DialogDescription>
-              {isEdit
+              {editingProduct
                 ? `Update details for "${editingProduct.name}".`
                 : "Enter the product details to add it to your catalog."}
             </DialogDescription>
@@ -404,13 +263,11 @@ export function ProductDialog({
               <Label htmlFor="p-name">
                 Product Name <span className="text-destructive">*</span>
               </Label>
-
               <Input
                 id="p-name"
                 placeholder="e.g. Basmati Rice 5kg"
                 {...register("name", { required: "Name is required" })}
               />
-
               {errors.name && (
                 <p className="text-xs text-destructive">
                   {errors.name.message}
@@ -423,7 +280,6 @@ export function ProductDialog({
                 <Label htmlFor="p-category">
                   Category <span className="text-destructive">*</span>
                 </Label>
-
                 <Button
                   type="button"
                   variant="outline"
@@ -445,7 +301,6 @@ export function ProductDialog({
                     <SelectTrigger id="p-category" className="w-full">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
-
                     <SelectContent>
                       {allCategories.map((c) => (
                         <SelectItem key={c.id} value={c.name}>
@@ -468,7 +323,6 @@ export function ProductDialog({
               <Label htmlFor="p-price">
                 Selling Price <span className="text-destructive">*</span>
               </Label>
-
               <Input
                 id="p-price"
                 type="number"
@@ -476,13 +330,10 @@ export function ProductDialog({
                 min="0"
                 {...register("price", {
                   required: "Price is required",
-
                   valueAsNumber: true,
-
                   min: { value: 0, message: "Price must be 0 or more" },
                 })}
               />
-
               {errors.price && (
                 <p className="text-xs text-destructive">
                   {errors.price.message}
@@ -497,28 +348,24 @@ export function ProductDialog({
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => {
                   e.preventDefault();
-
                   setIsDragging(true);
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 className={cn(
                   "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors",
-
                   isDragging
                     ? "border-primary bg-primary/5"
                     : "border-input hover:border-primary/50 hover:bg-muted/50",
                 )}
               >
                 <UploadCloud className="size-6 text-muted-foreground" />
-
                 <p className="text-sm text-muted-foreground">
                   <span className="font-medium text-foreground">
                     Click to upload
                   </span>{" "}
                   or drag and drop
                 </p>
-
                 <p className="text-xs text-muted-foreground/70">
                   PNG or JPG, multiple images allowed
                 </p>
@@ -531,7 +378,6 @@ export function ProductDialog({
                   className="hidden"
                   onChange={(e) => {
                     if (e.target.files?.length) addFiles(e.target.files);
-
                     e.target.value = "";
                   }}
                 />
@@ -549,7 +395,6 @@ export function ProductDialog({
                         alt="Product"
                         className="size-full object-cover"
                       />
-
                       <button
                         type="button"
                         onClick={() => removeExistingImage(img)}
@@ -607,26 +452,28 @@ export function ProductDialog({
             >
               Cancel
             </Button>
-
             <Button type="submit" disabled={isSubmitting || hasUploading}>
               {(isSubmitting || hasUploading) && (
                 <Loader2 className="size-4 animate-spin" />
               )}
-
               {isEdit ? "Save Changes" : "Create Product"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
 
-      <AddCategoryDialog
+      <CategoryDialog
         open={addCategoryOpen}
+        editingCategory={null}
         onOpenChange={setAddCategoryOpen}
+        onSubmit={async (values) => {
+          const { createCategory } = await import("@/queries/category");
+          const res = await createCategory(values);
+          return { id: res.id, name: values.name };
+        }}
         onCreated={(category) => {
           setLocalCategories((prev) => [...prev, category]);
-
           setValue("categoryName", category.name);
-
           onCategoryCreated?.(category);
         }}
       />
@@ -636,10 +483,7 @@ export function ProductDialog({
 
 interface UploadingImage {
   key: string;
-
   previewUrl: string;
-
   id?: string;
-
   status: "uploading" | "done" | "error";
 }
