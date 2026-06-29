@@ -135,7 +135,7 @@ export default function DashboardPage() {
 
         {isCustomActive && (
           <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
-            Custom range
+            Custom Range
           </Badge>
         )}
       </div>

@@ -71,7 +71,7 @@ export function DateRangePicker({
 
   const label = hasRange
     ? `${formatDate(value.from)} – ${formatDate(value.to)}`
-    : "Custom range";
+    : "Custom Range";
 
   return (
     <Popover open={open} onOpenChange={handleOpen}>
