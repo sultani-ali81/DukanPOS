@@ -119,7 +119,7 @@ export default function RegisterForm() {
         <div className="w-full max-w-sm">
           {/* Brand */}
 
-          <h1 className="text-center text-3xl font-bold text-teal-600">
+          <h1 className="text-center text-3xl font-bold text-primary-600">
             Create Your Store
           </h1>
           <p className="mt-2 text-center text-sm text-slate-400">
