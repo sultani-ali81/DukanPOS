@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneNumberInput } from "@/components/ui/phoneinput";
+import { Select, SelectItem, SelectTrigger } from "@/components/ui/select";
 import type {
   CreateUserPayload,
   UpdateUserPayload,
@@ -200,13 +201,11 @@ export function UserDialog({
                 <Label className="text-sm font-medium text-gray-700">
                   Role
                 </Label>
-                <select
-                  className="h-11 w-full rounded-xl border border-gray-200 bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                  {...register("role")}
-                >
-                  <option value="Cashier">Cashier</option>
-                  <option value="Admin">Admin</option>
-                </select>
+                <Select disabled>
+                  <SelectTrigger className="max-w-35">
+                    <SelectItem value="cashier">Cashier</SelectItem>
+                  </SelectTrigger>
+                </Select>
               </div>
             )}
           </div>
