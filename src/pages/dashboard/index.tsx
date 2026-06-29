@@ -1,27 +1,23 @@
 import { PageHeader } from "@/components/page-header";
-
 import { StatCard } from "@/components/stat-card";
-
-import { useDashboard } from "@/hooks/use-dashboard";
-
 import { Badge } from "@/components/ui/badge";
-
 import { Button } from "@/components/ui/button";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { useDashboard } from "@/hooks/use-dashboard";
 import { formatCurrency } from "@/lib/data";
-
-import type { DashboardRange, DashboardSession } from "@/types/dashboard";
-import { Banknote, Lock, Unlock } from "lucide-react";
-
-import { AlertTriangle, ArrowRight, BarChart3, TrendingUp } from "lucide-react";
-
+import type { DashboardRange } from "@/types/dashboard";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Banknote,
+  BarChart3,
+  TrendingUp,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { CashierBreakdownTable } from "./components/cashier-breakdown-table";
 import { DateRangePicker } from "./components/date-range-picker";
-
 import { SalesChart } from "./components/sales-chart";
+import { StockAlerts } from "./components/stock-alerts";
 
 // ── Skeletons ─────────────────────────────────────────────────────────────────
 
@@ -31,12 +27,9 @@ function StatCardSkeleton() {
       <CardContent className="flex items-start justify-between gap-4 p-5">
         <div className="space-y-2">
           <div className="h-4 w-28 animate-pulse rounded bg-muted" />
-
           <div className="h-8 w-20 animate-pulse rounded bg-muted" />
-
           <div className="h-3 w-16 animate-pulse rounded bg-muted" />
         </div>
-
         <div className="size-12 animate-pulse rounded-xl bg-muted" />
       </CardContent>
     </Card>
@@ -62,128 +55,37 @@ function ChartSkeleton() {
 
 const RANGE_OPTIONS: { label: string; value: DashboardRange }[] = [
   { label: "Today", value: "today" },
-
   { label: "Yesterday", value: "yesterday" },
-
   { label: "Last 7 Days", value: "last-week" },
-
   { label: "This Month", value: "monthly" },
 ];
 
 function formatTrend(pct: number): { value: string; positive: boolean } {
   const rounded = Math.round(pct);
-
   return {
     value: `${rounded >= 0 ? "+" : ""}${rounded}% vs previous period`,
-
     positive: pct >= 0,
   };
 }
-function SessionCard({ session }: { session: DashboardSession }) {
-  const isOpen = session.status === "open";
 
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      {/* Status */}
-      <Card>
-        <CardContent className="p-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">Session Status</p>
-            <p
-              className={`text-2xl font-bold ${isOpen ? "text-green-600" : "text-gray-500"}`}
-            >
-              {isOpen ? "Open" : "Closed"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {isOpen ? "Store is accepting sales" : "Store session is closed"}
-            </p>
-          </div>
-          <div
-            className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${isOpen ? "bg-green-50" : "bg-gray-100"}`}
-          >
-            {isOpen ? (
-              <Unlock className={`size-5 text-green-600`} />
-            ) : (
-              <Lock className={`size-5 text-gray-400`} />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+// ── Page ──────────────────────────────────────────────────────────────────────
 
-      {/* Opening / Closing amount */}
-      <Card>
-        <CardContent className="p-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">
-              {isOpen ? "Opening Amount" : "Closing Amount"}
-            </p>
-            <p className="text-2xl font-bold text-foreground">
-              {formatCurrency(
-                isOpen
-                  ? (session.openingAmount ?? 0)
-                  : (session.closingAmount ?? 0),
-              )}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {isOpen ? "Cash at session start" : "Cash at session end"}
-            </p>
-          </div>
-          <div className="size-12 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-            <Banknote className="size-5 text-blue-500" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Expected amount */}
-      <Card>
-        <CardContent className="p-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">
-              Expected Amount
-            </p>
-            <p className="text-2xl font-bold text-indigo-600">
-              {formatCurrency(session.expectedAmount)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Opening + all sales collected
-            </p>
-          </div>
-          <div className="size-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-            <TrendingUp className="size-5 text-indigo-500" />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 export default function DashboardPage() {
   const navigate = useNavigate();
 
   const {
     range,
-
     setRange,
-
     customRange,
-
     setCustomRange,
-
     activeCustomRange,
-
     applyCustomRange,
-
     stats,
-
     loading,
-
     error,
-
     weeklyBreakdown,
-
     weeklyLoading,
-
     isCustomActive,
-
     hasChart,
   } = useDashboard();
 
@@ -208,8 +110,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Toolbar: range toggles + date range picker ── */}
-
+      {/* ── Range toolbar ── */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
           {RANGE_OPTIONS.map((opt) => (
@@ -218,7 +119,6 @@ export default function DashboardPage() {
               onClick={() => setRange(opt.value)}
               className={[
                 "h-8 rounded-lg px-3.5 text-sm font-medium transition-colors",
-
                 range === opt.value && !isCustomActive
                   ? "bg-primary text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
@@ -228,8 +128,6 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
-
-        {/* Custom date range picker */}
 
         <DateRangePicker
           value={customRange}
@@ -246,16 +144,12 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Stat cards ── */}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         {loading ? (
           <>
             <StatCardSkeleton />
-
             <StatCardSkeleton />
-
             <StatCardSkeleton />
-
             <StatCardSkeleton />
           </>
         ) : (
@@ -266,14 +160,12 @@ export default function DashboardPage() {
               icon={Banknote}
               trend={formatTrend(stats?.sales?.percentageChange ?? 0)}
             />
-
             <StatCard
               label="Profit"
               value={formatCurrency(stats?.profit?.total ?? 0)}
               icon={TrendingUp}
               trend={formatTrend(stats?.profit?.percentageChange ?? 0)}
             />
-
             <StatCard
               label="Out of Stock"
               value={String(stats?.outOfStockProducts?.length ?? 0)}
@@ -284,11 +176,9 @@ export default function DashboardPage() {
                   (stats?.outOfStockProducts?.length ?? 0) > 0
                     ? "Needs restocking"
                     : "All stocked",
-
                 positive: (stats?.outOfStockProducts?.length ?? 0) === 0,
               }}
             />
-
             <StatCard
               label="Low Stock Items"
               value={String(lowStockCount)}
@@ -296,7 +186,6 @@ export default function DashboardPage() {
               accent="amber"
               trend={{
                 value: lowStockCount > 0 ? "Needs attention" : "All good",
-
                 positive: lowStockCount === 0,
               }}
             />
@@ -304,16 +193,17 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {!loading && stats?.session && <SessionCard session={stats.session} />}
+      <CashierBreakdownTable
+        data={stats?.cashierBreakdown ?? []}
+        loading={loading}
+      />
 
-      {/* ── Chart — always visible, shows active range breakdown or falls back to last 7 days ── */}
-
+      {/* ── Sales chart ── */}
       <Card className="mb-6">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 className="size-4 text-muted-foreground" />
-
               {hasChart ? "Daily Breakdown" : "Last 7 Days"}
             </CardTitle>
 
@@ -336,7 +226,6 @@ export default function DashboardPage() {
             )}
           </div>
         </CardHeader>
-
         <CardContent>
           {(hasChart ? loading : weeklyLoading) ? (
             <ChartSkeleton />
@@ -353,58 +242,11 @@ export default function DashboardPage() {
       </Card>
 
       {/* ── Stock alerts ── */}
-
-      {lowStockCount > 0 && !loading && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="size-4 text-destructive" />
-              Stock Alerts
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {(stats?.outOfStockProducts ?? []).map((p, i) => (
-                <div
-                  key={`out-${p.id}-${i}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-red-100 bg-red-50/50 p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900">
-                      {p.name}
-                    </p>
-
-                    <p className="text-xs text-gray-500">{p.inventoryName}</p>
-                  </div>
-
-                  <Badge className="shrink-0 bg-red-100 text-red-600 border-red-200 hover:bg-red-100">
-                    Out of stock
-                  </Badge>
-                </div>
-              ))}
-
-              {(stats?.lowStockProducts ?? []).map((p, i) => (
-                <div
-                  key={`low-${p.id}-${i}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-amber-100 bg-amber-50/50 p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900">
-                      {p.name}
-                    </p>
-
-                    <p className="text-xs text-gray-500">{p.inventoryName}</p>
-                  </div>
-
-                  <Badge className="shrink-0 bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
-                    {p.quantity} left
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {!loading && (
+        <StockAlerts
+          outOfStock={stats?.outOfStockProducts ?? []}
+          lowStock={stats?.lowStockProducts ?? []}
+        />
       )}
     </div>
   );

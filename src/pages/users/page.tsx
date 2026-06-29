@@ -1,80 +1,38 @@
-// src/pages/users/page.tsx
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { createUser, deleteUser, getUsers, updateUser } from "@/queries/user";
+import { Input } from "@/components/ui/input";
+import { useUsers } from "@/hooks/use-users";
+import { createUser, deleteUser, updateUser } from "@/queries/user";
 import type { CreateUserPayload, UpdateUserPayload, User } from "@/types/user";
-import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Plus, Search, X } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { DeleteUserDialog } from "./components/delete-user-dialog";
 import { UserDialog } from "./components/user-dialog";
 import { UserTable } from "./components/user-table";
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    users,
+    total,
+    isLoading,
+    page,
+    setPage,
+    search,
+    handleSearch,
+    clearSearch,
+    role,
+    setRole,
+    mutate,
+    optimisticDelete,
+    PAGE_SIZE,
+  } = useUsers();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState("ALL");
-
-  // ── Fetch ─────────────────────────────────────────────────────────────────
-
-  async function fetchUsers() {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await getUsers({});
-      setUsers(data);
-    } catch (err) {
-      setError((err as Error).message ?? "Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  // ── Create / Update ───────────────────────────────────────────────────────
-
-  async function handleSubmit(
-    payload: CreateUserPayload | UpdateUserPayload,
-    id?: string,
-  ) {
-    if (id) {
-      await updateUser(id, payload as UpdateUserPayload);
-      toast.success("User updated");
-    } else {
-      await createUser(payload as CreateUserPayload);
-      toast.success("User created");
-    }
-    await fetchUsers();
-  }
-
-  // ── Delete ────────────────────────────────────────────────────────────────
-
-  async function handleDelete(user: User) {
-    setDeletingId(user.id);
-    try {
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
-      await deleteUser(user.id);
-      toast.success("User deleted", {
-        description: `${user.name} has been removed.`,
-      });
-    } catch {
-      setUsers((prev) => [user, ...prev]);
-      toast.error("Could not delete user", {
-        description: "Please try again.",
-      });
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
-  // ── Dialog helpers ────────────────────────────────────────────────────────
 
   function openCreate() {
     setEditingUser(null);
@@ -86,10 +44,48 @@ export default function UsersPage() {
     setDialogOpen(true);
   }
 
-  // ── Filtered list ─────────────────────────────────────────────────────────
+  async function handleSubmit(
+    payload: CreateUserPayload | UpdateUserPayload,
+    id?: string,
+  ) {
+    try {
+      if (id) {
+        await updateUser(id, payload as UpdateUserPayload);
+        toast.success("User updated");
+      } else {
+        await createUser(payload as CreateUserPayload);
+        toast.success("User created");
+      }
+      await mutate();
+    } catch {
+      toast.error("Something went wrong", { description: "Please try again." });
+      throw new Error("submit failed");
+    }
+  }
 
-  const filtered =
-    roleFilter === "ALL" ? users : users.filter((u) => u.role === roleFilter);
+  async function confirmDelete() {
+    if (!userToDelete) return;
+    const target = userToDelete;
+    setDeletingId(target.id);
+    setUserToDelete(null);
+    try {
+      optimisticDelete(target.id);
+      await deleteUser(target.id);
+      await mutate();
+      toast.success("User deleted", {
+        description: `${target.name} has been removed.`,
+      });
+    } catch {
+      await mutate();
+      toast.error("Could not delete user", {
+        description: "Please try again.",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const error = null;
 
   return (
     <div>
@@ -102,47 +98,95 @@ export default function UsersPage() {
         </Button>
       </PageHeader>
 
-      {error && (
-        <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      {/* Search */}
+      <div className="mb-4 relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search users..."
+          className="pl-9 pr-8"
+        />
+        {search && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
 
       {/* Role filter */}
       <div className="mb-4 flex gap-2">
         {["ALL", "Admin", "Cashier"].map((r) => (
           <button
             key={r}
-            onClick={() => setRoleFilter(r)}
+            onClick={() => setRole(r)}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              roleFilter === r
+              role === r
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:bg-accent"
             }`}
           >
-            {r === "ALL"
-              ? `All (${users.length})`
-              : `${r}s (${users.filter((u) => u.role === r).length})`}
+            {r === "ALL" ? `All (${total})` : r}
           </button>
         ))}
       </div>
 
       <UserTable
-        users={filtered}
-        loading={loading}
+        users={users}
+        loading={isLoading}
         deletingId={deletingId}
-        roleFilter={roleFilter}
+        roleFilter={role}
         error={error}
+        onRowClick={openEdit}
         onEdit={openEdit}
-        onDelete={handleDelete}
+        onDelete={(user) => setUserToDelete(user)}
         onAddFirst={openCreate}
       />
+
+      {/* Pagination */}
+      {total > PAGE_SIZE && (
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Showing {(page - 1) * PAGE_SIZE + 1}–
+            {Math.min(page * PAGE_SIZE, total)} of {total}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page * PAGE_SIZE >= total}
+              onClick={() => setPage(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <UserDialog
         open={dialogOpen}
         editingUser={editingUser}
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
+      />
+
+      <DeleteUserDialog
+        user={userToDelete}
+        open={!!userToDelete}
+        isDeleting={!!deletingId}
+        onConfirm={confirmDelete}
+        onCancel={() => setUserToDelete(null)}
       />
     </div>
   );

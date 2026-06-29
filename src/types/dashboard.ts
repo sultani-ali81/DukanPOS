@@ -27,6 +27,17 @@ export interface DashboardStockProduct {
   inventoryName: string;
 }
 
+export interface CashierBreakdown {
+  sessionId: string;
+  employeeId: string;
+  employeeName: string;
+  totalSales: number;
+  openingAmount: number;
+  closingAmount: number | null;
+  status: "open" | "closed";
+  expectedAmount?: number | null;
+}
+
 export interface DashboardStats {
   range: DashboardRange;
   customRange?: { from: string; to: string };
@@ -36,4 +47,5 @@ export interface DashboardStats {
   outOfStockProducts?: DashboardStockProduct[];
   dailyBreakdown?: DailyStats[];
   session?: DashboardSession;
+  cashierBreakdown?: CashierBreakdown[];
 }

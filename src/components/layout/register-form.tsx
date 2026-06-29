@@ -119,10 +119,6 @@ export default function RegisterForm() {
       >
         <div className="w-full max-w-sm">
           {/* Brand */}
-          <div className="mb-6 flex items-center gap-2">
-            <img src="/icons/logo.svg" alt="Logo" className="h-7 w-7" />
-            <span className="text-lg font-bold text-slate-800">POS</span>
-          </div>
 
           <h1 className="text-center text-3xl font-bold text-teal-600">
             Create Your Store

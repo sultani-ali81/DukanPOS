@@ -1,4 +1,3 @@
-// src/pages/users/components/user-table.tsx
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,8 +13,6 @@ import {
 import type { User } from "@/types/user";
 import { Loader2, Pencil, Trash2, UserX } from "lucide-react";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function initials(name: string) {
   return name
     .split(" ")
@@ -24,8 +21,6 @@ function initials(name: string) {
     .join("")
     .toUpperCase();
 }
-
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function UserSkeletonRow() {
   return (
@@ -55,14 +50,13 @@ function UserSkeletonRow() {
   );
 }
 
-// ── Table ─────────────────────────────────────────────────────────────────────
-
 interface UserTableProps {
   users: User[];
   loading: boolean;
   deletingId: string | null;
   roleFilter: string;
   error: string | null;
+  onRowClick: (user: User) => void;
   onEdit: (user: User) => void;
   onDelete: (user: User) => void;
   onAddFirst: () => void;
@@ -74,6 +68,7 @@ export function UserTable({
   deletingId,
   roleFilter,
   error,
+  onRowClick,
   onEdit,
   onDelete,
   onAddFirst,
@@ -120,7 +115,8 @@ export function UserTable({
             users.map((u) => (
               <TableRow
                 key={u.id}
-                className="transition-colors hover:bg-muted/50"
+                className="cursor-pointer transition-colors hover:bg-muted/50"
+                onClick={() => onRowClick(u)}
               >
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -145,7 +141,7 @@ export function UserTable({
                     {u.role}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
