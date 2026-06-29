@@ -353,7 +353,7 @@ export function PurchaseDetailClient() {
                       Destination Inventory
                     </dt>
                     <dd className="text-sm font-semibold text-foreground">
-                      {stockIns[0]?.inventoryName ?? inventoryId}
+                      {purchase.inventoryName ?? inventoryId}
                     </dd>
                   </div>
                 )}

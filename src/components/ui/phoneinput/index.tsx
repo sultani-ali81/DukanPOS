@@ -116,13 +116,7 @@ export const PhoneNumberInput: React.ForwardRefExoticComponent<PhoneNumberInputP
             <Label>{label}</Label>
           </div>
         )}
-        <div
-          className={cn(
-            "flex h-11 w-full items-center overflow-hidden rounded-xl border border-gray-200 shadow-xs transition-[color,box-shadow]",
-            "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
-            error && "border-destructive focus-within:ring-destructive/50",
-          )}
-        >
+        <div className="h-12 w-full min-w-0 rounded-xl border border-input focus-ring-ring px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40">
           {/* CallingCodeContext passes the code into InputWithPrefix
                 without changing its component reference */}
           <CallingCodeContext.Provider value={callingCode}>

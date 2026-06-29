@@ -94,8 +94,7 @@ export default function RegisterForm() {
     }
   };
 
-  const fieldClass =
-    "h-12 rounded-xl border-transparent bg-slate-100 pl-12 text-slate-700 placeholder:text-slate-400 focus-visible:ring-teal-500";
+  const fieldClass = "h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400 ";
 
   return (
     <>
@@ -110,7 +109,7 @@ export default function RegisterForm() {
             <button
               type="button"
               onClick={() => navigate("/login")}
-              className="mt-8 rounded-full border-2 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition hover:bg-white hover:text-teal-600"
+              className="mt-8 rounded-full border-1 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition text-white hover:bg-blue-900 hover:text-primary cursor-pointer"
             >
               Sign In
             </button>

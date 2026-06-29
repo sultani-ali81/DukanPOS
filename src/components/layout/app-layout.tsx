@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Input } from "../ui/input";
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
@@ -93,10 +94,10 @@ export default function AppLayout() {
 
           <div className="relative hidden max-w-sm flex-1 sm:block">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
+            <Input
               type="search"
               placeholder="Search products, sales, contacts..."
-              className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+              className="h-10 w-full rounded-lg  pl-9 pr-3 text-sm placeholder:text-muted-foreground "
             />
           </div>
 

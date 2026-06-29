@@ -248,7 +248,7 @@ export function PurchaseFlowCard({
                 disabled={stockingIn}
               >
                 <PackagePlus className="size-4" />
-                {stockingIn ? "Processing…" : "Confirm & Stock-In"}
+                {stockingIn ? "Processing…" : "Confirm Stock-In"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -265,7 +265,7 @@ export function PurchaseFlowCard({
               <AlertDialogFooter>
                 <AlertDialogCancel>Go Back</AlertDialogCancel>
                 <AlertDialogAction onClick={onStockIn}>
-                  Confirm & Stock-In
+                  Confirm Stock-In
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

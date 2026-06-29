@@ -74,6 +74,7 @@ export interface PurchaseListItem {
   /** Stock-in records associated with this purchase */
   stockIns?: StockInResponse[];
   inventoryId?: string | null;
+  inventoryName?: string | null;
 }
 
 // ── Detail (returned by GET /purchase/:id) ────────────────────────────────────

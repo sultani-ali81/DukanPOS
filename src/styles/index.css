@@ -96,7 +96,7 @@
 
   --destructive: oklch(0.62 0.22 25);
 
-  --border: oklch(0.24 0.015 285 / 12%);
+  --border: oklch(0.24 0.015 285 / 18%);
   --input: oklch(0.24 0.015 285 / 16%);
   --ring: oklch(23.538% 0.10872 272.315);
 

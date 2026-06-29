@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/store";
 import { decodeToken } from "@/lib/utils";
@@ -114,7 +113,7 @@ export default function LoginForm() {
             <button
               type="button"
               onClick={() => navigate("/register")}
-              className="mt-8 rounded-full border-2 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition hover:bg-white hover:text-teal-600"
+              className="mt-8 rounded-full border-1 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition text-white hover:bg-blue-900 hover:text-primary cursor-pointer"
             >
               Sign Up
             </button>
@@ -139,7 +138,7 @@ export default function LoginForm() {
                 placeholder="Email"
                 value={form.email}
                 onChange={handleChange}
-                className="h-12 rounded-xl border-transparent bg-slate-100 pl-12 text-slate-700 placeholder:text-slate-400 focus-visible:ring-teal-500"
+                className="h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400 "
               />
             </div>
 
@@ -153,7 +152,7 @@ export default function LoginForm() {
                 onChange={handleChange}
                 placeholder="Password"
                 autoComplete="new-password"
-                className="h-12 rounded-xl border-transparent bg-slate-100 pl-12 pr-12 text-slate-700 placeholder:text-slate-400 focus-visible:ring-teal-500"
+                className="h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400 "
               />
               <Button
                 type="button"
@@ -165,30 +164,6 @@ export default function LoginForm() {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </Button>
             </div>
-          </div>
-
-          {/* Remember + Forgot */}
-          <div className="mt-4 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={form.remember}
-                onCheckedChange={(value) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    remember: !!value,
-                  }))
-                }
-              />
-              <span className="text-slate-500">Remember me</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => navigate("/forgot-password")}
-              className="text-slate-400 hover:text-teal-600"
-            >
-              Forgot your password?
-            </button>
           </div>
 
           {error && (
