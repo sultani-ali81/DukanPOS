@@ -419,7 +419,7 @@ export function EditProfileDialog({
               {/* ── Gender + Store ────────────────────────────────────── */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="ep-gender">Gender</Label>
+                  <Label>Gender</Label>
                   <Controller
                     control={control}
                     name="gender"
@@ -428,7 +428,7 @@ export function EditProfileDialog({
                         value={field.value}
                         onValueChange={field.onChange}
                       >
-                        <SelectTrigger id="ep-gender" className="w-full">
+                        <SelectTrigger aria-label="Gender" className="w-full">
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>

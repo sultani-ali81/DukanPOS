@@ -34,88 +34,50 @@ import { usePosSession } from "./components/use-pos-session";
 
 const ITEMS_PER_PAGE = 20;
 
-// ── Barcode WebSocket hook ────────────────────────────────────────────────────
-
 function useBarcodeScanner({
   onBarcode,
+
   enabled = true,
 }: {
   onBarcode: (barcode: string) => void;
+
   enabled?: boolean;
 }) {
   const onBarcodeRef = useRef(onBarcode);
+
   useEffect(() => {
     onBarcodeRef.current = onBarcode;
   }, [onBarcode]);
 
-  const wsConnected = useRef(false);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let dead = false;
-
-    function connect() {
-      if (dead) return;
-      ws = new WebSocket("ws://localhost:8765");
-
-      ws.onopen = () => {
-        wsConnected.current = true;
-        console.log("[BarcodeScanner] WebSocket connected");
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data as string) as { barcode: string };
-          if (data.barcode) onBarcodeRef.current(data.barcode);
-        } catch {
-          // ignore malformed messages
-        }
-      };
-
-      ws.onclose = () => {
-        wsConnected.current = false;
-        console.log("[BarcodeScanner] WebSocket closed, retrying in 2 s…");
-        if (!dead) reconnectTimer = setTimeout(connect, 2000);
-      };
-
-      ws.onerror = () => ws?.close();
-    }
-
-    connect();
-
-    return () => {
-      dead = true;
-      wsConnected.current = false;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      ws?.close();
-    };
-  }, [enabled]);
-
   const scanBuffer = useRef("");
-  const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scanTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (document.activeElement as HTMLElement)?.tagName;
+
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      if (wsConnected.current) return;
 
       if (e.key === "Enter") {
         const barcode = scanBuffer.current.trim();
+
         scanBuffer.current = "";
+
         if (scanTimer.current) clearTimeout(scanTimer.current);
+
         if (barcode) onBarcodeRef.current(barcode);
+
         return;
       }
 
       if (e.key.length === 1) {
         scanBuffer.current += e.key;
+
         if (scanTimer.current) clearTimeout(scanTimer.current);
+
         scanTimer.current = setTimeout(() => {
           scanBuffer.current = "";
         }, 300);
@@ -123,14 +85,14 @@ function useBarcodeScanner({
     };
 
     window.addEventListener("keydown", handleKeyDown);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+
       if (scanTimer.current) clearTimeout(scanTimer.current);
     };
   }, [enabled]);
 }
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PosPage() {
   const navigate = useNavigate();

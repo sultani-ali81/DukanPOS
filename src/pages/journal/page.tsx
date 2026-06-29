@@ -1,4 +1,3 @@
-import { NewJournalEntryDialog } from "@/components/new-journal-entry-dialog";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -94,9 +93,7 @@ export default function JournalPage() {
       <PageHeader
         title="Journal"
         description="Simple accounting entries for your shop."
-      >
-        <NewJournalEntryDialog />
-      </PageHeader>
+      ></PageHeader>
 
       {error && (
         <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">

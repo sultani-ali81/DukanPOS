@@ -56,12 +56,15 @@ export function PosCategoryFilter({
       {/* ── MOBILE ── */}
       <div className="lg:hidden space-y-2">
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger>
-            <Button className="flex items-center gap-1.5 h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 shrink-0">
-              <span>{selectedName}</span>
-              <ChevronDown size={13} className="text-gray-400" />
-            </Button>
-          </SheetTrigger>
+          <SheetTrigger
+            render={
+              <Button className="flex items-center gap-1.5 h-10 px-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 shrink-0">
+                <span>{selectedName}</span>
+
+                <ChevronDown size={13} className="text-gray-400" />
+              </Button>
+            }
+          />
           <SheetContent side="bottom" className="rounded-t-2xl">
             <SheetHeader className="mb-5">
               <SheetTitle className="text-base">Select Category</SheetTitle>

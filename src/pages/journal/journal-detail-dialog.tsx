@@ -375,8 +375,6 @@ function JournalDetailMobileDialog({
   );
 }
 
-// ─── Desktop: shadcn Dialog ───────────────────────────────────────────────────
-
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 function JournalDetailDesktopDialog({

@@ -277,7 +277,7 @@ export function ProductDialog({
 
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="p-category">
+                <Label>
                   Category <span className="text-destructive">*</span>
                 </Label>
                 <Button
@@ -298,7 +298,7 @@ export function ProductDialog({
                 rules={{ required: "Category is required" }}
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="p-category" className="w-full">
+                    <SelectTrigger aria-label="Category" className="w-full">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>

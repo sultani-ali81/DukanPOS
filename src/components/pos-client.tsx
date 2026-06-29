@@ -441,17 +441,17 @@ export function PosClient() {
             <Button
               size="lg"
               className="fixed bottom-5 right-5 z-40 h-14 gap-2 rounded-full shadow-lg lg:hidden"
-            />
+            >
+              <ShoppingCart className="size-5" />
+              {itemCount > 0 ? (
+                <span className="flex size-6 items-center justify-center rounded-full bg-primary-foreground text-xs font-bold text-primary">
+                  {itemCount}
+                </span>
+              ) : null}
+              <span>{formatCurrency(total)}</span>
+            </Button>
           }
-        >
-          <ShoppingCart className="size-5" />
-          {itemCount > 0 ? (
-            <span className="flex size-6 items-center justify-center rounded-full bg-primary-foreground text-xs font-bold text-primary">
-              {itemCount}
-            </span>
-          ) : null}
-          <span>{formatCurrency(total)}</span>
-        </SheetTrigger>
+        />
         <SheetContent side="right" className="w-full p-0 sm:max-w-md">
           <SheetTitle className="sr-only">Current Sale</SheetTitle>
           {cartPanel}

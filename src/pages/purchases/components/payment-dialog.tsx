@@ -146,14 +146,14 @@ export function PaymentDialog({ purchase, onSuccess }: PaymentDialogProps) {
         <div className="space-y-4 py-2">
           {/* Payment method */}
           <div className="space-y-1.5">
-            <Label htmlFor="method">Payment Method</Label>
+            <Label>Payment Method</Label>
             <Select
               value={form.method}
               onValueChange={(v) =>
                 setForm((f) => ({ ...f, method: v as PaymentMethod }))
               }
             >
-              <SelectTrigger id="method" className="rounded-xl">
+              <SelectTrigger aria-label="Payment Method" className="rounded-xl">
                 <SelectValue placeholder="Select method" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">

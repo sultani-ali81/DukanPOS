@@ -52,11 +52,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   size="icon"
                   className="lg:hidden"
                   aria-label="Open menu"
-                />
+                >
+                  <Menu className="size-5" />
+                </Button>
               }
-            >
-              <Menu className="size-5" />
-            </SheetTrigger>
+            />
             <SheetContent side="left" className="w-72 p-0">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <SidebarNav onNavigate={() => setOpen(false)} />
