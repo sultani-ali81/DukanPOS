@@ -95,11 +95,10 @@ export function useDashboard(
   // ── SWR: cashier breakdown — always today, independent of range ──
 
   const { data: todayStats, isLoading: cashierLoading } = useSWR(
-    ["dashboard", "today"] as const,
+    ["cashier-breakdown-today"] as const,
     () => getDashboardStats({ range: "today" }),
     { revalidateOnFocus: false },
   );
-
   // ── Loading + error ──
 
   const loading = statsLoading && !stats;
