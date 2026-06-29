@@ -5,15 +5,22 @@ import { useNavigate } from "react-router-dom";
 import AuthLayout from "@/components/layout/auth-layout";
 import OtpDialog from "@/components/otp-dialog";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PhoneNumberInput } from "@/components/ui/phoneinput";
-
-import type { Value } from "react-phone-number-input";
-import { isValidPhoneNumber } from "react-phone-number-input";
-
+import { passwordSchema } from "@/lib/password";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Lock, Mail, Store, User } from "lucide-react";
 import { useForm } from "react-hook-form";
+import type { Value } from "react-phone-number-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
+import { z } from "zod";
 
 import { useAuthStore } from "@/lib/store";
 import { decodeToken } from "@/lib/utils";
@@ -22,12 +29,38 @@ type ApiError = {
   response?: { data?: { message?: string | string[] } };
 };
 
+// ─── Schema ──────────────────────────────────────────────────────────────────
+
+const registerSchema = z
+  .object({
+    name: z.string().min(1, "Please enter your name"),
+    storeName: z.string().min(1, "Please enter store name"),
+    email: z
+      .string()
+      .min(1, "Please enter email")
+      .email("Enter a valid email address"),
+    phone: z
+      .string()
+      .min(1, "Please enter phone number")
+      .refine(isValidPhoneNumber, "Enter a valid phone number"),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export default function RegisterForm() {
   const navigate = useNavigate();
-
   const { setAuth } = useAuthStore();
 
-  const formHook = useForm({
+  const formHook = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       name: "",
       storeName: "",
@@ -40,37 +73,12 @@ export default function RegisterForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [userEmail, setUserEmail] = useState("");
 
-  const handleSubmit = async (values: {
-    name: string;
-    storeName: string;
-    email: string;
-    phone: string;
-    password: string;
-    confirmPassword: string;
-  }) => {
-    if (!values.name) return setError("Please enter your name");
-
-    if (!values.storeName) return setError("Please enter store name");
-
-    if (!values.email) return setError("Please enter email");
-
-    if (!values.phone) return setError("Please enter phone number");
-
-    if (!isValidPhoneNumber(values.phone))
-      return setError("Enter a valid phone number");
-
-    if (!values.password) return setError("Please enter password");
-
-    if (values.password !== values.confirmPassword)
-      return setError("Passwords do not match");
-
+  const handleSubmit = async (values: RegisterFormValues) => {
     try {
       setLoading(true);
       setError("");
@@ -87,14 +95,13 @@ export default function RegisterForm() {
       setShowOtpModal(true);
     } catch (err) {
       const msg = (err as ApiError)?.response?.data?.message;
-
       setError(Array.isArray(msg) ? msg[0] : msg || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const fieldClass = "h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400 ";
+  const fieldClass = "h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400";
 
   return (
     <>
@@ -117,8 +124,6 @@ export default function RegisterForm() {
         }
       >
         <div className="w-full max-w-sm">
-          {/* Brand */}
-
           <h1 className="text-center text-3xl font-bold text-primary-600">
             Create Your Store
           </h1>
@@ -131,6 +136,7 @@ export default function RegisterForm() {
               onSubmit={formHook.handleSubmit(handleSubmit)}
               className="mt-6 space-y-4"
             >
+              {/* Name */}
               <FormField
                 control={formHook.control}
                 name="name"
@@ -146,10 +152,12 @@ export default function RegisterForm() {
                         />
                       </div>
                     </FormControl>
+                    <FormMessage className="text-xs px-1" />
                   </FormItem>
                 )}
               />
 
+              {/* Store Name */}
               <FormField
                 control={formHook.control}
                 name="storeName"
@@ -165,10 +173,12 @@ export default function RegisterForm() {
                         />
                       </div>
                     </FormControl>
+                    <FormMessage className="text-xs px-1" />
                   </FormItem>
                 )}
               />
 
+              {/* Email */}
               <FormField
                 control={formHook.control}
                 name="email"
@@ -185,10 +195,12 @@ export default function RegisterForm() {
                         />
                       </div>
                     </FormControl>
+                    <FormMessage className="text-xs px-1" />
                   </FormItem>
                 )}
               />
 
+              {/* Phone */}
               <FormField
                 control={formHook.control}
                 name="phone"
@@ -201,10 +213,12 @@ export default function RegisterForm() {
                         onChange={field.onChange}
                       />
                     </FormControl>
+                    <FormMessage className="text-xs px-1" />
                   </FormItem>
                 )}
               />
 
+              {/* Password */}
               <FormField
                 control={formHook.control}
                 name="password"
@@ -234,10 +248,12 @@ export default function RegisterForm() {
                         </Button>
                       </div>
                     </FormControl>
+                    <FormMessage className="text-xs px-1" />
                   </FormItem>
                 )}
               />
 
+              {/* Confirm Password */}
               <FormField
                 control={formHook.control}
                 name="confirmPassword"
@@ -267,10 +283,12 @@ export default function RegisterForm() {
                         </Button>
                       </div>
                     </FormControl>
+                    <FormMessage className="text-xs px-1" />
                   </FormItem>
                 )}
               />
 
+              {/* API error */}
               {error && (
                 <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
                   {error}

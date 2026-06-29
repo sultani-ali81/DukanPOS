@@ -14,12 +14,14 @@ import { getInventories } from "@/queries/inventory";
 import { useDebounce } from "use-debounce";
 
 interface InventoryComboboxProps {
+  id?: string;
   value: string;
   onChange: (id: string) => void;
   disabled?: boolean;
 }
 
 export default function InventoryCombobox({
+  id,
   value,
   onChange,
   disabled,
@@ -71,6 +73,7 @@ export default function InventoryCombobox({
       }}
     >
       <ComboboxInput
+        id={id}
         placeholder={selectedName || "Assign to inventory..."}
         onChange={(e) => {
           if (disabled) return;

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import type { Suggestion } from "@/types/purchases";
 
 interface InlineComboboxProps {
+  id?: string;
   displayValue: string;
   placeholder: string;
   icon: React.ReactNode;
@@ -17,6 +18,7 @@ interface InlineComboboxProps {
 }
 
 export function InlineCombobox({
+  id,
   displayValue,
   placeholder,
   icon,
@@ -47,6 +49,7 @@ export function InlineCombobox({
           {icon}
         </span>
         <Input
+          id={id}
           value={displayValue}
           placeholder={placeholder}
           className={`h-11 pl-9 pr-3 rounded-xl border-gray-200 text-sm ${error ? "border-red-400" : ""}`}

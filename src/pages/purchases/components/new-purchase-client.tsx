@@ -320,11 +320,12 @@ export function NewPurchaseClient() {
                     name="customerId"
                     render={({ field, fieldState }) => (
                       <FormItem>
-                        <FormLabel>Supplier</FormLabel>
+                        <FormLabel htmlFor="supplier">Supplier</FormLabel>
                         <div className="flex gap-2">
                           <FormControl>
                             <div className="flex-1">
                               <InlineCombobox
+                                id="supplier"
                                 displayValue={customerDisplay}
                                 placeholder="Search supplier..."
                                 icon={<User className="w-4 h-4" />}
@@ -374,9 +375,12 @@ export function NewPurchaseClient() {
                     name="purchaseDate"
                     render={({ field, fieldState }) => (
                       <FormItem>
-                        <FormLabel>Purchase Date</FormLabel>
+                        <FormLabel htmlFor="purchaseDate">
+                          Purchase Date
+                        </FormLabel>
                         <FormControl>
                           <DateInput
+                            id="purchaseDate"
                             value={field.value}
                             onChange={field.onChange}
                           />
@@ -391,10 +395,14 @@ export function NewPurchaseClient() {
 
                 {/* Inventory */}
                 <div className="space-y-1.5">
-                  <FormLabel className="flex items-center gap-1.5">
+                  <FormLabel
+                    htmlFor="inventoryId"
+                    className="flex items-center gap-1.5"
+                  >
                     <Warehouse className="size-3.5" /> Destination Inventory
                   </FormLabel>
                   <InventoryCombobox
+                    id="inventoryId"
                     value={inventoryId}
                     onChange={setInventoryId}
                   />

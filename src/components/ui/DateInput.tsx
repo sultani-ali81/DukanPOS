@@ -11,6 +11,7 @@ import {
 import { formatDate } from "@/utils/profile.helpers";
 
 interface Props {
+  id?: string;
   value: string | undefined;
   onChange: (val: string) => void;
 }
@@ -30,7 +31,7 @@ const MONTHS = [
   "December",
 ];
 
-export default function DateInput({ value, onChange }: Props) {
+export default function DateInput({ id, value, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [format] = useState("MM/DD/YYYY");
   const [monthOpen, setMonthOpen] = useState(false);
@@ -67,6 +68,7 @@ export default function DateInput({ value, onChange }: Props) {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            id={id}
             type="button"
             variant="outline"
             className="w-full h-12 border border-gray-100 rounded-xl px-4 text-sm text-left bg-white flex items-center justify-between hover:border-gray-300"

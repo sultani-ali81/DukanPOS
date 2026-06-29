@@ -12,24 +12,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneNumberInput } from "@/components/ui/phoneinput";
 import { Select, SelectItem, SelectTrigger } from "@/components/ui/select";
-import type {
-  CreateUserPayload,
-  UpdateUserPayload,
-  User,
-  UserRole,
-} from "@/types/user";
+import { passwordSchema } from "@/lib/password";
+import type { CreateUserPayload, UpdateUserPayload, User } from "@/types/user";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { Value as PhoneValue } from "react-phone-number-input";
+import { z } from "zod";
 
-export interface UserFormValues {
+// ─── Schemas ────────────────────────────────────────────────────────────────
+
+const editUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  phone: z.string().optional(),
+});
+
+const createUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
+  password: passwordSchema,
+  phone: z.string().optional(),
+  role: z.enum(["Cashier", "Admin"]),
+});
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export type UserFormValues = {
   name: string;
-  email: string;
+  email?: string;
   password?: string;
   phone?: string;
-  role?: UserRole;
-}
+  role?: "Cashier" | "Admin";
+};
+
+// ─── Props ───────────────────────────────────────────────────────────────────
 
 interface UserDialogProps {
   open: boolean;
@@ -41,6 +61,8 @@ interface UserDialogProps {
   ) => Promise<void>;
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export function UserDialog({
   open,
   editingUser,
@@ -49,6 +71,11 @@ export function UserDialog({
 }: UserDialogProps) {
   const isEdit = !!editingUser;
 
+  const resolver = useMemo(
+    () => zodResolver(isEdit ? editUserSchema : createUserSchema),
+    [isEdit],
+  );
+
   const {
     register,
     handleSubmit,
@@ -56,6 +83,7 @@ export function UserDialog({
     control,
     formState: { errors, isSubmitting },
   } = useForm<UserFormValues>({
+    resolver,
     defaultValues: {
       name: "",
       email: "",
@@ -121,7 +149,7 @@ export function UserDialog({
               <Input
                 placeholder="John Smith"
                 className="h-11 rounded-xl border-gray-200 text-sm"
-                {...register("name", { required: "Name is required" })}
+                {...register("name")}
               />
               {errors.name && (
                 <p className="text-xs text-destructive">
@@ -140,13 +168,7 @@ export function UserDialog({
                   type="email"
                   placeholder="john@example.com"
                   className="h-11 rounded-xl border-gray-200 text-sm"
-                  {...register("email", {
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: "Enter a valid email address",
-                    },
-                  })}
+                  {...register("email")}
                 />
                 {errors.email && (
                   <p className="text-xs text-destructive">
@@ -164,12 +186,9 @@ export function UserDialog({
                 </Label>
                 <Input
                   type="password"
-                  placeholder="Min 6 characters"
+                  placeholder="Min 8 characters"
                   className="h-11 rounded-xl border-gray-200 text-sm"
-                  {...register("password", {
-                    required: "Password is required",
-                    minLength: { value: 6, message: "At least 6 characters" },
-                  })}
+                  {...register("password")}
                 />
                 {errors.password && (
                   <p className="text-xs text-destructive">
