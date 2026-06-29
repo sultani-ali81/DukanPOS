@@ -115,7 +115,7 @@ export default function DashboardPage() {
               key={opt.value}
               onClick={() => setRange(opt.value)}
               className={[
-                "h-8 rounded-lg px-3.5 text-sm font-medium transition-colors",
+                "h-6 rounded-lg px-3.5 text-sm font-medium transition-colors",
                 range === opt.value && !isCustomActive
                   ? "bg-primary text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
@@ -190,10 +190,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <CashierBreakdownTable
-        data={stats?.cashierBreakdown ?? []}
-        loading={loading}
-      />
+      <CashierBreakdownTable data={cashierBreakdown} loading={cashierLoading} />
 
       {/* ── Sales chart ── */}
       <Card className="mb-6">

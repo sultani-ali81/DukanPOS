@@ -133,14 +133,15 @@ export function DateRangePicker({
             endMonth={new Date()}
             showOutsideDays={false}
             classNames={{
-              months: "flex gap-4",
-              month_caption: "flex justify-center relative items-center h-9",
+              months: "flex gap-6",
+              month: "relative",
+              month_caption: "flex justify-center items-center h-9 mx-8",
               caption_label: "text-sm font-semibold text-gray-900",
-              nav: "flex items-center gap-1 absolute inset-x-0 top-0 justify-between px-1",
+              nav: "absolute inset-x-0 top-0 flex items-center justify-between z-10",
               button_previous:
-                "h-7 w-7 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-colors",
+                "h-7 w-7 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-colors cursor-pointer",
               button_next:
-                "h-7 w-7 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-colors",
+                "h-7 w-7 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-colors cursor-pointer",
               month_grid: "w-full border-collapse mt-1",
               weekdays: "flex",
               weekday: "text-gray-400 w-8 font-normal text-xs text-center",
