@@ -184,7 +184,7 @@ export default function LoginForm() {
 
           {/* Mobile-only switch link */}
           <div className="mt-6 text-center text-sm text-slate-500 lg:hidden">
-            Don&apos;t have an account?{" "}
+            Don't have an account?{" "}
             <span
               onClick={() => navigate("/register")}
               className="cursor-pointer font-semibold text-teal-600 hover:underline"
