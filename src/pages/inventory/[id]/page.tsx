@@ -26,8 +26,6 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
-// ── Stock badge ───────────────────────────────────────────────────────────────
-
 function StockBadge({ quantity }: { quantity: number }) {
   if (quantity === 0)
     return (
@@ -47,8 +45,6 @@ function StockBadge({ quantity }: { quantity: number }) {
     </Badge>
   );
 }
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
 
 function StatTile({
   label,
@@ -79,8 +75,6 @@ function StatTile({
   );
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
 function TableSkeleton() {
   return (
     <>
@@ -97,16 +91,12 @@ function TableSkeleton() {
   );
 }
 
-// ── Status filter pills ───────────────────────────────────────────────────────
-
 const STATUS_OPTIONS = [
   { value: "all", label: "All" },
   { value: "in_stock", label: "In Stock" },
   { value: "low_stock", label: "Low Stock" },
   { value: "out_of_stock", label: "Out of Stock" },
 ];
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function InventoryDetailPage() {
   const { id } = useParams<{ id: string }>();

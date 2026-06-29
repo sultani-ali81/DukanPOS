@@ -1,346 +1,105 @@
-"use client";
-
 import { PageHeader } from "@/components/page-header";
-
 import { Button } from "@/components/ui/button";
-
-import { Card } from "@/components/ui/card";
-
-import { Checkbox } from "@/components/ui/checkbox";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
 import { Input } from "@/components/ui/input";
-
-import { Label } from "@/components/ui/label";
-
-import { PhoneNumberInput } from "@/components/ui/phoneinput";
-
-import type { Value as PhoneValue } from "react-phone-number-input";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-import { useCustomerDialog } from "@/hooks/use-customer-dialog";
-
 import { useCustomers } from "@/hooks/use-customers";
-
+import {
+  createCustomer,
+  deleteCustomer,
+  updateCustomer,
+} from "@/queries/customer";
 import type { Customer } from "@/types/customer";
-
-import { Loader2, Pencil, Plus, Search, Trash2, UserX, X } from "lucide-react";
-
-import { useEffect } from "react";
-
+import { Plus, Search, X } from "lucide-react";
 import { useState } from "react";
-
-import { Controller, useForm } from "react-hook-form";
-
 import { toast } from "sonner";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface ContactFormValues {
-  name: string;
-
-  phone: string;
-
-  address: string;
-}
-
-// ── Add / Edit dialog ─────────────────────────────────────────────────────────
-
-interface ContactDialogProps {
-  open: boolean;
-
-  editingCustomer: Customer | null;
-
-  onOpenChange: (open: boolean) => void;
-
-  onSubmit: (values: ContactFormValues, id?: string) => Promise<void>;
-}
-
-function ContactDialog({
-  open,
-
-  editingCustomer,
-
-  onOpenChange,
-
-  onSubmit,
-}: ContactDialogProps) {
-  const {
-    register,
-
-    handleSubmit,
-
-    reset,
-
-    control,
-
-    formState: { errors, isSubmitting },
-  } = useForm<ContactFormValues>({
-    defaultValues: {
-      name: "",
-
-      phone: "",
-
-      address: "",
-    },
-  });
-
-  // Sync form values whenever the dialog opens or the target customer changes
-
-  useEffect(() => {
-    if (!open) return;
-
-    reset({
-      name: editingCustomer?.name ?? "",
-
-      phone: editingCustomer?.phone ?? "",
-
-      address: editingCustomer?.address ?? "",
-    });
-  }, [open, editingCustomer, reset]);
-
-  async function submit(values: ContactFormValues) {
-    await onSubmit(values, editingCustomer?.id);
-
-    onOpenChange(false);
-
-    reset();
-  }
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o);
-
-        if (!o) reset();
-      }}
-    >
-      <DialogContent>
-        <form onSubmit={handleSubmit(submit)}>
-          <DialogHeader>
-            <DialogTitle>
-              {editingCustomer ? "Edit Contact" : "Add Contact"}
-            </DialogTitle>
-
-            <DialogDescription>
-              {editingCustomer
-                ? `Update details for ${editingCustomer.name}.`
-                : "Add a new customer to your contacts."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="contact-name">
-                Name <span className="text-destructive">*</span>
-              </Label>
-
-              <Input
-                id="contact-name"
-                placeholder="John Smith"
-                {...register("name", { required: "Name is required" })}
-              />
-
-              {errors.name && (
-                <p className="text-xs text-destructive">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <Controller
-                control={control}
-                name="phone"
-                rules={{ required: "Phone is required" }}
-                render={({ field }) => (
-                  <PhoneNumberInput
-                    label="Phone *"
-                    value={field.value as PhoneValue}
-                    placeholder="700000000"
-                    onChange={field.onChange}
-                    error={!!errors.phone}
-                  />
-                )}
-              />
-
-              {errors.phone && (
-                <p className="text-xs text-destructive">
-                  {errors.phone.message}
-                </p>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="contact-address">Address</Label>
-
-              <Input
-                id="contact-address"
-                placeholder="Shahr-e Naw, Kabul"
-                {...register("address")}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-
-                reset();
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-
-              {editingCustomer ? "Save Changes" : "Add Contact"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── Loading skeleton row ──────────────────────────────────────────────────────
-
-function CustomerSkeletonRow() {
-  return (
-    <TableRow>
-      <TableCell>
-        <div className="h-4 w-4 animate-pulse rounded bg-muted" />
-      </TableCell>
-
-      <TableCell>
-        <div className="h-4 w-36 animate-pulse rounded bg-muted" />
-      </TableCell>
-
-      <TableCell>
-        <div className="h-4 w-28 animate-pulse rounded bg-muted" />
-      </TableCell>
-
-      <TableCell>
-        <div className="h-4 w-40 animate-pulse rounded bg-muted" />
-      </TableCell>
-
-      <TableCell>
-        <div className="flex gap-1">
-          <div className="h-8 w-8 animate-pulse rounded bg-muted" />
-
-          <div className="h-8 w-8 animate-pulse rounded bg-muted" />
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
+import type { ContactFormValues } from "./components/contact-dialog";
+import { ContactDialog } from "./components/contact-dialog";
+import { ContactTable } from "./components/contact-table";
 
 export default function ContactsPage() {
   const {
     customers,
-
     isLoading,
-
     search,
-
     handleSearch,
-
     clearSearch,
-
     mutate,
-
     total,
-
     page,
-
     setPage,
-
     PAGE_SIZE,
   } = useCustomers();
 
-  const {
-    dialogOpen,
+  // ── Dialog state ────────────────────────────────────────────────────────────
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-    setDialogOpen,
+  function openCreate() {
+    setEditingCustomer(null);
+    setDialogOpen(true);
+  }
 
-    editingCustomer,
+  function openEdit(customer: Customer) {
+    setEditingCustomer(customer);
+    setDialogOpen(true);
+  }
 
-    handleOpenCreate,
-
-    handleOpenEdit,
-
-    handleSubmit,
-
-    handleDelete,
-  } = useCustomerDialog(mutate);
-
+  // ── Selection state ─────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const allSelected =
-    customers.length > 0 && selected.size === customers.length;
-
-  const someSelected = selected.size > 0 && selected.size < customers.length;
-
   function toggleAll() {
+    const allSelected = selected.size === customers.length;
     setSelected(allSelected ? new Set() : new Set(customers.map((c) => c.id)));
   }
 
   function toggleOne(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   }
 
+  // ── CRUD handlers ───────────────────────────────────────────────────────────
   async function onSubmit(values: ContactFormValues, id?: string) {
     try {
-      await handleSubmit(values, id);
+      if (id) {
+        await updateCustomer(id, values);
+        toast.success("Contact updated", {
+          description: `${values.name} has been updated.`,
+        });
+      } else {
+        await createCustomer(values);
+        toast.success("Contact added", {
+          description: `${values.name} has been added.`,
+        });
+      }
+      await mutate();
     } catch {
+      toast.error("Something went wrong", { description: "Please try again." });
       throw new Error("submit failed");
     }
   }
 
-  async function onDelete(id: string, name: string) {
-    setDeletingId(id);
-
+  async function onDelete(customer: Customer) {
+    setDeletingId(customer.id);
     try {
-      await handleDelete(id);
-
-      selected.delete(id);
-
-      setSelected(new Set(selected));
-
+      mutate(
+        (prev) =>
+          prev
+            ? { ...prev, data: prev.data.filter((c) => c.id !== customer.id) }
+            : prev,
+        false,
+      );
+      await deleteCustomer(customer.id);
+      await mutate();
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(customer.id);
+        return next;
+      });
       toast.success("Contact deleted", {
-        description: `${name} has been removed.`,
+        description: `${customer.name} has been removed.`,
       });
     } catch {
       toast.error("Could not delete contact", {
@@ -354,25 +113,22 @@ export default function ContactsPage() {
   return (
     <div>
       <PageHeader title="Contacts" description="Manage your customers.">
-        <Button onClick={handleOpenCreate}>
+        <Button onClick={openCreate}>
           <Plus className="size-4" /> Add Contact
         </Button>
       </PageHeader>
 
       {/* Search */}
-
       <div className="mb-4 relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
           <Search className="size-4" />
         </span>
-
         <Input
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search contacts..."
           className="pl-9 pr-8"
         />
-
         {search && (
           <button
             onClick={clearSearch}
@@ -384,13 +140,11 @@ export default function ContactsPage() {
       </div>
 
       {/* Bulk selection bar */}
-
       {selected.size > 0 && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-muted/50 px-4 py-2 text-sm">
           <span className="font-medium text-foreground">
             {selected.size} selected
           </span>
-
           <Button
             variant="outline"
             size="sm"
@@ -401,137 +155,28 @@ export default function ContactsPage() {
         </div>
       )}
 
-      <Card className="overflow-hidden p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={someSelected ? "indeterminate" : allSelected}
-                  onCheckedChange={toggleAll}
-                  aria-label="Select all contacts"
-                />
-              </TableHead>
-
-              <TableHead className="text-left">Name</TableHead>
-
-              <TableHead className="text-left">Phone</TableHead>
-
-              <TableHead className="text-left">Address</TableHead>
-
-              <TableHead className="text-left">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                <CustomerSkeletonRow key={i} />
-              ))
-            ) : customers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center">
-                  <UserX className="mx-auto mb-2 size-8 text-muted-foreground/50" />
-
-                  <p className="text-sm text-muted-foreground">
-                    {search
-                      ? `No customers match "${search}"`
-                      : "No customers yet."}
-                  </p>
-
-                  {!search && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="mt-2"
-                      onClick={handleOpenCreate}
-                    >
-                      Add your first customer
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ) : (
-              customers.map((c) => {
-                const isSelected = selected.has(c.id);
-
-                const isDeleting = deletingId === c.id;
-
-                return (
-                  <TableRow
-                    key={c.id}
-                    data-state={isSelected ? "selected" : undefined}
-                    className="transition-colors hover:bg-muted/50"
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleOne(c.id)}
-                        aria-label={`Select ${c.name}`}
-                      />
-                    </TableCell>
-
-                    <TableCell className="font-medium text-left text-foreground">
-                      {c.name}
-                    </TableCell>
-
-                    <TableCell className="text-left text-muted-foreground">
-                      {c.phone}
-                    </TableCell>
-
-                    <TableCell className="text-left text-muted-foreground">
-                      {c.address || (
-                        <span className="italic text-muted-foreground/60">
-                          —
-                        </span>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="text-left">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => handleOpenEdit(c)}
-                          aria-label={`Edit ${c.name}`}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-destructive hover:text-destructive"
-                          disabled={isDeleting}
-                          onClick={() => onDelete(c.id, c.name)}
-                          aria-label={`Delete ${c.name}`}
-                        >
-                          {isDeleting ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      <ContactTable
+        customers={customers}
+        isLoading={isLoading}
+        pageSize={PAGE_SIZE}
+        search={search}
+        selected={selected}
+        deletingId={deletingId}
+        onToggleAll={toggleAll}
+        onToggleOne={toggleOne}
+        onEdit={openEdit}
+        onDelete={onDelete}
+        onRowClick={openEdit}
+        onAddFirst={openCreate}
+      />
 
       {/* Pagination */}
-
       {total > PAGE_SIZE && (
         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Showing {(page - 1) * PAGE_SIZE + 1}–
             {Math.min(page * PAGE_SIZE, total)} of {total}
           </span>
-
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -541,7 +186,6 @@ export default function ContactsPage() {
             >
               Previous
             </Button>
-
             <Button
               variant="outline"
               size="sm"
@@ -553,8 +197,6 @@ export default function ContactsPage() {
           </div>
         </div>
       )}
-
-      {/* Add / Edit dialog */}
 
       <ContactDialog
         open={dialogOpen}

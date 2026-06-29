@@ -1,4 +1,3 @@
-// src/queries/inventory.ts
 import api from "@/lib/axios";
 import type {
   GetInventoriesParams,
