@@ -1,118 +1,51 @@
 import type { DashboardQueryParams } from "@/queries/dashboard";
-
 import { getDashboardStats } from "@/queries/dashboard";
-
-import type { DashboardRange, DashboardStats } from "@/types/dashboard";
-
+import type {
+  CashierBreakdown,
+  DashboardRange,
+  DashboardStats,
+} from "@/types/dashboard";
 import { useCallback, useMemo, useState } from "react";
-
 import useSWR from "swr";
-
-// Date range types come from the picker component to avoid a circular dep
 
 export interface DateRange {
   from: Date | undefined;
-
   to: Date | undefined;
 }
 
 export interface UseDashboardReturn {
-  // Range state (consumed by range toggle UI)
-
   range: DashboardRange;
-
   setRange: (range: DashboardRange) => void;
-
-  // Custom range (picker — local state until applied)
-
   customRange: DateRange;
-
   setCustomRange: (range: DateRange) => void;
-
   activeCustomRange: DateRange;
-
   applyCustomRange: (range: DateRange) => void;
-
-  // Main stats — depends on range + activeCustomRange
-
   stats: DashboardStats | null;
-
   loading: boolean;
-
   error: string | null;
-
-  // Chart fallback (always fetched independently on mount)
-
   weeklyBreakdown: DashboardStats | null;
-
   weeklyLoading: boolean;
-
-  // Derived
-
+  cashierBreakdown: CashierBreakdown[];
+  cashierLoading: boolean;
   isCustomActive: boolean;
-
   hasChart: boolean;
 }
 
-/**
-
- * Build the API params based on selected range + active custom range.
-
- */
-
 function buildParams(
   range: DashboardRange,
-
   activeCustomRange: DateRange,
 ): DashboardQueryParams {
   if (range === "custom" && activeCustomRange.from && activeCustomRange.to) {
     const toDate = new Date(activeCustomRange.to);
-
     toDate.setHours(23, 59, 59, 999);
-
     return {
       range: "custom",
-
       from: activeCustomRange.from.toISOString().split("T")[0],
-
       to: toDate.toISOString().split("T")[0],
     };
   }
-
   return { range };
 }
-
-/**
-
- * Dashboard hook — SWR-based, replaces three useState chains + two useEffects.
-
- *
-
- * Before:
-
- *   - 1 useEffect for initial fetch (range + last-week breakdown)
-
- *   - 1 useEffect for range change
-
- *   - 4 useState for range/customRange/activeCustomRange/stats/loading/error
-
- *   - 1 useState pair for weeklyBreakdown
-
- *   - Manual fetchStats() function duplicated logic
-
- *
-
- * After:
-
- *   - One SWR call per "fetch concern" (main stats, weekly breakdown)
-
- *   - Range change = key change = automatic re-fetch
-
- *   - Custom date apply = key change = automatic re-fetch
-
- *   - Last-week breakdown cached separately, never re-fetched
-
- */
 
 export function useDashboard(
   initialRange: DashboardRange = "today",
@@ -121,13 +54,11 @@ export function useDashboard(
 
   const [customRange, setCustomRange] = useState<DateRange>({
     from: undefined,
-
     to: undefined,
   });
 
   const [activeCustomRange, setActiveCustomRange] = useState<DateRange>({
     from: undefined,
-
     to: undefined,
   });
 
@@ -137,22 +68,15 @@ export function useDashboard(
 
   const mainKey = [
     "dashboard",
-
     mainParams.range ?? null,
-
     mainParams.from ?? null,
-
     mainParams.to ?? null,
   ] as const;
 
   const {
     data: stats,
-
     isLoading: statsLoading,
-
     error: statsError,
-
-    mutate: refreshStats,
   } = useSWR(mainKey, ([, r, f, t]) =>
     getDashboardStats({
       range: r as DashboardRange,
@@ -161,23 +85,24 @@ export function useDashboard(
     }),
   );
 
-  // ── SWR: weekly breakdown for chart fallback (independent fetch) ──
+  // ── SWR: weekly breakdown for chart fallback ──
 
-  const {
-    data: weeklyBreakdown,
-
-    isLoading: weeklyLoading,
-  } = useSWR(["dashboard", "last-week"] as const, () =>
-    getDashboardStats({ range: "last-week" }),
+  const { data: weeklyBreakdown, isLoading: weeklyLoading } = useSWR(
+    ["dashboard", "last-week"] as const,
+    () => getDashboardStats({ range: "last-week" }),
   );
 
-  // ── Loading flags ──
+  // ── SWR: cashier breakdown — always today, independent of range ──
 
-  // First-load only — re-fetches keep showing previous data (stale-while-revalidate)
+  const { data: todayStats, isLoading: cashierLoading } = useSWR(
+    ["dashboard", "today"] as const,
+    () => getDashboardStats({ range: "today" }),
+    { revalidateOnFocus: false },
+  );
 
-  const hasMainData = !!stats;
+  // ── Loading + error ──
 
-  const loading = statsLoading && !hasMainData;
+  const loading = statsLoading && !stats;
 
   const error: string | null = statsError
     ? (statsError?.response?.data?.message ??
@@ -189,15 +114,11 @@ export function useDashboard(
 
   const setRange = useCallback((next: DashboardRange) => {
     setRangeState(next);
-
-    // Switching to a preset range clears the active custom range
-
     setActiveCustomRange({ from: undefined, to: undefined });
   }, []);
 
   const applyCustomRange = useCallback((cr: DateRange) => {
     setActiveCustomRange(cr);
-
     setRangeState("custom");
   }, []);
 
@@ -208,35 +129,24 @@ export function useDashboard(
 
   const hasChart = useMemo(
     () => !!stats?.dailyBreakdown && stats.dailyBreakdown.length > 0,
-
     [stats],
   );
 
   return {
     range,
-
     setRange,
-
     customRange,
-
     setCustomRange,
-
     activeCustomRange,
-
     applyCustomRange,
-
     stats: stats ?? null,
-
     loading,
-
     error,
-
     weeklyBreakdown: weeklyBreakdown ?? null,
-
     weeklyLoading,
-
+    cashierBreakdown: todayStats?.cashierBreakdown ?? [],
+    cashierLoading,
     isCustomActive,
-
     hasChart,
   };
 }

@@ -12,12 +12,10 @@ import { formatCurrency } from "@/lib/data";
 import type { CashierBreakdown } from "@/types/dashboard";
 import { Users } from "lucide-react";
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-
 function SkeletonRow() {
   return (
     <TableRow>
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <TableCell key={i}>
           <div className="h-4 w-full animate-pulse rounded bg-muted" />
         </TableCell>
@@ -25,8 +23,6 @@ function SkeletonRow() {
     </TableRow>
   );
 }
-
-// ── Status badge ──────────────────────────────────────────────────────────────
 
 function SessionStatusBadge({ status }: { status: "open" | "closed" }) {
   return status === "open" ? (
@@ -52,13 +48,13 @@ export function CashierBreakdownTable({
   return (
     <Card className="mb-6">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center text-base">
           <Users className="size-4 text-muted-foreground" />
-          Cashier Sessions
+          Today's Cashier Sessions
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-0">
+      <CardContent className="p-4">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -68,6 +64,8 @@ export function CashierBreakdownTable({
                 <TableHead className="text-right">Opening Amount</TableHead>
                 <TableHead className="text-right">Total Sales</TableHead>
                 <TableHead className="text-right">Closing Amount</TableHead>
+                <TableHead className="text-right">Cash In</TableHead>
+                <TableHead className="text-right">Cash Out</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -116,6 +114,12 @@ export function CashierBreakdownTable({
                           —
                         </span>
                       )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(row.cashIn)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(row.cashOut)}
                     </TableCell>
                   </TableRow>
                 ))

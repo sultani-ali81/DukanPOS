@@ -19,8 +19,6 @@ import { DateRangePicker } from "./components/date-range-picker";
 import { SalesChart } from "./components/sales-chart";
 import { StockAlerts } from "./components/stock-alerts";
 
-// ── Skeletons ─────────────────────────────────────────────────────────────────
-
 function StatCardSkeleton() {
   return (
     <Card>
@@ -51,8 +49,6 @@ function ChartSkeleton() {
   );
 }
 
-// ── Range toggle ──────────────────────────────────────────────────────────────
-
 const RANGE_OPTIONS: { label: string; value: DashboardRange }[] = [
   { label: "Today", value: "today" },
   { label: "Yesterday", value: "yesterday" },
@@ -78,7 +74,8 @@ export default function DashboardPage() {
     setRange,
     customRange,
     setCustomRange,
-    activeCustomRange,
+    cashierBreakdown,
+    cashierLoading,
     applyCustomRange,
     stats,
     loading,

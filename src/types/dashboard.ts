@@ -36,6 +36,8 @@ export interface CashierBreakdown {
   closingAmount: number | null;
   status: "open" | "closed";
   expectedAmount?: number | null;
+  cashIn: number;
+  cashOut: number;
 }
 
 export interface DashboardStats {
