@@ -140,11 +140,13 @@ export default function JournalPage() {
       )}
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="pl-4">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Reference</TableHead>
+              <TableRow className="text-md">
+                <TableHead className="text-sm font-semibold">
+                  Reference
+                </TableHead>
                 <TableHead>
                   <Select
                     value={dateSort}
@@ -154,8 +156,8 @@ export default function JournalPage() {
                       setStatusSort("none");
                     }}
                   >
-                    <SelectTrigger className="h-7 w-fit gap-1 border-none px-0 font-medium text-foreground shadow-none focus:ring-0 [&>svg]:size-3.5">
-                      <span>Date</span>
+                    <SelectTrigger className="h-7 w-fit gap-1 border-none font-semibold text-foreground shadow-none focus:ring-0 [&>svg]:size-3.5">
+                      <span className="text-sm">Date</span>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="newest">Newest</SelectItem>
@@ -163,25 +165,11 @@ export default function JournalPage() {
                     </SelectContent>
                   </Select>
                 </TableHead>
-                <TableHead>
-                  <Select
-                    value={statusSort === "none" ? undefined : statusSort}
-                    onValueChange={(value: StatusSort | null) => {
-                      if (!value) return;
-                      setStatusSort(value);
-                    }}
-                  >
-                    <SelectTrigger className="h-7 w-fit gap-1 border-none px-0 font-medium text-foreground shadow-none focus:ring-0 [&>svg]:size-3.5">
-                      <span>Status</span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="done">Done</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </TableHead>
-                <TableHead className="text-left">Debit</TableHead>
-                <TableHead className="text-left">Credit</TableHead>
+
+                <TableHead className="text-sm font-semibold">Status</TableHead>
+
+                <TableHead className="text-sm font-semibold">Debit</TableHead>
+                <TableHead className="text-sm font-semibold">Credit</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

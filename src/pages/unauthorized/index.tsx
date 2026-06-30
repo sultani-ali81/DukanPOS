@@ -12,7 +12,7 @@ export default function Unauthorized() {
         mistake, contact your administrator.
       </p>
       <Button asChild>
-        <Link to="/dashboard">Back to dashboard</Link>
+        <Link to="/pos">Back to POS</Link>
       </Button>
     </div>
   );

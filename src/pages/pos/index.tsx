@@ -365,7 +365,7 @@ export default function PosPage() {
   const exitSessionRow = (
     <div className="flex-none flex items-center justify-between gap-2 mb-3">
       <Button
-        onClick={() => navigate("/purchases")}
+        onClick={() => navigate("/dashboard")}
         className="flex items-center gap-1.5 h-9 px-3 rounded-xl transition-colors cursor-pointer"
         variant="default"
       >
