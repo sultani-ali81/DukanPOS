@@ -16,7 +16,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { MoreHorizontal, Plus, Search, XIcon } from "lucide-react";
 
@@ -26,16 +25,6 @@ import { usePurchases } from "@/hooks/use-purchases";
 import { extractError } from "@/lib/error";
 import { deletePurchase, updatePurchaseStatus } from "@/queries/purchase";
 import type { PurchaseListItem, PurchaseStatus } from "@/types/purchases";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const STATUS_FILTER_OPTIONS: { label: string; value: string }[] = [
-  { label: "All Statuses", value: "ALL" },
-  { label: "Draft", value: "Draft" },
-  { label: "Done", value: "Done" },
-  { label: "Cancelled", value: "Cancelled" },
-  { label: "Pending", value: "Pending" },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -64,11 +53,6 @@ const STOCK_IN_BADGE: Record<StockInCompletion, string> = {
   None: "bg-gray-50 text-gray-400 border border-gray-200",
 };
 
-/**
- * Complete   = every item has received >= quantity
- * Incomplete = at least one item still has unassigned units
- * None       = purchase has no items (edge case)
- */
 function deriveStockInCompletion(
   purchase: PurchaseListItem,
 ): StockInCompletion {
@@ -79,6 +63,13 @@ function deriveStockInCompletion(
     : "Incomplete";
 }
 
+// ── Date sort select ──────────────────────────────────────────────────────────
+
+const DATE_SORT_OPTIONS = [
+  { label: "Newest", value: "newest" },
+  { label: "Oldest", value: "oldest" },
+];
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function PurchasesClient() {
@@ -86,8 +77,8 @@ export function PurchasesClient() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
 
-  // ── Paginated list (for the table) ─────────────────────────────────────────
   const {
     purchases,
     totalItems,
@@ -98,14 +89,18 @@ export function PurchasesClient() {
     search,
     handleSearch,
     clearSearch,
-    status,
-    setStatus,
     isLoading,
     mutate,
   } = usePurchases();
 
   const from = totalItems === 0 ? 0 : (page - 1) * itemsPerPage + 1;
   const to = Math.min(page * itemsPerPage, totalItems);
+
+  const sortedPurchases = [...purchases].sort((a, b) => {
+    const ta = a.customDate ? new Date(a.customDate).getTime() : 0;
+    const tb = b.customDate ? new Date(b.customDate).getTime() : 0;
+    return dateSort === "newest" ? tb - ta : ta - tb;
+  });
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -139,13 +134,9 @@ export function PurchasesClient() {
 
   return (
     <div className="overflow-y-auto">
-      <PageHeader
-        title="Purchases"
-        description="View and manage purchases"
-      ></PageHeader>
+      <PageHeader title="Purchases" description="View and manage purchases" />
 
       <div>
-        {/* Error banner */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center justify-between">
             <span>{error}</span>
@@ -158,7 +149,6 @@ export function PurchasesClient() {
           </div>
         )}
 
-        {/* Table card */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Toolbar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100">
@@ -203,22 +193,6 @@ export function PurchasesClient() {
                   />
                 </div>
               )}
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className=" border-gray-200 text-sm w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {STATUS_FILTER_OPTIONS.map((opt) => (
-                    <SelectItem
-                      key={opt.value}
-                      value={opt.value}
-                      className="text-sm"
-                    >
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Button
                 onClick={() => navigate("/purchases/new")}
                 className="h-10 text-sm gap-1.5"
@@ -229,42 +203,63 @@ export function PurchasesClient() {
             </div>
           </div>
 
-          {/* Table — horizontally scrollable on all screen sizes */}
+          {/* Table */}
           <div className="overflow-x-auto">
             <div className="min-w-[640px]">
               {/* Header */}
-              <div className="grid grid-cols-7 justify-items-center bg-gray-50 py-3 px-4 border-b border-gray-100">
-                {[
-                  "Purchase #",
-                  "Customer",
-                  "Total Price",
-                  "Date",
-                  "Status",
-                  "Stock In",
-                  "Actions",
-                ].map((h) => (
+              <div className="grid grid-cols-7 justify-items-center items-center bg-gray-50 py-3 px-4 border-b border-gray-100">
+                {["Purchase #", "Customer", "Total Price"].map((h) => (
                   <span
                     key={h}
-                    className="text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                    className="text-xs font-semibold text-gray-700 uppercase tracking-wide"
+                  >
+                    {h}
+                  </span>
+                ))}
+                {/* Date sort */}
+                <Select
+                  value={dateSort}
+                  onValueChange={(v) => setDateSort(v as "newest" | "oldest")}
+                >
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 shadow-none text-xs font-semibold text-gray-700 uppercase tracking-wide gap-1 focus:ring-0">
+                    <span className="w-10">Date</span>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    {DATE_SORT_OPTIONS.map((opt) => (
+                      <SelectItem
+                        key={opt.value}
+                        value={opt.value}
+                        className="text-sm"
+                      >
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {["Status", "Stock In", "Actions"].map((h) => (
+                  <span
+                    key={h}
+                    className="text-xs font-semibold text-gray-700 uppercase tracking-wide"
                   >
                     {h}
                   </span>
                 ))}
               </div>
 
+              {/* Rows */}
               <div className="divide-y divide-gray-100">
                 {isLoading ? (
                   <p className="px-5 py-12 text-center text-gray-400 text-sm">
                     Loading purchases…
                   </p>
-                ) : purchases.length === 0 ? (
+                ) : sortedPurchases.length === 0 ? (
                   <p className="px-5 py-12 text-center text-gray-400 text-sm">
                     {search
                       ? `No purchases matching "${search}"`
                       : "No purchases found"}
                   </p>
                 ) : (
-                  purchases.map((item) => {
+                  sortedPurchases.map((item) => {
                     const itemStatus = item.status;
                     const stockInStatus = deriveStockInCompletion(item);
 
@@ -274,28 +269,19 @@ export function PurchasesClient() {
                         onClick={() => navigate(`/purchases/${item.id}`)}
                         className="grid grid-cols-7 justify-items-center items-center text-center py-4 px-2 hover:bg-gray-50/80 transition-colors cursor-pointer"
                       >
-                        {/* Purchase # */}
-                        <p className="text-xs font-mono text-gray-500">
+                        <p className="text-xs font-mono text-gray-700">
                           #{item.sequenceId}
                         </p>
-
-                        {/* Customer */}
                         <p className="text-xs font-medium text-gray-800 truncate max-w-[120px]">
                           {item.customer?.name}
                         </p>
-
-                        {/* Total price */}
                         <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">
                           <NumberDisplay value={item.totalPrice} decimals={0} />{" "}
                           AFN
                         </p>
-
-                        {/* Date */}
-                        <p className="text-xs text-gray-600 whitespace-nowrap">
+                        <p className="text-xs text-gray-800 whitespace-nowrap">
                           {fmtDate(item.customDate)}
                         </p>
-
-                        {/* Purchase status */}
                         <div className="flex">
                           <span
                             className={`text-xs px-2.5 py-1 rounded-full font-medium ${PURCHASE_STATUS_STYLES[itemStatus] ?? "bg-gray-100 text-gray-600"}`}
@@ -303,8 +289,6 @@ export function PurchasesClient() {
                             {itemStatus}
                           </span>
                         </div>
-
-                        {/* Stock-in status */}
                         <div className="flex">
                           <span
                             className={`text-xs px-2.5 py-1 rounded-full font-medium ${STOCK_IN_BADGE[stockInStatus]}`}
@@ -312,8 +296,6 @@ export function PurchasesClient() {
                             {stockInStatus}
                           </span>
                         </div>
-
-                        {/* Actions dropdown */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -325,7 +307,7 @@ export function PurchasesClient() {
                             >
                               <MoreHorizontal
                                 size={16}
-                                className="text-gray-500"
+                                className="text-gray-700"
                               />
                             </Button>
                           </DropdownMenuTrigger>
@@ -381,9 +363,9 @@ export function PurchasesClient() {
             </div>
           </div>
 
-          {/* Pagination footer */}
+          {/* Pagination */}
           <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-600">
               {totalItems === 0
                 ? "No records"
                 : `Showing ${from}–${to} of ${totalItems} records`}

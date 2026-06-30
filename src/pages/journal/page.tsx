@@ -3,6 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -19,7 +25,11 @@ import {
 } from "@/lib/status";
 import type { JournalItem } from "@/types/journal";
 import { BookOpenCheck } from "lucide-react";
+import { useMemo, useState } from "react";
 import { JournalDetailDialog } from "./journal-detail-dialog";
+
+type DateSort = "newest" | "oldest";
+type StatusSort = "done" | "pending";
 
 function entryDebit(items: JournalItem[]) {
   return items.reduce((s, i) => s + (i.debit ?? 0), 0);
@@ -36,6 +46,11 @@ function formatDate(iso?: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+// Adjust this if your status values differ (e.g. "completed" / "open").
+function isDoneStatus(status: string) {
+  return status?.toLowerCase() === "done";
 }
 
 function TableSkeleton() {
@@ -79,11 +94,34 @@ export default function JournalPage() {
     detailLoading,
   } = useJournals();
 
-  const totalDebit = journals.reduce(
+  const [dateSort, setDateSort] = useState<DateSort>("newest");
+  const [statusSort, setStatusSort] = useState<StatusSort | "none">("none");
+
+  const sortedJournals = useMemo(() => {
+    const list = [...journals];
+
+    if (statusSort !== "none") {
+      list.sort((a, b) => {
+        const aDone = isDoneStatus(a.status) ? 0 : 1;
+        const bDone = isDoneStatus(b.status) ? 0 : 1;
+        return statusSort === "done" ? aDone - bDone : bDone - aDone;
+      });
+    } else {
+      list.sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateSort === "newest" ? bTime - aTime : aTime - bTime;
+      });
+    }
+
+    return list;
+  }, [journals, dateSort, statusSort]);
+
+  const totalDebit = sortedJournals.reduce(
     (s, e) => s + entryDebit(e.items ?? []),
     0,
   );
-  const totalCredit = journals.reduce(
+  const totalCredit = sortedJournals.reduce(
     (s, e) => s + entryCredit(e.items ?? []),
     0,
   );
@@ -107,8 +145,41 @@ export default function JournalPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Reference</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>
+                  <Select
+                    value={dateSort}
+                    onValueChange={(value: DateSort | null) => {
+                      if (!value) return;
+                      setDateSort(value);
+                      setStatusSort("none");
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-fit gap-1 border-none px-0 font-medium text-foreground shadow-none focus:ring-0 [&>svg]:size-3.5">
+                      <span>Date</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">Newest</SelectItem>
+                      <SelectItem value="oldest">Oldest</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableHead>
+                <TableHead>
+                  <Select
+                    value={statusSort === "none" ? undefined : statusSort}
+                    onValueChange={(value: StatusSort | null) => {
+                      if (!value) return;
+                      setStatusSort(value);
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-fit gap-1 border-none px-0 font-medium text-foreground shadow-none focus:ring-0 [&>svg]:size-3.5">
+                      <span>Status</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="done">Done</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableHead>
                 <TableHead className="text-left">Debit</TableHead>
                 <TableHead className="text-left">Credit</TableHead>
               </TableRow>
@@ -116,7 +187,7 @@ export default function JournalPage() {
             <TableBody>
               {loading ? (
                 <TableSkeleton />
-              ) : journals.length === 0 ? (
+              ) : sortedJournals.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
@@ -128,7 +199,7 @@ export default function JournalPage() {
                 </TableRow>
               ) : (
                 <>
-                  {journals.map((entry) => {
+                  {sortedJournals.map((entry) => {
                     const seqId = entry.sequence
                       ? `${entry.sequence.prefix}-${String(entry.sequence.lastIndex).padStart(4, "0")}`
                       : "—";
