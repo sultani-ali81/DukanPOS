@@ -46,26 +46,32 @@ export function CashierBreakdownTable({
   loading,
 }: CashierBreakdownTableProps) {
   return (
-    <Card className="mb-6">
-      <CardHeader className="pb-2">
+    <Card className="">
+      <CardHeader className="">
         <CardTitle className="flex items-center text-base">
           <Users className="size-4 text-muted-foreground" />
           Today's Cashier Sessions
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-4">
+      <CardContent className="">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Opening Amount</TableHead>
-                <TableHead className="text-right">Total Sales</TableHead>
-                <TableHead className="text-right">Closing Amount</TableHead>
-                <TableHead className="text-right">Cash In</TableHead>
-                <TableHead className="text-right">Cash Out</TableHead>
+                <TableHead className="font-bold">Name</TableHead>
+                <TableHead className="font-bold">Status</TableHead>
+                <TableHead className="text-right font-bold">
+                  Opening Amount
+                </TableHead>
+                <TableHead className="text-right font-bold">
+                  Total Sales
+                </TableHead>
+                <TableHead className="text-right font-bold">
+                  Closing Amount
+                </TableHead>
+                <TableHead className="text-right font-bold">Cash In</TableHead>
+                <TableHead className="text-right font-bold">Cash Out</TableHead>
               </TableRow>
             </TableHeader>
 
