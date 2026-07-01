@@ -45,14 +45,6 @@ export default function AppLayout() {
     navigate("/", { replace: true });
   };
 
-  // if (pathname === "/pos") {
-  //   return (
-  //     <div className="min-h-screen bg-gray-300 overflow-y-auto">
-  //       <PosPage />
-  //     </div>
-  //   );
-  // }
-
   const initials = (user?.name ?? user?.role ?? "?")
     .split(" ")
     .map((p) => p[0])

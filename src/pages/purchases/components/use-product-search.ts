@@ -17,14 +17,10 @@ export function useProductSearch() {
   const [debounced] = useDebounce(activeSearch, 300);
 
   useEffect(() => {
-    if (activeIndex === null || !debounced.trim()) {
-      if (activeIndex !== null)
-        setSuggestions((p) => ({ ...p, [activeIndex]: [] }));
-      return;
-    }
+    if (activeIndex === null || !debounced.trim()) return;
+
     const index = activeIndex;
     let cancelled = false;
-    setLoadingMap((p) => ({ ...p, [index]: true }));
     getProducts({ search: debounced, page: 1, itemsPerPage: 8 })
       .then(({ data }) => {
         if (cancelled) return;
@@ -59,7 +55,33 @@ export function useProductSearch() {
       delete n[index];
       return n;
     });
+    setLoadingMap((p) => {
+      const n = { ...p };
+      delete n[index];
+      return n;
+    });
     if (activeIndex === index) setActiveIndex(null);
+  };
+
+  const updateDisplay = (index: number, value: string) => {
+    setDisplays((p) => {
+      const next = [...p];
+      next[index] = value;
+      return next;
+    });
+    if (value.trim()) {
+      setLoadingMap((p) => ({ ...p, [index]: true }));
+    } else {
+      setSuggestions((p) => ({ ...p, [index]: [] }));
+      setLoadingMap((p) => ({ ...p, [index]: false }));
+    }
+  };
+
+  const activateRow = (index: number) => {
+    setActiveIndex(index);
+    if ((displays[index] ?? "").trim()) {
+      setLoadingMap((p) => ({ ...p, [index]: true }));
+    }
   };
 
   return {
@@ -72,5 +94,7 @@ export function useProductSearch() {
     setActiveIndex,
     addRow,
     removeRow,
+    updateDisplay,
+    activateRow,
   };
 }
