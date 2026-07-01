@@ -27,14 +27,12 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { Input } from "../ui/input";
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
 
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -70,7 +68,7 @@ export default function AppLayout() {
         <SidebarNav />
       </aside>
 
-      <div className="flex flex-1 flex-col gap-2.5 min-w-0 min-h-dvh">
+      <div className="flex flex-1 flex-col gap-2.5 min-w-0">
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex min-h-[60px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
