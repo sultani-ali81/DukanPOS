@@ -64,15 +64,15 @@ export default function AppLayout() {
     .toUpperCase();
 
   return (
-    <div className="flex gap-2.5 p-2.5 bg-gray-300">
+    <div className="flex gap-2.5 p-2.5 bg-gray-300 min-h-dvh">
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 rounded-lg bg-white lg:sticky lg:top-2.5 lg:block lg:h-[calc(100vh-1.25rem)]">
         <SidebarNav />
       </aside>
 
-      <div className="flex flex-1 flex-col gap-2.5">
+      <div className="flex flex-1 flex-col gap-2.5 min-w-0 min-h-dvh">
         {/* Top bar */}
-        <header className="sticky top-0 fixed-inset z-30 flex min-h-[60px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
+        <header className="sticky top-0 z-30 flex min-h-[60px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               render={
@@ -167,7 +167,7 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto rounded-lg bg-white p-5">
+        <main className="flex flex-1 flex-col min-w-0 overflow-y-auto overflow-x-auto rounded-lg bg-white p-5">
           <Outlet />
         </main>
       </div>

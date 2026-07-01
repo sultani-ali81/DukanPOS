@@ -75,10 +75,18 @@ export function ReportsClient() {
 
       <Tabs defaultValue="sales">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="sales">Sales</TabsTrigger>
-          <TabsTrigger value="purchase">Purchase</TabsTrigger>
-          <TabsTrigger value="profit">Profit</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="sales">
+            Sales
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="purchase">
+            Purchase
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="profit">
+            Profit
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="inventory">
+            Inventory
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="mt-4">
