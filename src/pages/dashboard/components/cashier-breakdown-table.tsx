@@ -46,7 +46,7 @@ export function CashierBreakdownTable({
   loading,
 }: CashierBreakdownTableProps) {
   return (
-    <Card className="">
+    <Card className="mb-4">
       <CardHeader className="">
         <CardTitle className="flex items-center text-base">
           <Users className="size-4 text-muted-foreground" />

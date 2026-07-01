@@ -6,9 +6,9 @@ type UtilsState = {
   setInventoryId: (id: string) => void;
   inventoryLabel: string;
   setInventoryLabel: (label: string) => void;
-  // Walk-in customer — persisted so it survives refresh
   walkInCustomerId: string;
   walkInCustomerLabel: string;
+  sessionId: string;
   setWalkInCustomer: (id: string, label: string) => void;
   clearUtilsStore: () => void;
 };
@@ -37,7 +37,6 @@ export const useUtilsStore = create<UtilsState>()(
           walkInCustomerLabel: "",
         });
       },
-      // keep legacy getters so nothing else breaks
       getInventoryId: () => get().inventoryId,
       getInventoryLabel: () => get().inventoryLabel,
     }),

@@ -17,11 +17,11 @@ export async function openSession(
 export async function CloseSession(
   payload: CloseSessionPayload,
 ): Promise<CloseSessionResponse> {
-  const res = await api.put("store-session/close", payload);
+  const res = await api.put("/store-session/close", payload);
   return res.data;
 }
 
 export async function hasSession(): Promise<Boolean> {
-  const res = await api.get("store-session/my-session");
+  const res = await api.get("/store-session/my-session");
   return res.data;
 }
