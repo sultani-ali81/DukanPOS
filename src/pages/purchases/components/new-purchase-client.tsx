@@ -1,5 +1,6 @@
+import { useNewPurchaseDraftStore } from "@/lib/newPurchaseDraftStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -236,6 +237,54 @@ export function NewPurchaseClient() {
   );
   const hasInventory = !!inventoryId;
 
+  // ── Draft persistence ───────────────────────────────────────────────────
+  // Keeps the form alive in sessionStorage while the user pops over to
+  // "Add Product" / "Add Inventory" on another route. The 1-minute TTL only
+  // starts counting once this component unmounts (i.e. once they actually
+  // leave), not while they're sitting here filling out the form.
+  const { getFreshDraft, setDraft, markLeft, clearDraft } =
+    useNewPurchaseDraftStore();
+  const hydratedRef = useRef(false);
+
+  // Hydrate once on mount; mark "left" on unmount so the TTL clock starts then.
+  useEffect(() => {
+    const draft = getFreshDraft();
+    if (draft) {
+      form.reset(draft.values);
+      setCustomerDisplay(draft.customerDisplay);
+      setInventoryId(draft.inventoryId);
+      product.setDisplays(draft.productDisplays);
+    }
+    hydratedRef.current = true;
+
+    return () => {
+      markLeft();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist on change, debounced, skipped until initial hydration has run.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    const timeout = setTimeout(() => {
+      setDraft({
+        values: form.getValues(),
+        customerDisplay,
+        inventoryId,
+        productDisplays: product.displays,
+      });
+    }, 400);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    watchedItems,
+    watchedCustomerId,
+    watchedDate,
+    customerDisplay,
+    inventoryId,
+    product.displays,
+  ]);
+
   const handleCreateCustomer = async (values: CreateCustomerPayload) => {
     await createCustomer(values);
     setCustomerDisplay(values.name);
@@ -268,6 +317,8 @@ export function NewPurchaseClient() {
       toast.success("Purchase saved", {
         description: `Purchase created as draft.`,
       });
+
+      clearDraft();
 
       navigate(`/purchases/${result.purchaseId}`, {
         state: { inventoryId },
