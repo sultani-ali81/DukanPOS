@@ -127,6 +127,7 @@ export function DateRangePicker({
           startMonth={new Date(2020, 0)}
           endMonth={new Date(new Date().getFullYear() + 1, 11)}
           showOutsideDays={false}
+          disabled={{ after: new Date() }}
         />
 
         {/* Footer */}
