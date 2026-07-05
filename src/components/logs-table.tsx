@@ -1,5 +1,6 @@
 import { useAuditLogs } from "@/hooks/use-audit-log";
 import { usePagination } from "@/hooks/use-pagination";
+import { formatAuditRecord } from "@/lib/audit-format";
 import {
   actionBadgeVariant,
   actionLabel,
@@ -8,10 +9,8 @@ import {
 import type { AuditLog } from "@/types/audit";
 import { AuditEntityType } from "@/types/audit";
 import { useState } from "react";
-import { LogDiffDialog } from "./log-diff-dialog";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
-import { Card } from "./ui/card";
 import { Pagination } from "./ui/pagination";
 import {
   Select,
@@ -44,7 +43,7 @@ function getInitials(name: string) {
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString("en-US", {
-    dateStyle: "medium",
+    dateStyle: "short",
     timeStyle: "short",
   });
 }
@@ -61,15 +60,13 @@ export default function LogsTable({ entityId }: LogsTableProps) {
   });
 
   if (error) {
-    return (
-      <Card className="p-6 text-sm text-destructive">Failed to load logs.</Card>
-    );
+    return <p className="p-3 text-sm text-destructive">Failed to load logs.</p>;
   }
 
   return (
-    <div className="overflow-hidden">
+    <div>
       {!entityId && (
-        <div className="flex items-center justify-between border-b">
+        <div className="flex items-center justify-between p-3">
           <Select
             value={type ?? "all"}
             onValueChange={(val) =>
@@ -92,13 +89,13 @@ export default function LogsTable({ entityId }: LogsTableProps) {
       )}
 
       <Table>
-        <TableHeader className="bg-gray-100 ">
-          <TableRow>
-            <TableHead className="text-lg ">Employee</TableHead>
-            <TableHead className="text-lg ">Entity</TableHead>
-            <TableHead className="text-lg ">Action</TableHead>
-            <TableHead className="text-lg ">Changes</TableHead>
-            <TableHead className="text-lg ">Date</TableHead>
+        <TableHeader>
+          <TableRow className="bg-gray-100">
+            <TableHead className="p-3 font-semibold">Employee</TableHead>
+            <TableHead className="p-3 font-semibold">Action</TableHead>
+            <TableHead className="p-3 font-semibold">Before</TableHead>
+            <TableHead className="p-3 font-semibold">After</TableHead>
+            <TableHead className="p-3 font-semibold">Date</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -106,7 +103,7 @@ export default function LogsTable({ entityId }: LogsTableProps) {
             <TableRow>
               <TableCell
                 colSpan={5}
-                className="text-center justify-center text-muted-foreground py-8"
+                className="p-3 text-center text-muted-foreground"
               >
                 Loading logs...
               </TableCell>
@@ -117,7 +114,7 @@ export default function LogsTable({ entityId }: LogsTableProps) {
             <TableRow>
               <TableCell
                 colSpan={5}
-                className="text-center text-muted-foreground py-8"
+                className="p-3 text-center text-muted-foreground"
               >
                 No logs found.
               </TableCell>
@@ -125,11 +122,8 @@ export default function LogsTable({ entityId }: LogsTableProps) {
           )}
 
           {logs.map((log: AuditLog) => (
-            <TableRow
-              key={log.id}
-              className="text-center justify-center items-center"
-            >
-              <TableCell>
+            <TableRow key={log.id}>
+              <TableCell className="p-3">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-7 w-7">
                     <AvatarFallback>
@@ -139,20 +133,22 @@ export default function LogsTable({ entityId }: LogsTableProps) {
                   <span>{log.employee.name}</span>
                 </div>
               </TableCell>
-              <TableCell>
-                <span className="text-muted-foreground text-sm">
-                  {entityLabel[log.entityType]}
-                </span>
+              <TableCell className="p-3">
+                {log.actionType ? (
+                  <Badge variant={actionBadgeVariant[log.actionType]}>
+                    {actionLabel[log.actionType]}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground text-sm">—</span>
+                )}
               </TableCell>
-              <TableCell>
-                <Badge variant={actionBadgeVariant[log.actionType]}>
-                  {actionLabel[log.actionType]}
-                </Badge>
+              <TableCell className="p-3 text-sm text-muted-foreground">
+                {formatAuditRecord(log.before)}
               </TableCell>
-              <TableCell>
-                <LogDiffDialog log={log} />
+              <TableCell className="p-3 text-sm">
+                {formatAuditRecord(log.after)}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="p-3 text-muted-foreground">
                 {formatDate(log.createdAt)}
               </TableCell>
             </TableRow>
@@ -161,7 +157,7 @@ export default function LogsTable({ entityId }: LogsTableProps) {
       </Table>
 
       {meta && (
-        <div className="p-4 border-t">
+        <div className="p-3">
           <Pagination
             currentPage={meta.currentPage}
             totalPages={meta.totalPages}

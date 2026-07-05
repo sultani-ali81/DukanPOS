@@ -232,120 +232,120 @@ export default function ProductDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Summary */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Category</p>
-                <Badge variant="secondary" className="mt-1.5">
-                  {product.category ?? "—"}
-                </Badge>
+        <div className="gap-6 lg:col-span-3 lg:flex-col">
+          {/* Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <Badge variant="secondary" className="mt-1.5">
+                    {product.category ?? "—"}
+                  </Badge>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Selling Price</p>
+                  <p className="mt-1 font-semibold text-primary">
+                    {formatCurrency(product.price)}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Total Stock</p>
+                  <p className="mt-1 font-semibold">{totalStock} units</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge
+                    variant={isOutOfStock ? "destructive" : "secondary"}
+                    className="mt-1.5"
+                  >
+                    {totalStock < 10 && totalStock > 1
+                      ? "Low Stock"
+                      : totalStock > 10
+                        ? "In Stock"
+                        : "Out of Stock"}
+                  </Badge>
+                </div>
               </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Selling Price</p>
-                <p className="mt-1 font-semibold text-primary">
-                  {formatCurrency(product.price)}
-                </p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Total Stock</p>
-                <p className="mt-1 font-semibold">{totalStock} units</p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">Status</p>
-                <Badge
-                  variant={isOutOfStock ? "destructive" : "secondary"}
-                  className="mt-1.5"
-                >
-                  {totalStock < 10 && totalStock > 1
-                    ? "Low Stock"
-                    : totalStock > 10
-                      ? "In Stock"
-                      : "Out of Stock"}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Stock by location */}
-        <Card className="lg:col-span-2 mt-6 overflow-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Boxes className="size-4 text-muted-foreground" />
-              Stock by Inventory
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {inventories.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-muted-foreground">
-                This product isn't stocked in any inventory yet.
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="py-3 pl-6">Inventory</TableHead>
-                    <TableHead className="py-3 pr-6 text-right">
-                      Quantity
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inventories.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell className="py-3 pl-6">{inv.name}</TableCell>
+          {/* Stock by location */}
+          <Card className="lg:col-span-2 mt-6 overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Boxes className="size-4 text-muted-foreground" />
+                Stock by Inventory
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {inventories.length === 0 ? (
+                <p className="px-6 pb-6 text-sm text-muted-foreground">
+                  This product isn't stocked in any inventory yet.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="py-3 pl-6">Inventory</TableHead>
+                      <TableHead className="py-3 pr-6 text-right">
+                        Quantity
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inventories.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="py-3 pl-6">{inv.name}</TableCell>
+                        <TableCell className="py-3 pr-6 text-right tabular-nums">
+                          <span
+                            className={
+                              inv.quantity === 0
+                                ? "font-medium text-red-500"
+                                : inv.quantity < 10
+                                  ? "font-medium text-orange-500"
+                                  : "font-medium text-green-500"
+                            }
+                          >
+                            {inv.quantity}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="border-t-2 font-semibold">
+                      <TableCell className="py-3 pl-6">Total</TableCell>
                       <TableCell className="py-3 pr-6 text-right tabular-nums">
-                        <span
-                          className={
-                            inv.quantity === 0
-                              ? "font-medium text-red-500"
-                              : inv.quantity < 10
-                                ? "font-medium text-orange-500"
-                                : "font-medium text-green-500"
-                          }
-                        >
-                          {inv.quantity}
-                        </span>
+                        {totalStock}
                       </TableCell>
                     </TableRow>
-                  ))}
-                  <TableRow className="border-t-2 font-semibold">
-                    <TableCell className="py-3 pl-6">Total</TableCell>
-                    <TableCell className="py-3 pr-6 text-right tabular-nums">
-                      {totalStock}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Audit history */}
-        <Card className="lg:col-span-3 mt-6 overflow-hidden">
-          <CardHeader>
-            <CardTitle>Logs History</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <LogsTable entityId={product.id} />
-          </CardContent>
-        </Card>
-
-        <ProductDialog
-          open={dialogOpen}
-          categories={categories}
-          editingProduct={product}
-          onOpenChange={setDialogOpen}
-          onSubmit={handleSubmit}
-        />
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {/* Audit history */}
+      <Card className="lg:col-span-3 mt-6 overflow-hidden">
+        <CardHeader>
+          <CardTitle>Logs History</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <LogsTable entityId={product.id} />
+        </CardContent>
+      </Card>
+
+      <ProductDialog
+        open={dialogOpen}
+        categories={categories}
+        editingProduct={product}
+        onOpenChange={setDialogOpen}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }
