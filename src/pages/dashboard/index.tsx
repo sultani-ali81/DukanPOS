@@ -64,8 +64,6 @@ function formatTrend(pct: number): { value: string; positive: boolean } {
   };
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function DashboardPage() {
   const navigate = useNavigate();
 
