@@ -1,8 +1,9 @@
 // src/pages/inventory/[id]/page.tsx
+import LogsTable from "@/components/logs-table";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -372,6 +373,16 @@ export default function InventoryDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Audit history */}
+      <Card className="mt-6 overflow-hidden">
+        <CardHeader>
+          <CardTitle className="text-lg">Logs History</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <LogsTable entityId={id} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

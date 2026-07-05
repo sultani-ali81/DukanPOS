@@ -25,6 +25,7 @@ import {
   Warehouse,
 } from "lucide-react";
 
+import LogsTable from "@/components/logs-table";
 import { extractError } from "@/lib/error";
 import { getPurchase, updatePurchaseStatus } from "@/queries/purchase";
 import { createStockIn, updateStockIn } from "@/queries/stock-in";
@@ -214,7 +215,7 @@ export function PurchaseDetailClient() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="px-4 py-8">
       <PageHeader
         title={`Purchase #${purchase.sequenceId}`}
         description={`${purchase.customer?.name ?? "—"} · ${fmtDate(purchase.customDate)}`}
@@ -240,9 +241,9 @@ export function PurchaseDetailClient() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-5">
         {/* ── Left ── */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           {/* Purchased Items */}
           <Card>
             <CardHeader>
@@ -372,7 +373,7 @@ export function PurchaseDetailClient() {
         </div>
 
         {/* Right sidebar */}
-        <div className="flex-col w-sm sm:pl-3 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           <PurchaseFlowCard
             purchase={purchase}
             onConfirm={handleConfirmPurchase}
@@ -385,7 +386,7 @@ export function PurchaseDetailClient() {
           />
           {/* Stock-In Records */}
           {hasStockIns && (
-            <Card className="w-sm">
+            <Card>
               <CardHeader>
                 <CardTitle>Stock-In Records</CardTitle>
               </CardHeader>
@@ -473,6 +474,16 @@ export function PurchaseDetailClient() {
               </CardContent>
             </Card>
           )}
+
+          {/* Audit history */}
+          <Card className="mt-6 overflow-hidden">
+            <CardHeader>
+              <CardTitle>Logs History</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <LogsTable entityId={purchase.id} />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

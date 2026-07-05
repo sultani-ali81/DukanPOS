@@ -1,3 +1,4 @@
+import LogsTable from "@/components/logs-table";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -272,67 +273,79 @@ export default function ProductDetailPage() {
         </Card>
       </div>
 
-      {/* Stock by location */}
-      <Card className="mt-6 overflow-hidden">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Boxes className="size-4 text-muted-foreground" />
-            Stock by Inventory
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {inventories.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-muted-foreground">
-              This product isn't stocked in any inventory yet.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="py-3 pl-6">Inventory</TableHead>
-                  <TableHead className="py-3 pr-6 text-right">
-                    Quantity
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventories.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="py-3 pl-6">{inv.name}</TableCell>
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Stock by location */}
+        <Card className="lg:col-span-2 mt-6 overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Boxes className="size-4 text-muted-foreground" />
+              Stock by Inventory
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {inventories.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-muted-foreground">
+                This product isn't stocked in any inventory yet.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="py-3 pl-6">Inventory</TableHead>
+                    <TableHead className="py-3 pr-6 text-right">
+                      Quantity
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inventories.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="py-3 pl-6">{inv.name}</TableCell>
+                      <TableCell className="py-3 pr-6 text-right tabular-nums">
+                        <span
+                          className={
+                            inv.quantity === 0
+                              ? "font-medium text-red-500"
+                              : inv.quantity < 10
+                                ? "font-medium text-orange-500"
+                                : "font-medium text-green-500"
+                          }
+                        >
+                          {inv.quantity}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="border-t-2 font-semibold">
+                    <TableCell className="py-3 pl-6">Total</TableCell>
                     <TableCell className="py-3 pr-6 text-right tabular-nums">
-                      <span
-                        className={
-                          inv.quantity === 0
-                            ? "font-medium text-red-500"
-                            : inv.quantity < 10
-                              ? "font-medium text-orange-500"
-                              : "font-medium text-green-500"
-                        }
-                      >
-                        {inv.quantity}
-                      </span>
+                      {totalStock}
                     </TableCell>
                   </TableRow>
-                ))}
-                <TableRow className="border-t-2 font-semibold">
-                  <TableCell className="py-3 pl-6">Total</TableCell>
-                  <TableCell className="py-3 pr-6 text-right tabular-nums">
-                    {totalStock}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-      <ProductDialog
-        open={dialogOpen}
-        categories={categories}
-        editingProduct={product}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleSubmit}
-      />
+        {/* Audit history */}
+        <Card className="lg:col-span-3 mt-6 overflow-hidden">
+          <CardHeader>
+            <CardTitle>Logs History</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <LogsTable entityId={product.id} />
+          </CardContent>
+        </Card>
+
+        <ProductDialog
+          open={dialogOpen}
+          categories={categories}
+          editingProduct={product}
+          onOpenChange={setDialogOpen}
+          onSubmit={handleSubmit}
+        />
+      </div>
     </div>
   );
 }

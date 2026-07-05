@@ -114,7 +114,7 @@ export function PurchaseFlowCard({
   const hasStockIns = stockIns.length > 0;
 
   return (
-    <Card className="sm:w-100">
+    <Card>
       <CardHeader>
         <CardTitle>Purchase Flow</CardTitle>
       </CardHeader>
