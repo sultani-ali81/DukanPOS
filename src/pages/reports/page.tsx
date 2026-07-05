@@ -76,14 +76,16 @@ const saleColumns: ReportColumn<SaleReportRow>[] = [
   },
   {
     header: "Items",
-    className: "text-right",
-    cell: (row) => <span className="block text-right">{row.items.length}</span>,
+    className: "text-center items-center",
+    cell: (row) => (
+      <span className="block text-center items-center">{row.items.length}</span>
+    ),
   },
   {
     header: "Total",
-    className: "text-right",
+    className: "text-center items-center",
     cell: (row) => (
-      <span className="block text-right font-semibold">
+      <span className="block text-center items-center font-semibold">
         {formatCurrency(
           row.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
         )}
@@ -104,22 +106,24 @@ function renderSaleExpanded(row: SaleReportRow) {
       <TableHeader>
         <TableRow>
           <TableHead className="h-8 text-xs">Product</TableHead>
-          <TableHead className="h-8 text-right text-xs">Qty</TableHead>
-          <TableHead className="h-8 text-right text-xs">Unit Price</TableHead>
-          <TableHead className="h-8 text-right text-xs">Subtotal</TableHead>
+          <TableHead className="h-8 text-left text-xs">Qty</TableHead>
+          <TableHead className="h-8 text-center items-center text-xs">
+            Unit Price
+          </TableHead>
+          <TableHead className="h-8 text-center items-center text-xs">
+            Subtotal
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {row.items.map((item) => (
           <TableRow key={item.id} className="hover:bg-transparent">
             <TableCell className="text-sm">{item.product.name}</TableCell>
-            <TableCell className="text-right text-sm">
-              {item.quantity}
-            </TableCell>
-            <TableCell className="text-right text-sm">
+            <TableCell className="text-left text-sm">{item.quantity}</TableCell>
+            <TableCell className="text-center items-center text-sm">
               {formatCurrency(item.unitPrice)}
             </TableCell>
-            <TableCell className="text-right text-sm font-medium">
+            <TableCell className="text-center items-center text-sm font-medium">
               {formatCurrency(item.quantity * item.unitPrice)}
             </TableCell>
           </TableRow>
@@ -141,25 +145,27 @@ const inventoryColumns: ReportColumn<InventoryReportRow>[] = [
   },
   {
     header: "Products",
-    className: "text-right",
+    className: "text-center items-center",
     cell: (row) => (
-      <span className="block text-right">{row.products.length}</span>
+      <span className="block text-center items-center">
+        {row.products.length}
+      </span>
     ),
   },
   {
     header: "Total Units",
-    className: "text-right",
+    className: "text-center items-center",
     cell: (row) => (
-      <span className="block text-right">
+      <span className="block text-center items-center">
         {row.stockQuantities.reduce((s, sq) => s + sq.quantity, 0)}
       </span>
     ),
   },
   {
     header: "Stock Value",
-    className: "text-right",
+    className: "text-center items-center",
     cell: (row) => (
-      <span className="block text-right font-semibold">
+      <span className="block text-center items-center font-semibold">
         {formatCurrency(
           row.stockQuantities.reduce(
             (s, sq) => s + sq.quantity * (sq.product.price ?? 0),
@@ -184,20 +190,28 @@ function renderInventoryExpanded(row: InventoryReportRow) {
       <TableHeader>
         <TableRow>
           <TableHead className="h-8 text-xs">Product</TableHead>
-          <TableHead className="h-8 text-right text-xs">Unit Price</TableHead>
-          <TableHead className="h-8 text-right text-xs">Quantity</TableHead>
-          <TableHead className="h-8 text-right text-xs">Value</TableHead>
+          <TableHead className="h-8 text-center items-center text-xs">
+            Unit Price
+          </TableHead>
+          <TableHead className="h-8 text-center items-center text-xs">
+            Quantity
+          </TableHead>
+          <TableHead className="h-8 text-center items-center text-xs">
+            Value
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {row.stockQuantities.map((sq) => (
           <TableRow key={sq.id} className="hover:bg-transparent">
             <TableCell className="text-sm">{sq.product.name}</TableCell>
-            <TableCell className="text-right text-sm">
+            <TableCell className="text-center items-center text-sm">
               {formatCurrency(sq.product.price ?? 0)}
             </TableCell>
-            <TableCell className="text-right text-sm">{sq.quantity}</TableCell>
-            <TableCell className="text-right text-sm font-medium">
+            <TableCell className="text-center items-center text-sm">
+              {sq.quantity}
+            </TableCell>
+            <TableCell className="text-center items-center text-sm font-medium">
               {formatCurrency(sq.quantity * (sq.product.price ?? 0))}
             </TableCell>
           </TableRow>
@@ -236,16 +250,18 @@ function makeStockColumns(prefix: string): ReportColumn<StockReportRow>[] {
     },
     {
       header: "Items",
-      className: "text-right",
+      className: "text-center items-center",
       cell: (row) => (
-        <span className="block text-right">{row.items.length}</span>
+        <span className="block text-center items-center">
+          {row.items.length}
+        </span>
       ),
     },
     {
       header: "Total Qty",
-      className: "text-right",
+      className: "text-center items-center",
       cell: (row) => (
-        <span className="block text-right">
+        <span className="block text-center items-center">
           {row.items.reduce((s, i) => s + i.quantity, 0)}
         </span>
       ),
@@ -267,14 +283,16 @@ function renderStockExpanded(row: StockReportRow) {
       <TableHeader>
         <TableRow>
           <TableHead className="h-8 text-xs">Product</TableHead>
-          <TableHead className="h-8 text-right text-xs">Quantity</TableHead>
+          <TableHead className="h-8 text-center items-center text-xs">
+            Quantity
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {row.items.map((item) => (
           <TableRow key={item.id} className="hover:bg-transparent">
             <TableCell className="text-sm">{item.product.name}</TableCell>
-            <TableCell className="text-right text-sm font-medium">
+            <TableCell className="text-center items-center text-sm font-medium">
               {item.quantity}
             </TableCell>
           </TableRow>
@@ -311,12 +329,12 @@ const cashMovementColumns: ReportColumn<CashMovementReportRow>[] = [
   },
   {
     header: "Amount",
-    className: "w-36 text-right",
+    className: "w-36 text-center items-center",
     cell: (row) => {
       const isCashIn = row.type === "cash_in";
       return (
         <span
-          className={`block text-right font-semibold tabular-nums ${
+          className={`block text-center items-center font-semibold tabular-nums ${
             isCashIn
               ? "text-emerald-600 dark:text-emerald-400"
               : "text-destructive"
