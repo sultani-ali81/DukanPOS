@@ -62,8 +62,6 @@ export function useDashboard(
     to: undefined,
   });
 
-  // ── SWR: main stats (key changes when range or activeCustomRange changes) ──
-
   const mainParams = buildParams(range, activeCustomRange);
 
   const mainKey = [
