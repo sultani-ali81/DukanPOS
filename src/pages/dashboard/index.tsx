@@ -113,7 +113,7 @@ export default function DashboardPage() {
               key={opt.value}
               onClick={() => setRange(opt.value)}
               className={[
-                "h-6 rounded-lg px-3.5 text-sm font-medium transition-colors",
+                "h-6 rounded-lg cursor-pointer px-3.5 text-sm font-medium transition-colors",
                 range === opt.value && !isCustomActive
                   ? "bg-primary text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground",

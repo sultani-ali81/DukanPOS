@@ -71,7 +71,7 @@ export function DateRangePicker({
   return (
     <Popover open={open} onOpenChange={handleOpen}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           disabled={disabled}
           className={[
             "flex items-center gap-2 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
@@ -85,7 +85,7 @@ export function DateRangePicker({
           <span className="max-w-[180px] truncate">{label}</span>
           {hasRange && (
             <span
-              role="button"
+              role="Button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleClear();
@@ -95,7 +95,7 @@ export function DateRangePicker({
               <X className="size-3" />
             </span>
           )}
-        </button>
+        </Button>
       </PopoverTrigger>
 
       <PopoverContent
@@ -132,12 +132,12 @@ export function DateRangePicker({
 
         {/* Footer */}
         <div className="px-4 pb-4 pt-3 flex items-center justify-between gap-3 border-t border-gray-100">
-          <button
+          <Button
             onClick={handleClear}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             Clear
-          </button>
+          </Button>
           <div className="flex gap-2">
             <Button
               variant="outline"
