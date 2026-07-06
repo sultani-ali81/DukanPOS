@@ -15,6 +15,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { Value as PhoneValue } from "react-phone-number-input";
+import { isValidPhoneNumber } from "react-phone-number-input";
 
 export interface ContactFormValues {
   name: string;
@@ -102,7 +103,12 @@ export function ContactDialog({
               <Controller
                 control={control}
                 name="phone"
-                rules={{ required: "Phone is required" }}
+                rules={{
+                  required: "Phone is required",
+                  validate: (value) =>
+                    isValidPhoneNumber(value) ||
+                    "Please enter a valid phone number",
+                }}
                 render={({ field }) => (
                   <PhoneNumberInput
                     label="Phone *"
@@ -125,8 +131,13 @@ export function ContactDialog({
               <Input
                 id="contact-address"
                 placeholder="Shahr-e Naw, Kabul"
-                {...register("address")}
+                {...register("address", { required: "Address is required" })}
               />
+              {errors.address && (
+                <p className="text-xs text-destructive">
+                  {errors.address.message}
+                </p>
+              )}
             </div>
           </div>
 

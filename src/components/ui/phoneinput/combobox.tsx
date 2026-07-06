@@ -1,7 +1,6 @@
 import * as React from "react";
 
-import { ArrowDown01Icon } from "hugeicons-react";
-import { Check } from "lucide-react";
+import { ArrowDown01Icon, Check } from "lucide-react";
 
 import {
   Command,
