@@ -314,9 +314,7 @@ export default function CategoriesPage() {
                       <p className="truncate text-base font-semibold text-foreground">
                         {cat.name}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        {meta.totalItems} categories
-                      </p>
+                      <p className="text-sm text-muted-foreground"></p>
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-1">

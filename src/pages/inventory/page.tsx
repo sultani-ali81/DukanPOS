@@ -1,4 +1,15 @@
 import { PageHeader } from "@/components/page-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -9,7 +20,14 @@ import {
   updateInventory,
 } from "@/queries/inventory";
 import type { Inventory } from "@/types/inventory";
-import { Plus, Search, Warehouse, X } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Search,
+  TriangleAlert,
+  Warehouse,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -40,6 +58,7 @@ export default function InventoryPage() {
     null,
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Inventory | null>(null);
 
   function openCreate() {
     setEditingInventory(null);
@@ -72,7 +91,16 @@ export default function InventoryPage() {
     }
   }
 
-  async function onDelete(inv: Inventory) {
+  // Step 1: trash icon → just open the confirmation dialog.
+  function requestDelete(inv: Inventory) {
+    setPendingDelete(inv);
+  }
+
+  // Step 2: user confirmed in the dialog → actually call the API.
+  async function confirmDelete() {
+    const inv = pendingDelete;
+    if (!inv) return;
+
     setDeletingId(inv.id);
     try {
       await deleteInventory(inv.id);
@@ -86,6 +114,7 @@ export default function InventoryPage() {
       });
     } finally {
       setDeletingId(null);
+      setPendingDelete(null);
     }
   }
 
@@ -159,7 +188,7 @@ export default function InventoryPage() {
               inventory={inv}
               isDeleting={deletingId === inv.id}
               onEdit={openEdit}
-              onDelete={onDelete}
+              onDelete={requestDelete}
             />
           ))}
         </div>
@@ -186,6 +215,49 @@ export default function InventoryPage() {
         onOpenChange={setDialogOpen}
         onSubmit={onSubmit}
       />
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <TriangleAlert className="size-6" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete inventory?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove{" "}
+              <span className="font-medium text-foreground">
+                &ldquo;{pendingDelete?.name}&rdquo;
+              </span>
+              . Any stock associations with products will also be removed. This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingId !== null}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deletingId !== null}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+            >
+              {deletingId !== null && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
