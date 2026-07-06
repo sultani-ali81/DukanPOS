@@ -208,7 +208,7 @@ export function PurchasesClient() {
             <div className="min-w-[640px]">
               {/* Header */}
               <div className="grid grid-cols-7 justify-items-center items-center bg-gray-50 py-3 px-4 border-b border-gray-100">
-                {["Purchase #", "Customer", "Total Price"].map((h) => (
+                {["Purchase #", "Supplier", "Total Price"].map((h) => (
                   <span
                     key={h}
                     className="text-xs font-semibold text-gray-700 uppercase tracking-wide"
