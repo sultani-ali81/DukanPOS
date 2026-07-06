@@ -1,4 +1,4 @@
-import type { PaginationMeta } from "@/hooks/use-pagination"; // adjust if your existing file uses a different name
+import type { PaginationMeta } from "@/hooks/use-pagination";
 import { AuditActionType, AuditEntityType } from "./audit-enmus";
 
 export { AuditActionType, AuditEntityType };
@@ -6,9 +6,37 @@ export { AuditActionType, AuditEntityType };
 export interface AuditEmployee {
   id: string;
   name: string;
-  email: string;
+  email?: string; // only present when the log came from GET /audit
 }
 
+export interface StockMovementItem {
+  id: string;
+  quantity: number;
+  product: { id: string; name: string };
+}
+
+export interface StockInDetails {
+  id: string;
+  status: string;
+  createdAt: string;
+  inventory: { id: string; name: string } | null;
+  purchase: { id: string } | null;
+  sequence: { prefix: string; lastIndex: number } | null;
+  items: StockMovementItem[];
+}
+
+export interface StockOutDetails {
+  id: string;
+  status: string;
+  createdAt: string;
+  inventory: { id: string; name: string } | null;
+  sale: { id: string; status: string } | null;
+  sequence: { prefix: string; lastIndex: number } | null;
+  items: StockMovementItem[];
+}
+
+// Normalized shape used everywhere in the frontend, regardless of which
+// endpoint (/audit or /audit/entity/:id) the log came from.
 export interface AuditLog {
   id: string;
   entityType: AuditEntityType;
@@ -18,6 +46,8 @@ export interface AuditLog {
   after: Record<string, unknown> | null;
   createdAt: string;
   employee: AuditEmployee;
+  stockIn?: StockInDetails | null;
+  stockOut?: StockOutDetails | null;
 }
 
 export interface AuditResponse {

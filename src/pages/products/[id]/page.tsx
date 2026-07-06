@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { invalidateAuditLogs } from "@/lib/audit-logs-cache";
 import { formatCurrency } from "@/lib/data";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
 import {
@@ -97,6 +98,7 @@ export default function ProductDetailPage() {
       setProduct(refreshed);
       setActiveImage(0);
     }
+    invalidateAuditLogs(product.id);
     toast.success("Product updated", {
       description: `"${values.name ?? product.name}" has been updated.`,
     });

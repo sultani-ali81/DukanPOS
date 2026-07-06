@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import LogsTable from "@/components/logs-table";
+import { invalidateAuditLogs } from "@/lib/audit-logs-cache";
 import { extractError } from "@/lib/error";
 import { getPurchase, updatePurchaseStatus } from "@/queries/purchase";
 import { createStockIn, updateStockIn } from "@/queries/stock-in";
@@ -112,6 +113,7 @@ export function PurchaseDetailClient() {
       toast.success("Purchase confirmed", {
         description: `Purchase #${purchase.sequenceId} is ready for stock-in.`,
       });
+      invalidateAuditLogs(purchase.id);
     } catch (err: unknown) {
       toast.error("Could not confirm purchase", {
         description: extractError(err),
@@ -155,6 +157,7 @@ export function PurchaseDetailClient() {
       });
 
       loadPurchase(true);
+      invalidateAuditLogs(pendingStockIn.stockInId);
     } catch (err: unknown) {
       toast.error("Stock-in failed", { description: extractError(err) });
     } finally {
@@ -172,6 +175,7 @@ export function PurchaseDetailClient() {
         description: "Items have been added to inventory.",
       });
       loadPurchase(true);
+      invalidateAuditLogs(stockInId);
     } catch (err: unknown) {
       toast.error("Could not confirm stock-in", {
         description: extractError(err),
