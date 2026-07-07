@@ -231,13 +231,13 @@ export default function InventoryDetailPage() {
         <CardContent className="overflow-x-auto p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-14">Image</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Categories</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Status</TableHead>
+              <TableRow className="bg-muted/50 items-center text-center">
+                <TableHead className="w-14 text-center">Image</TableHead>
+                <TableHead className="text-center">Product</TableHead>
+                <TableHead className="text-center">Categories</TableHead>
+                <TableHead className="text-center">Price</TableHead>
+                <TableHead className="text-center">Quantity</TableHead>
+                <TableHead className="text-center">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -268,7 +268,7 @@ export default function InventoryDetailPage() {
                   return (
                     <TableRow key={product.id} className="hover:bg-muted/40">
                       {/* Thumbnail */}
-                      <TableCell className="py-2">
+                      <TableCell className="py-2 text-center">
                         {firstImage ? (
                           <img
                             src={firstImage.imageUrlSigned}
@@ -283,13 +283,13 @@ export default function InventoryDetailPage() {
                       </TableCell>
 
                       {/* Name */}
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-center">
                         {product.name}
                       </TableCell>
 
                       {/* Categories */}
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                      <TableCell className="text-center">
+                        <div className="flex flex-wrap gap-1 justify-center items-center">
                           {product.categories.length > 0 ? (
                             product.categories.map((c) => (
                               <Badge
@@ -308,17 +308,17 @@ export default function InventoryDetailPage() {
                         </div>
                       </TableCell>
                       {/* Price */}
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-center tabular-nums">
                         {formatCurrency(product.price)}
                       </TableCell>
 
                       {/* Quantity */}
-                      <TableCell className="text-right tabular-nums font-semibold">
+                      <TableCell className="text-center tabular-nums font-semibold">
                         {product.quantity}
                       </TableCell>
 
                       {/* Status */}
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
                         <StockBadge quantity={product.quantity} />
                       </TableCell>
                     </TableRow>
