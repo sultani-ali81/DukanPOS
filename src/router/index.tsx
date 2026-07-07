@@ -14,6 +14,7 @@ import ViewPurchase from "@/pages/purchases/[id]";
 import Purchases from "@/pages/purchases/index";
 import NewPurchasePage from "@/pages/purchases/new";
 import Report from "@/pages/reports/page";
+import NewStockMovementPage from "@/pages/stock-movement/new";
 import UnauthorizedPage from "@/pages/unauthorized";
 import UsersPage from "@/pages/users/page";
 import { createBrowserRouter } from "react-router-dom";
@@ -114,6 +115,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allowed={["Admin"]}>
             <InventoryDetailPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: "/stock-movement/new",
+        element: (
+          <RoleRoute allowed={["Admin"]}>
+            <NewStockMovementPage />
           </RoleRoute>
         ),
       },

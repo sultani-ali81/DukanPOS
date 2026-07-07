@@ -21,6 +21,7 @@ import {
 } from "@/queries/inventory";
 import type { Inventory } from "@/types/inventory";
 import {
+  ArrowLeftRight,
   Loader2,
   Plus,
   Search,
@@ -29,6 +30,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   InventoryCard,
@@ -38,6 +40,8 @@ import type { InventoryFormValues } from "./components/inventory-dialog";
 import { InventoryDialog } from "./components/inventory-dialog";
 
 export default function InventoryPage() {
+  const navigate = useNavigate();
+
   const {
     inventories,
     paginationMeta,
@@ -91,12 +95,10 @@ export default function InventoryPage() {
     }
   }
 
-  // Step 1: trash icon → just open the confirmation dialog.
   function requestDelete(inv: Inventory) {
     setPendingDelete(inv);
   }
 
-  // Step 2: user confirmed in the dialog → actually call the API.
   async function confirmDelete() {
     const inv = pendingDelete;
     if (!inv) return;
@@ -124,9 +126,17 @@ export default function InventoryPage() {
         title="Inventory"
         description="Manage warehouses, stock levels, and stock movements."
       >
-        <Button onClick={openCreate}>
-          <Plus className="size-4" /> Add Inventory
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/stock-movement/new")}
+          >
+            <ArrowLeftRight className="size-4" /> Transfer Stock
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="size-4" /> Add Inventory
+          </Button>
+        </div>
       </PageHeader>
 
       {error && (

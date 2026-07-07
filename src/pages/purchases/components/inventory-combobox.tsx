@@ -18,6 +18,7 @@ interface InventoryComboboxProps {
   value: string;
   onChange: (id: string) => void;
   disabled?: boolean;
+  excludeId?: string;
 }
 
 export default function InventoryCombobox({
@@ -25,6 +26,7 @@ export default function InventoryCombobox({
   value,
   onChange,
   disabled,
+  excludeId,
 }: InventoryComboboxProps) {
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [search, setSearch] = useState("");
@@ -57,6 +59,10 @@ export default function InventoryCombobox({
     };
   }, [open, debouncedSearch]);
 
+  const visibleInventories = excludeId
+    ? inventories.filter((inv) => inv.id !== excludeId)
+    : inventories;
+
   const selectedName = inventories.find((inv) => inv.id === value)?.name ?? "";
 
   return (
@@ -67,14 +73,14 @@ export default function InventoryCombobox({
       filter={() => true}
       onValueChange={(name: string | null) => {
         if (disabled) return;
-        const inv = inventories.find((i) => i.name === (name ?? ""));
+        const inv = visibleInventories.find((i) => i.name === (name ?? ""));
         onChange(inv?.id ?? "");
         setSearch("");
       }}
     >
       <ComboboxInput
         id={id}
-        placeholder={selectedName || "Assign to inventory..."}
+        placeholder={selectedName || "Select inventory..."}
         onChange={(e) => {
           if (disabled) return;
           setSearch(e.target.value);
@@ -91,12 +97,12 @@ export default function InventoryCombobox({
               Searching...
             </div>
           )}
-          {!loading && inventories.length === 0 && (
+          {!loading && visibleInventories.length === 0 && (
             <ComboboxEmpty className="py-6 text-sm text-muted-foreground">
               No inventories found
             </ComboboxEmpty>
           )}
-          {inventories.map((inv) => (
+          {visibleInventories.map((inv) => (
             <ComboboxItem
               key={inv.id}
               value={inv.name}

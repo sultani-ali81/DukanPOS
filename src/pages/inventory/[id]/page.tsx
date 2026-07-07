@@ -19,6 +19,7 @@ import { formatCurrency } from "@/lib/data";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowLeftRight,
   MapPin,
   Package,
   Search,
@@ -141,10 +142,23 @@ export default function InventoryDetailPage() {
       <PageHeader
         title={loading ? "Loading\u2026" : (inventory?.name ?? "Inventory")}
       >
-        <Button variant="outline" onClick={() => navigate("/inventory")}>
-          <ArrowLeft className="size-4" />
-          Back to Inventories
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate("/stock-movement/new", {
+                state: { sourceInventoryId: id },
+              })
+            }
+          >
+            <ArrowLeftRight className="size-4" />
+            Transfer Stock
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/inventory")}>
+            <ArrowLeft className="size-4" />
+            Back to Inventories
+          </Button>
+        </div>
       </PageHeader>
       {inventory?.address && (
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground -mt-4 mb-4">
