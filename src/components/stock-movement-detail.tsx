@@ -1,3 +1,10 @@
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { StockInDetails, StockOutDetails } from "@/types/audit";
 
 interface StockMovementDetailsProps {
@@ -13,43 +20,45 @@ export function StockMovementDetails({
   if (!movement) return null;
 
   const isStockIn = !!stockIn;
-  const reference = isStockIn ? stockIn!.purchase : stockOut!.sale;
   const sequenceLabel = movement.sequence
     ? `${movement.sequence.prefix}${movement.sequence.lastIndex}`
     : movement.id;
 
   return (
     <div className="p-3 space-y-2">
-      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-        <span>
-          {isStockIn ? "Stock In" : "Stock Out"} #{sequenceLabel}
+      <div className="flex flex-wrap gap-12 text-sm text-muted-foreground">
+        <span className="font-semibold bg-gray-200 px-2 py-1 rounded-md">
+          {isStockIn ? "Stock In:" : "Stock Out:"} #{sequenceLabel}
         </span>
-        <span>Status: {movement.status}</span>
+        <span className="font-semibold bg-gray-200 px-2 py-1 rounded-md">
+          Status: {movement.status}
+        </span>
         {movement.inventory && (
-          <span>Inventory: {movement.inventory.name}</span>
-        )}
-        {reference && (
-          <span>
-            {isStockIn ? "Purchase" : "Sale"}: {reference.id}
+          <span className="font-semibold bg-gray-200 px-2 py-1 rounded-md">
+            Inventory: {movement.inventory.name}
           </span>
         )}
       </div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-muted-foreground">
-            <th className="p-1 ml-2 font-semibold">Product</th>
-            <th className="p-1 mr-2 font-semibold text-left">Quantity</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-auto">
+        <TableHeader>
+          <TableRow className="text-muted-foreground">
+            <TableHead className="text-left w-48 p-1 ml-2 font-semibold">
+              Product
+            </TableHead>
+            <TableHead className="text-left p-1 mr-2 font-semibold ">
+              Quantity
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {movement.items.map((item) => (
             <tr key={item.id}>
-              <td className="p-1 ml-2">{item.product.name}</td>
+              <td className="text-left p-1 ml-2">{item.product.name}</td>
               <td className="p-1 mr-2 text-left">{item.quantity}</td>
             </tr>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
