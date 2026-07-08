@@ -9,11 +9,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const user = useAuthStore((s) => s.user);
   const pathname = location.pathname;
 
-  // Filter items the current user is allowed to see
   const visibleItems = navItems.filter((item) => {
-    if (!item.role) return true;
-    if (!user) return false;
-    return item.role.includes(user.role);
+    if (item.hideFromCashier && user?.role === "Cashier") return false;
+    return true;
   });
 
   return (

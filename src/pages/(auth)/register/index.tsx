@@ -5,7 +5,7 @@ export default function Register() {
   return (
     <>
       <div className="md:hidden">
-        <Navbar userName="John Doe" onMenuClick={() => console.log("menu")} />
+        <Navbar />
       </div>
       <RegisterForm />
     </>

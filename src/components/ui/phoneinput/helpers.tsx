@@ -1,10 +1,10 @@
-import i18nIsoCountries from 'i18n-iso-countries';
 import {
-  type CountryCallingCode,
   type CountryCode,
   getCountries,
   getCountryCallingCode,
 } from 'libphonenumber-js';
+
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
 
 /**
  * Source: https://grafikart.fr/tutoriels/drapeau-emoji-fonction-2152
@@ -33,15 +33,13 @@ export function getCountriesOptions() {
   const options = countries
     .map((country) => ({
       value: country,
-      label: i18nIsoCountries.getName(country.toUpperCase(), 'en', {
-        select: 'official',
-      }),
+      label: regionNames.of(country) ?? country,
       indicatif: `+${getCountryCallingCode(country)}`,
     }))
     .filter((option) => option.label) as {
     value: CountryCode;
     label: string;
-    indicatif: CountryCallingCode;
+    indicatif: string;
   }[];
 
   return options;

@@ -5,7 +5,7 @@ export default function Login() {
   return (
     <>
       <div className="md:hidden">
-        <Navbar userName="John Doe" onMenuClick={() => console.log("menu")} />
+        <Navbar />
       </div>
 
       <LoginForm />

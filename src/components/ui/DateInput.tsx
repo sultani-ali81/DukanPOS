@@ -33,7 +33,6 @@ const MONTHS = [
 
 export default function DateInput({ id, value, onChange }: Props) {
   const [open, setOpen] = useState(false);
-  const [format] = useState("MM/DD/YYYY");
   const [monthOpen, setMonthOpen] = useState(false);
   const [yearOpen, setYearOpen] = useState(false);
 
@@ -58,7 +57,7 @@ export default function DateInput({ id, value, onChange }: Props) {
     setYearOpen(false);
   };
 
-  const displayValue = parsed ? formatDate(parsed, format) : "";
+  const displayValue = value ? formatDate(value) : "";
   const selectedDay = parsed?.getDate();
   const selectedMonth = parsed?.getMonth();
   const selectedYear = parsed?.getFullYear();
