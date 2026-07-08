@@ -133,7 +133,7 @@ export function PurchasesClient() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="overflow-y-auto">
+    <div>
       <PageHeader title="Purchases" description="View and manage purchases" />
 
       <div>

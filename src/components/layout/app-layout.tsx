@@ -157,7 +157,7 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg bg-white">
+        <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg bg-white p-[4.5px]">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-5">
             <Outlet />
           </div>
