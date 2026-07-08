@@ -33,7 +33,8 @@ type ApiError = {
 
 const registerSchema = z
   .object({
-    name: z.string().min(1, "Please enter your name"),
+    firstName: z.string().min(1, "Please enter your first name"),
+    lastName: z.string().min(1, "Please enter your last name"),
     storeName: z.string().min(1, "Please enter store name"),
     email: z
       .string()
@@ -62,7 +63,8 @@ export default function RegisterForm() {
   const formHook = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       storeName: "",
       email: "",
       phone: "",
@@ -84,7 +86,8 @@ export default function RegisterForm() {
       setError("");
 
       await api.post("/auth/register", {
-        name: values.name,
+        firstName: values.firstName,
+        lastName: values.lastName,
         storeName: values.storeName,
         email: values.email,
         phone: values.phone,
@@ -136,17 +139,38 @@ export default function RegisterForm() {
               onSubmit={formHook.handleSubmit(handleSubmit)}
               className="mt-6 space-y-4"
             >
-              {/* Name */}
+              {/* First Name */}
               <FormField
                 control={formHook.control}
-                name="name"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
                         <Input
-                          placeholder="Owner Name"
+                          placeholder="First Name"
+                          className={fieldClass}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-xs px-1" />
+                  </FormItem>
+                )}
+              />
+
+              {/* Last Name */}
+              <FormField
+                control={formHook.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Last Name"
                           className={fieldClass}
                           {...field}
                         />
