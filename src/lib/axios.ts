@@ -17,7 +17,12 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     const config = error.config as InternalAxiosRequestConfig & {
       _401Handled?: boolean;
+      skipAuthErrorHandling?: boolean;
     };
+
+    if (config?.skipAuthErrorHandling) {
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && config && !config._401Handled) {
       config._401Handled = true;

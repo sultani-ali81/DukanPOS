@@ -2,6 +2,7 @@ import {
   BarChart3,
   BookOpen,
   BookOpenCheck,
+  Bot,
   Boxes,
   Contact,
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
 
 export const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "AI Assistant", href: "/ai-assistant", icon: Bot },
   { title: "POS", href: "/pos", icon: ShoppingCart },
   { title: "Products", href: "/products", icon: Package },
   { title: "Categories", href: "/categories", icon: Tags },

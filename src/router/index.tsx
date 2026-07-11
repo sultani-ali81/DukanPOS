@@ -1,5 +1,6 @@
 import AppLayout from "@/components/layout/app-layout";
 import Login from "@/pages/(auth)/login";
+import AiAssistantPage from "@/pages/ai-assistant/page";
 import CategoriesPage from "@/pages/categories";
 import ContactsPage from "@/pages/contacts";
 import Dashboard from "@/pages/dashboard";
@@ -59,6 +60,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allowed={["Admin"]}>
             <Dashboard />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: "/ai-assistant",
+        element: (
+          <RoleRoute allowed={["Admin"]}>
+            <AiAssistantPage />
           </RoleRoute>
         ),
       },
