@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PhoneNumberInput } from "@/components/ui/phoneinput";
+import { PhoneNumberInput } from "@/components/ui/phone-input";
 import {
   Select,
   SelectContent,
@@ -25,7 +25,7 @@ import {
 import type { EditProfile, EmployeeInfo } from "@/types";
 import { getDisplayName, getInitials } from "@/utils/profile.helpers";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, Loader2, X } from "lucide-react";
+import { Camera, Eye, EyeOff, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { Value as PhoneValue } from "react-phone-number-input";
@@ -98,6 +98,8 @@ export function EditProfileDialog({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // pendingAttachmentId: the id returned by the upload endpoint for a newly
   // selected photo that hasn't been claimed yet (claim happens on save).
@@ -119,6 +121,8 @@ export function EditProfileDialog({
   // Reset form + pending avatar state every time the dialog opens.
   useEffect(() => {
     if (!open) return;
+    setShowOldPassword(false);
+    setShowPassword(false);
     reset({
       firstName: profile.firstName ?? "",
       lastName: profile.lastName ?? "",
@@ -283,7 +287,7 @@ export function EditProfileDialog({
               {/* ── Avatar ───────────────────────────────────────────── */}
               <div className="flex items-center gap-4 border-b pb-4">
                 <div className="group relative shrink-0">
-                  <div className="flex size-16 items-center justify-center overflow-hidden rounded-full border bg-muted text-lg font-semibold text-muted-foreground">
+                  <div className="flex size-16 items-center justify-center overflow-hidden rounded-lg border bg-muted text-lg font-semibold text-muted-foreground">
                     {displayImage ? (
                       <img
                         src={displayImage}
@@ -297,7 +301,7 @@ export function EditProfileDialog({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100"
                     aria-label="Change photo"
                   >
                     {avatarUploading ? (
@@ -469,11 +473,32 @@ export function EditProfileDialog({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="ep-oldPassword">Current Password</Label>
-                    <Input
-                      id="ep-oldPassword"
-                      type="password"
-                      {...register("oldPassword")}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="ep-oldPassword"
+                        type={showOldPassword ? "text" : "password"}
+                        className="pr-11"
+                        {...register("oldPassword")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowOldPassword((prev) => !prev)}
+                        className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-slate-400 hover:bg-transparent active:not-aria-[haspopup]:-translate-y-1/2"
+                        aria-label={
+                          showOldPassword
+                            ? "Hide current password"
+                            : "Show current password"
+                        }
+                      >
+                        {showOldPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
+                      </Button>
+                    </div>
                     {errors.oldPassword && (
                       <p className="text-xs text-destructive">
                         {errors.oldPassword.message}
@@ -482,11 +507,32 @@ export function EditProfileDialog({
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="ep-password">New Password</Label>
-                    <Input
-                      id="ep-password"
-                      type="password"
-                      {...register("password")}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="ep-password"
+                        type={showPassword ? "text" : "password"}
+                        className="pr-11"
+                        {...register("password")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-slate-400 hover:bg-transparent active:not-aria-[haspopup]:-translate-y-1/2"
+                        aria-label={
+                          showPassword
+                            ? "Hide new password"
+                            : "Show new password"
+                        }
+                      >
+                        {showPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
+                      </Button>
+                    </div>
                     {errors.password && (
                       <p className="text-xs text-destructive">
                         {errors.password.message}

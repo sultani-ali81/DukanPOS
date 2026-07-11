@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { PhoneNumberInput } from "@/components/ui/phoneinput";
+import { PhoneNumberInput } from "@/components/ui/phone-input";
 import { passwordSchema } from "@/lib/password";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Lock, Mail, Store, User } from "lucide-react";
@@ -238,7 +238,7 @@ export default function RegisterForm() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setShowPassword((prev) => !prev)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent active:not-aria-[haspopup]:-translate-y-1/2"
                         >
                           {showPassword ? (
                             <EyeOff size={18} />
@@ -273,7 +273,7 @@ export default function RegisterForm() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setShowConfirm((prev) => !prev)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent active:not-aria-[haspopup]:-translate-y-1/2"
                         >
                           {showConfirm ? (
                             <EyeOff size={18} />

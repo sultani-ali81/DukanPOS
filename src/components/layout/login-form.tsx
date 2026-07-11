@@ -159,7 +159,7 @@ export default function LoginForm() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent active:not-aria-[haspopup]:-translate-y-1/2"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </Button>

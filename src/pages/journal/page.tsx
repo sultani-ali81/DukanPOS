@@ -231,7 +231,12 @@ export default function JournalPage() {
                     );
                   })}
                   <TableRow className="border-t-2 font-bold">
-                    <TableCell colSpan={3}>Total</TableCell>
+                    <TableCell
+                      colSpan={3}
+                      className="text-lg mr-4 text-muted-foreground"
+                    >
+                      Total
+                    </TableCell>
                     <TableCell className="text-left text-destructive tabular-nums">
                       {formatCurrency(totalDebit)}
                     </TableCell>

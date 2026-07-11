@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PhoneNumberInput } from "@/components/ui/phoneinput";
+import { PhoneNumberInput } from "@/components/ui/phone-input";
 import type { Customer } from "@/types/customer";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
