@@ -13,8 +13,8 @@ import {
 import type { User } from "@/types/user";
 import { Loader2, Pencil, Trash2, UserX } from "lucide-react";
 
-function initials(name: string) {
-  return name
+function initials(name?: string) {
+  return (name?.trim() || "?")
     .split(" ")
     .map((n) => n[0])
     .slice(0, 2)

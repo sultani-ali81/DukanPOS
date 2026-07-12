@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/page-header";
+import { PaginationFooter } from "@/components/pagination-footer";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -246,15 +246,11 @@ export default function JournalPage() {
         </CardContent>
       </Card>
 
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-end">
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={goToPage}
-          />
-        </div>
-      )}
+      <PaginationFooter
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={goToPage}
+      />
 
       <JournalDetailDialog
         open={detailOpen}

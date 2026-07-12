@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/page-header";
+import { PaginationFooter } from "@/components/pagination-footer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +13,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pagination } from "@/components/ui/pagination";
 import { useInventory } from "@/hooks/use-inventory";
 import {
   createInventory,
@@ -205,19 +205,17 @@ export default function InventoryPage() {
       )}
 
       {/* Pagination */}
-      {paginationMeta.totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
-          <span>
+      <PaginationFooter
+        currentPage={page}
+        totalPages={paginationMeta.totalPages}
+        onPageChange={goToPage}
+        summary={
+          <>
             Page {paginationMeta.currentPage} of {paginationMeta.totalPages} ·{" "}
             {paginationMeta.totalItems} total
-          </span>
-          <Pagination
-            currentPage={page}
-            totalPages={paginationMeta.totalPages}
-            onPageChange={goToPage}
-          />
-        </div>
-      )}
+          </>
+        }
+      />
 
       <InventoryDialog
         open={dialogOpen}

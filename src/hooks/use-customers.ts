@@ -3,7 +3,7 @@ import { useSearch } from "@/hooks/use-search";
 import { customersKey, getCustomers } from "@/queries/customer";
 import useSWR from "swr";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 export function useCustomers() {
   const { page, setPage, resetToPage1 } = usePagination();

@@ -1,6 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/page-header";
+import { PaginationFooter } from "@/components/pagination-footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -170,6 +171,10 @@ export default function CategoriesPage() {
     handleSearch,
     clearSearch,
     mutate,
+    page,
+    goToPage,
+    totalPages,
+    totalItems,
   } = useCategories();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -234,7 +239,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div>
+    <div className="flex min-h-full flex-col">
       <PageHeader
         title="Categories"
         description="Organize your products into categories."
@@ -349,11 +354,20 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {/* Pagination info */}
-      {!loading && meta.totalItems > 0 && (
-        <p className="mt-4 text-sm text-muted-foreground">
-          Showing {categories.length} of {meta.totalItems} categories
-        </p>
+      {/* Pagination */}
+      {!loading && (
+        <PaginationFooter
+          className="mt-auto pt-6"
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+          summary={
+            <>
+            Showing {(page - 1) * meta.itemsPerPage + 1}–
+            {Math.min(page * meta.itemsPerPage, totalItems)} of {totalItems} categories
+            </>
+          }
+        />
       )}
 
       {/* Add / Edit dialog */}

@@ -8,6 +8,7 @@ export type EmployeeGender = "male" | "female" | "Other";
 
 export interface User {
   id: string;
+  firstName: string;
   name: string;
   lastName: string;
   phone?: string;

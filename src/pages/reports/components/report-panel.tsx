@@ -2,7 +2,6 @@ import { ChevronDown, ChevronRight, FileBarChart2 } from "lucide-react";
 import { Fragment, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -142,15 +141,14 @@ export function ReportPanel<T extends { id: string }>({
         </CardContent>
       </Card>
 
-      {meta && meta.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-end">
-          <Pagination
-            currentPage={meta.currentPage}
-            totalPages={meta.totalPages}
-            onPageChange={setPage}
-          />
-        </div>
+      {meta && (
+        <PaginationFooter
+          currentPage={meta.currentPage}
+          totalPages={meta.totalPages}
+          onPageChange={setPage}
+        />
       )}
     </>
   );
 }
+import { PaginationFooter } from "@/components/pagination-footer";

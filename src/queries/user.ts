@@ -16,6 +16,26 @@ export interface UsersQuery {
   role?: string;
 }
 
+type ApiUser = Omit<User, "name" | "firstName" | "lastName"> & {
+  name?: string;
+  firstName?: string;
+  firstname?: string;
+  lastName?: string;
+  lastname?: string;
+};
+
+function normalizeUser(raw: ApiUser): User {
+  const firstName = raw.firstName ?? raw.firstname ?? "";
+  const lastName = raw.lastName ?? raw.lastname ?? "";
+  const name =
+    [firstName, lastName].filter(Boolean).join(" ").trim() ||
+    raw.name?.trim() ||
+    raw.email ||
+    "Unknown user";
+
+  return { ...raw, firstName, lastName, name };
+}
+
 export function usersKey(params: UsersQuery = {}) {
   const { search = "", page = 1, itemsPerPage = 15, role = "" } = params;
   return `/employees?search=${search}&page=${page}&itemsPerPage=${itemsPerPage}&role=${role}`;
@@ -26,7 +46,7 @@ export const getUsers = (
 ): Promise<{ data: User[]; meta: UsersMeta }> =>
   api.get("/employees", { params: query }).then((r) => {
     const raw = r.data;
-    const items: User[] = Array.isArray(raw)
+    const items: ApiUser[] = Array.isArray(raw)
       ? raw
       : (raw.data ?? raw.employees ?? []);
     const meta: UsersMeta = raw.meta ?? {
@@ -35,18 +55,18 @@ export const getUsers = (
       totalItems: items.length,
       totalPages: 1,
     };
-    return { data: items, meta };
+    return { data: items.map(normalizeUser), meta };
   });
 
 // ── Single → GET /employees/:id ─────────────────────────────────────────────
 
 export const getUser = (id: string): Promise<User> =>
-  api.get(`/employees/${id}`).then((r) => r.data as User);
+  api.get(`/employees/${id}`).then((r) => normalizeUser(r.data));
 
 // ── Current user → GET /employees/me ─────────────────────────────────────────
 
 export const getMe = (): Promise<User> =>
-  api.get("/employees/me").then((r) => r.data as User);
+  api.get("/employees/me").then((r) => normalizeUser(r.data));
 
 // ── Create → POST /employees/register ────────────────────────────────────────
 

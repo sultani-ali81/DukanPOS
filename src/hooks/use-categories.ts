@@ -8,7 +8,7 @@ import { useSearch } from "./use-search";
 
 import useSWR from "swr";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 15;
 
 export interface UseCategoriesReturn {
   categories: Category[];

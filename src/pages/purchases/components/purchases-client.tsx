@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -21,6 +20,7 @@ import { MoreHorizontal, Plus, Search, XIcon } from "lucide-react";
 
 import { NumberDisplay } from "@/components/number-display";
 import { PageHeader } from "@/components/page-header";
+import { PaginationFooter } from "@/components/pagination-footer";
 import { usePurchases } from "@/hooks/use-purchases";
 import { extractError } from "@/lib/error";
 import { deletePurchase, updatePurchaseStatus } from "@/queries/purchase";
@@ -362,21 +362,21 @@ export function PurchasesClient() {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Pagination */}
-          <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-600">
+        {/* Pagination */}
+        <PaginationFooter
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          summary={
+            <>
               {totalItems === 0
                 ? "No records"
                 : `Showing ${from}–${to} of ${totalItems} records`}
-            </span>
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={(newPage) => setPage(newPage)}
-            />
-          </div>
-        </div>
+            </>
+          }
+        />
       </div>
     </div>
   );

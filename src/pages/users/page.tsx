@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/page-header";
+import { PaginationFooter } from "@/components/pagination-footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUsers } from "@/hooks/use-users";
@@ -147,32 +148,17 @@ export default function UsersPage() {
       />
 
       {/* Pagination */}
-      {total > PAGE_SIZE && (
-        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <span>
+      <PaginationFooter
+        currentPage={page}
+        totalPages={Math.ceil(total / PAGE_SIZE)}
+        onPageChange={setPage}
+        summary={
+          <>
             Showing {(page - 1) * PAGE_SIZE + 1}–
             {Math.min(page * PAGE_SIZE, total)} of {total}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page * PAGE_SIZE >= total}
-              onClick={() => setPage(page + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+          </>
+        }
+      />
 
       <UserDialog
         open={dialogOpen}
