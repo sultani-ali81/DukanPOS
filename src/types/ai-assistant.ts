@@ -7,6 +7,15 @@ export interface AskAiAssistantPayload {
   threadId?: string;
 }
 
+export interface RenameAiChatThreadPayload {
+  name: string;
+}
+
+export interface DeleteAiChatThreadResponse {
+  message: string;
+  id: string;
+}
+
 export type AiChatRole = "user" | "assistant";
 
 export interface AiChatThreadSummary {

@@ -4,6 +4,8 @@ import type {
   AiChatThreadSummary,
   AiAssistantResponse,
   AskAiAssistantPayload,
+  DeleteAiChatThreadResponse,
+  RenameAiChatThreadPayload,
 } from "@/types/ai-assistant";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -70,6 +72,25 @@ export const getAiChatThread = (
     })
     .then((r) => r.data);
 
+export const renameAiChatThread = (
+  id: string,
+  payload: RenameAiChatThreadPayload,
+): Promise<void> =>
+  api
+    .put(`/ai-assistant/threads/${id}`, payload, {
+      skipAuthErrorHandling: true,
+    })
+    .then(() => undefined);
+
+export const deleteAiChatThread = (
+  id: string,
+): Promise<DeleteAiChatThreadResponse> =>
+  api
+    .delete<DeleteAiChatThreadResponse>(`/ai-assistant/threads/${id}`, {
+      skipAuthErrorHandling: true,
+    })
+    .then((r) => r.data);
+
 function getStreamStatusMessage(status: number) {
   if (status === 400) return "Question is required.";
   if (status === 401 || status === 403) return "You are not authorized.";
@@ -77,7 +98,7 @@ function getStreamStatusMessage(status: number) {
   return "Failed to get assistant response.";
 }
 
-function parseSseEvent(rawEvent: string) {
+export function parseAssistantSseEvent(rawEvent: string) {
   const lines = rawEvent.split("\n");
   const eventName = lines
     .find((line) => line.startsWith("event:"))
@@ -141,9 +162,10 @@ export async function askAssistantSseStream({
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let receivedTerminalEvent = false;
 
   const processRawEvent = (rawEvent: string) => {
-    const parsedEvent = parseSseEvent(rawEvent.trim());
+    const parsedEvent = parseAssistantSseEvent(rawEvent.trim());
     if (!parsedEvent) return false;
 
     const { eventName, data } = parsedEvent;
@@ -154,6 +176,7 @@ export async function askAssistantSseStream({
     }
 
     if (eventName === "done") {
+      receivedTerminalEvent = true;
       onDone({
         content: data.content ?? "",
         threadId: data.threadId,
@@ -164,6 +187,7 @@ export async function askAssistantSseStream({
     }
 
     if (eventName === "error") {
+      receivedTerminalEvent = true;
       onError({
         message: data.message ?? "Failed to stream assistant response.",
         threadId: data.threadId,
@@ -194,6 +218,12 @@ export async function askAssistantSseStream({
     buffer += decoder.decode();
     buffer = buffer.replace(/\r\n/g, "\n");
     if (buffer.trim()) processRawEvent(buffer);
+
+    if (!receivedTerminalEvent) {
+      throw new AiAssistantStreamError(
+        "The assistant connection ended before the response completed.",
+      );
+    }
   } finally {
     reader.releaseLock();
   }

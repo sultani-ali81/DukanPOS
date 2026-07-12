@@ -2,19 +2,38 @@ import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import {
   AiAssistantStreamError,
   askAssistantSseStream,
+  deleteAiChatThread,
   getAiChatThread,
   getAiChatThreads,
+  renameAiChatThread,
 } from "@/queries/ai-assistant";
 import type {
   AiChatMessage,
@@ -29,11 +48,14 @@ import {
   Clock3,
   Loader2,
   MessageSquare,
+  MoreHorizontal,
+  Pencil,
   Plus,
   Send,
   Sparkles,
   Square,
   TrendingUp,
+  Trash2,
   UserRoundCheck,
 } from "lucide-react";
 import {
@@ -44,6 +66,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { toast } from "sonner";
 
 type UiChatMessage = Omit<AiChatMessage, "status"> & {
   status?: "completed" | "failed" | "streaming" | "stopped";
@@ -175,7 +198,13 @@ function getThreadTitle(thread: AiChatThreadSummary) {
   return thread.title?.trim() || "Untitled chat";
 }
 
-function MessageBubble({ message }: { message: UiChatMessage }) {
+function MessageBubble({
+  message,
+  onRetry,
+}: {
+  message: UiChatMessage;
+  onRetry?: () => void;
+}) {
   const isUser = message.role === "user";
   const isError = message.status === "failed";
   const isStopped = message.status === "stopped";
@@ -226,7 +255,14 @@ function MessageBubble({ message }: { message: UiChatMessage }) {
         ) : null}
 
         {isError ? (
-          <p className="mt-2 text-xs font-medium text-destructive">Failed</p>
+          <div className="mt-2 flex items-center gap-2">
+            <p className="text-xs font-medium text-destructive">Failed</p>
+            {onRetry ? (
+              <Button type="button" variant="outline" size="xs" onClick={onRetry}>
+                Retry
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </div>
@@ -291,9 +327,17 @@ export default function AiAssistantPage() {
   const [threadsLoading, setThreadsLoading] = useState(false);
   const [threadLoading, setThreadLoading] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameLoading, setRenameLoading] = useState(false);
+  const [deletingThread, setDeletingThread] =
+    useState<AiChatThreadSummary | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const loadThreads = useCallback(async () => {
@@ -318,10 +362,12 @@ export default function AiAssistantPage() {
   }, [loadThreads]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
+    if (shouldAutoScrollRef.current) {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
   }, [messages, isStreaming]);
 
   useEffect(() => {
@@ -353,6 +399,7 @@ export default function AiAssistantPage() {
     setMessages([]);
     setInlineError(null);
     setQuestion("");
+    shouldAutoScrollRef.current = true;
     textareaRef.current?.focus();
   };
 
@@ -362,11 +409,16 @@ export default function AiAssistantPage() {
     setSelectedThreadId(threadId);
     setThreadLoading(true);
     setInlineError(null);
+    shouldAutoScrollRef.current = true;
 
     try {
       const thread = await getAiChatThread(threadId);
       setSelectedThreadId(thread.id);
-      setMessages(thread.messages);
+      setMessages(
+        [...thread.messages].sort((a, b) =>
+          (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
+        ),
+      );
     } catch (error) {
       setInlineError(getAssistantErrorMessage(error));
     } finally {
@@ -374,11 +426,62 @@ export default function AiAssistantPage() {
     }
   };
 
-  const sendQuestion = async (event?: FormEvent<HTMLFormElement>) => {
+  const startRename = (thread: AiChatThreadSummary) => {
+    setRenamingThreadId(thread.id);
+    setRenameValue(getThreadTitle(thread));
+  };
+
+  const submitRename = async (threadId: string) => {
+    const name = renameValue.trim();
+    if (!name || renameLoading) return;
+
+    setRenameLoading(true);
+    try {
+      await renameAiChatThread(threadId, { name });
+      setThreads((current) =>
+        current.map((thread) =>
+          thread.id === threadId ? { ...thread, title: name } : thread,
+        ),
+      );
+      setRenamingThreadId(null);
+      toast.success("Conversation renamed");
+    } catch (error) {
+      toast.error("Could not rename conversation", {
+        description: getAssistantErrorMessage(error),
+      });
+    } finally {
+      setRenameLoading(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingThread || deleteLoading) return;
+
+    const threadId = deletingThread.id;
+    setDeleteLoading(true);
+    try {
+      await deleteAiChatThread(threadId);
+      setThreads((current) => current.filter((thread) => thread.id !== threadId));
+      if (selectedThreadId === threadId) handleNewChat();
+      setDeletingThread(null);
+      toast.success("Conversation deleted");
+    } catch (error) {
+      toast.error("Could not delete conversation", {
+        description: getAssistantErrorMessage(error),
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const sendQuestion = async (
+    event?: FormEvent<HTMLFormElement>,
+    retryQuestion?: string,
+  ) => {
     event?.preventDefault();
     if (isStreaming) return;
 
-    const trimmedQuestion = question.trim();
+    const trimmedQuestion = (retryQuestion ?? question).trim();
     if (!trimmedQuestion) {
       setInlineError("Please enter a question.");
       textareaRef.current?.focus();
@@ -408,6 +511,7 @@ export default function AiAssistantPage() {
     let streamEventFailed = false;
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
+    shouldAutoScrollRef.current = true;
     setIsStreaming(true);
 
     try {
@@ -459,7 +563,7 @@ export default function AiAssistantPage() {
             local: false,
           });
           updateMessage(activeAssistantMessageId, {
-            content: message,
+            ...(!receivedStreamText ? { content: message } : {}),
             status: "failed",
             errorMessage: message,
           });
@@ -486,7 +590,7 @@ export default function AiAssistantPage() {
       const message = getAssistantErrorMessage(error);
       setInlineError(message);
       updateMessage(activeAssistantMessageId, {
-        content: message,
+        ...(!receivedStreamText ? { content: message } : {}),
         status: "failed",
         errorMessage: message,
       });
@@ -509,12 +613,20 @@ export default function AiAssistantPage() {
     }
   };
 
+  const handleMessagesScroll = () => {
+    const element = messagesContainerRef.current;
+    if (!element) return;
+    const distanceFromBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 120;
+  };
+
   const selectedThread = selectedThreadId
     ? threads.find((thread) => thread.id === selectedThreadId)
     : undefined;
 
   return (
-    <div className="flex h-full min-h-0 flex-col pb-2">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden pb-2">
       <PageHeader
         title="AI Assistant"
         description="Saved business chats for AsanPOS insights."
@@ -525,10 +637,10 @@ export default function AiAssistantPage() {
         </Badge>
       </PageHeader>
 
-      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <Card className="min-h-[220px] gap-0 py-0 xl:min-h-0">
-          <CardHeader className="border-b border-border px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(160px,35%)_minmax(0,1fr)] gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
+        <Card className="min-h-0 gap-0 border border-border py-0">
+          <CardHeader className="h-[72px] shrink-0 border-b border-border px-4 py-4">
+            <div className="flex h-full items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <MessageSquare className="size-4 text-muted-foreground" />
                 Chats
@@ -545,8 +657,8 @@ export default function AiAssistantPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="min-h-0 flex-1 p-0">
-            <div className="flex max-h-80 min-h-0 flex-col gap-1 overflow-y-auto p-3 xl:max-h-none">
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-3">
               {threadsLoading ? (
                 <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
@@ -564,13 +676,10 @@ export default function AiAssistantPage() {
                 const active = thread.id === selectedThreadId;
 
                 return (
-                  <button
+                  <div
                     key={thread.id}
-                    type="button"
-                    disabled={isStreaming || threadLoading}
-                    onClick={() => void loadThread(thread.id)}
                     className={cn(
-                      "rounded-lg px-3 py-2 text-left transition-colors",
+                      "group flex items-center rounded-lg transition-colors",
                       active
                         ? "bg-primary text-primary-foreground"
                         : "text-foreground hover:bg-muted",
@@ -578,30 +687,93 @@ export default function AiAssistantPage() {
                         "cursor-not-allowed opacity-60",
                     )}
                   >
-                    <span className="block truncate text-sm font-medium">
-                      {getThreadTitle(thread)}
-                    </span>
-                    <span
-                      className={cn(
-                        "mt-1 flex items-center gap-1 text-xs",
-                        active
-                          ? "text-primary-foreground/75"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      <Clock3 className="size-3" />
-                      {formatThreadTime(thread.lastMessageAt)}
-                    </span>
-                  </button>
+                    {renamingThreadId === thread.id ? (
+                      <form
+                        className="flex min-w-0 flex-1 items-center gap-1 p-2"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void submitRename(thread.id);
+                        }}
+                      >
+                        <Input
+                          autoFocus
+                          value={renameValue}
+                          maxLength={120}
+                          disabled={renameLoading}
+                          aria-label="Conversation title"
+                          className="h-8 bg-white text-foreground"
+                          onChange={(event) => setRenameValue(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") setRenamingThreadId(null);
+                          }}
+                          onBlur={() => {
+                            if (!renameLoading) setRenamingThreadId(null);
+                          }}
+                        />
+                      </form>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          disabled={isStreaming || threadLoading}
+                          onClick={() => void loadThread(thread.id)}
+                          className="min-w-0 flex-1 px-3 py-2 text-left"
+                        >
+                          <span className="block truncate text-sm font-medium">
+                            {getThreadTitle(thread)}
+                          </span>
+                          <span
+                            className={cn(
+                              "mt-1 flex items-center gap-1 text-xs",
+                              active
+                                ? "text-primary-foreground/75"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            <Clock3 className="size-3" />
+                            {formatThreadTime(thread.lastMessageAt)}
+                          </span>
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Actions for ${getThreadTitle(thread)}`}
+                              disabled={isStreaming || threadLoading}
+                              className={cn(
+                                "mr-1 shrink-0 opacity-70 hover:opacity-100",
+                                active && "text-primary-foreground hover:bg-white/15 hover:text-primary-foreground",
+                              )}
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => startRename(thread)}>
+                              <Pencil /> Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => setDeletingThread(thread)}
+                            >
+                              <Trash2 /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
+                    )}
+                  </div>
                 );
               })}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="min-h-[560px] gap-0 py-0 xl:min-h-0">
-          <CardHeader className="border-b border-border px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
+        <Card className="min-h-0 gap-0 border border-border py-0">
+          <CardHeader className="h-[72px] shrink-0 border-b border-border px-4 py-4">
+            <div className="flex h-full items-center justify-between gap-3">
               <CardTitle className="flex min-w-0 items-center gap-2 text-base">
                 <Bot className="size-4 shrink-0 text-muted-foreground" />
                 <span className="truncate">
@@ -616,7 +788,11 @@ export default function AiAssistantPage() {
           </CardHeader>
 
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5">
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleMessagesScroll}
+              className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-5"
+            >
               {threadLoading ? (
                 <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" />
@@ -632,8 +808,22 @@ export default function AiAssistantPage() {
                   }}
                 />
               ) : (
-                messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} />
+                messages.map((message, index) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    onRetry={
+                      message.status === "failed" &&
+                      index > 0 &&
+                      messages[index - 1]?.role === "user"
+                        ? () =>
+                            void sendQuestion(
+                              undefined,
+                              messages[index - 1].content,
+                            )
+                        : undefined
+                    }
+                  />
                 ))
               )}
               <div ref={messagesEndRef} />
@@ -682,6 +872,36 @@ export default function AiAssistantPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog
+        open={deletingThread !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleteLoading) setDeletingThread(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes “{deletingThread ? getThreadTitle(deletingThread) : "this conversation"}” and its messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteLoading}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {deleteLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
