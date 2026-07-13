@@ -63,7 +63,17 @@ interface RawPosInventory {
   id: string;
   name: string;
   address?: string;
-  products: RawPosProduct[];
+  products:
+    | RawPosProduct[]
+    | {
+        data: RawPosProduct[];
+        meta?: {
+          currentPage: number;
+          itemsPerPage: number;
+          totalItems: number;
+          totalPages: number;
+        };
+      };
 }
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
@@ -98,10 +108,14 @@ function mapPosProduct(p: RawPosProduct): PosProduct {
 export async function getPosInventory(id: string): Promise<PosInventoryDetail> {
   const res = await api.get<RawPosInventory>(`/inventory/${id}`);
   const raw = res.data;
+  const products = Array.isArray(raw.products)
+    ? raw.products
+    : raw.products?.data ?? [];
+
   return {
     id: raw.id,
     name: raw.name,
     address: raw.address ?? "",
-    products: raw.products.map(mapPosProduct),
+    products: products.map(mapPosProduct),
   };
 }

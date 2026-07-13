@@ -1,10 +1,20 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import type { AiChatThreadSummary } from "@/types/ai-assistant";
-import { Bot, Loader2, Send, Square } from "lucide-react";
+import {
+  Bot,
+  History,
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Send,
+  Sparkles,
+  Square,
+} from "lucide-react";
 import type { RefObject } from "react";
+import { cn } from "@/lib/utils";
 import { getThreadTitle, type UiChatMessage } from "../ai-assistant.utils";
 import { EmptyChat, MessageBubble } from "./conversation-content";
 
@@ -23,6 +33,11 @@ type ConversationPanelProps = {
   onSend: (question?: string) => void;
   onStop: () => void;
   onMessagesScroll: () => void;
+  onOpenHistory: () => void;
+  onToggleHistory: () => void;
+  onNewChat: () => void;
+  historyCollapsed: boolean;
+  className?: string;
 };
 
 export function ConversationPanel({
@@ -40,32 +55,98 @@ export function ConversationPanel({
   onSend,
   onStop,
   onMessagesScroll,
+  onOpenHistory,
+  onToggleHistory,
+  onNewChat,
+  historyCollapsed,
+  className,
 }: ConversationPanelProps) {
   return (
-    <Card className="min-h-0 gap-0 border border-border py-0">
-      <CardHeader className="h-[72px] shrink-0 border-b border-border px-4 py-4">
-        <div className="flex h-full items-center justify-between gap-3">
-          <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-            <Bot className="size-4 shrink-0 text-muted-foreground" />
-            <span className="truncate">
-              {selectedThread ? getThreadTitle(selectedThread) : "New chat"}
-            </span>
-          </CardTitle>
+    <section
+      className={cn(
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
+        className,
+      )}
+    >
+      <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border px-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="lg:hidden"
+            onClick={onOpenHistory}
+            aria-label="Open chat history"
+          >
+            <History className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="hidden lg:inline-flex"
+            onClick={onToggleHistory}
+            aria-label={
+              historyCollapsed ? "Show chat history" : "Hide chat history"
+            }
+            aria-expanded={!historyCollapsed}
+          >
+            {historyCollapsed ? (
+              <PanelLeftOpen className="size-4" />
+            ) : (
+              <PanelLeftClose className="size-4" />
+            )}
+          </Button>
 
-          <Badge variant={isStreaming ? "outline" : "secondary"}>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Bot className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">
+                AI Assistant
+              </p>
+              <h1 className="truncate text-sm font-semibold text-foreground sm:text-base">
+                {selectedThread ? getThreadTitle(selectedThread) : "New chat"}
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge
+            variant={isStreaming ? "outline" : "secondary"}
+            className="hidden gap-1.5 sm:inline-flex"
+          >
+            <Sparkles className="size-3" />
             {isStreaming ? "Streaming" : "Ready"}
           </Badge>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isStreaming || threadLoading}
+            onClick={onNewChat}
+          >
+            <Plus className="size-4" />
+            <span className="hidden sm:inline">New chat</span>
+          </Button>
         </div>
-      </CardHeader>
+      </header>
 
-      <CardContent className="flex min-h-0 flex-1 flex-col p-0">
-        <div
-          ref={messagesContainerRef}
-          onScroll={onMessagesScroll}
-          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-5"
-        >
+      <div
+        ref={messagesContainerRef}
+        onScroll={onMessagesScroll}
+        aria-busy={threadLoading || isStreaming}
+        aria-label="Conversation messages"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-5"
+      >
+        <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-5">
           {threadLoading ? (
-            <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div
+              role="status"
+              className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground"
+            >
               <Loader2 className="size-4 animate-spin" />
               Loading chat...
             </div>
@@ -92,16 +173,20 @@ export function ConversationPanel({
           )}
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSend();
-          }}
-          className="shrink-0 border-t border-border bg-white p-4 pb-5"
-        >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSend();
+        }}
+        className="shrink-0 overflow-hidden rounded-b-[inherit] border-t border-border bg-background px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-4"
+      >
+        <div className="mx-auto w-full max-w-4xl">
           {inlineError ? (
-            <p className="mb-2 text-sm text-destructive">{inlineError}</p>
+            <p role="alert" className="mb-2 text-sm text-destructive">
+              {inlineError}
+            </p>
           ) : null}
 
           <div className="flex items-end gap-2">
@@ -110,14 +195,19 @@ export function ConversationPanel({
               value={question}
               onChange={(event) => onQuestionChange(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing
+                ) {
                   event.preventDefault();
                   onSend();
                 }
               }}
+              aria-label="Ask the AI assistant"
               placeholder="Ask about sales, profit, stock, or cashier performance..."
               disabled={isStreaming || threadLoading}
-              className="max-h-32 min-h-12 resize-none bg-white"
+              className="max-h-32 min-h-12 resize-none rounded-xl bg-background"
             />
             {isStreaming ? (
               <Button
@@ -140,8 +230,8 @@ export function ConversationPanel({
               </Button>
             )}
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      </form>
+    </section>
   );
 }

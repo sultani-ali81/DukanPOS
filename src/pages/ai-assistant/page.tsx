@@ -1,5 +1,9 @@
-import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useAuthStore } from "@/lib/store";
 import {
   askAssistantSseStream,
@@ -9,7 +13,7 @@ import {
   renameAiChatThread,
 } from "@/queries/ai-assistant";
 import type { AiChatThreadSummary } from "@/types/ai-assistant";
-import { Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -25,6 +29,7 @@ import { DeleteThreadDialog } from "./components/delete-thread-dialog";
 
 export default function AiAssistantPage() {
   const token = useAuthStore((state) => state.token);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [question, setQuestion] = useState("");
   const [threads, setThreads] = useState<AiChatThreadSummary[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -39,6 +44,12 @@ export default function AiAssistantPage() {
   const [deletingThread, setDeletingThread] =
     useState<AiChatThreadSummary | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : window.localStorage.getItem("ai-history-collapsed") === "true",
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -82,6 +93,13 @@ export default function AiAssistantPage() {
     };
   }, []);
 
+  useEffect(() => {
+    window.localStorage.setItem(
+      "ai-history-collapsed",
+      String(historyCollapsed),
+    );
+  }, [historyCollapsed]);
+
   const updateMessage = (id: string, update: Partial<UiChatMessage>) => {
     setMessages((current) =>
       current.map((message) =>
@@ -101,17 +119,19 @@ export default function AiAssistantPage() {
   const handleNewChat = () => {
     if (isStreaming) return;
 
+    setMobileHistoryOpen(false);
     setSelectedThreadId(null);
     setMessages([]);
     setInlineError(null);
     setQuestion("");
     shouldAutoScrollRef.current = true;
-    textareaRef.current?.focus();
+    window.setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
   const loadThread = async (threadId: string) => {
     if (isStreaming) return;
 
+    setMobileHistoryOpen(false);
     setSelectedThreadId(threadId);
     setThreadLoading(true);
     setInlineError(null);
@@ -321,36 +341,43 @@ export default function AiAssistantPage() {
     : undefined;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden pb-2">
-      <PageHeader
-        title="AI Assistant"
-        description="Saved business chats for AsanPOS insights."
-      >
-        <Badge className="gap-1.5 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
-          <Sparkles className="size-3" />
-          Store analyst
-        </Badge>
-      </PageHeader>
-
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(160px,35%)_minmax(0,1fr)] gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-        <ChatHistoryPanel
-          threads={threads}
-          selectedThreadId={selectedThreadId}
-          loading={threadsLoading}
-          disabled={isStreaming || threadLoading}
-          renamingThreadId={renamingThreadId}
-          renameValue={renameValue}
-          renameLoading={renameLoading}
-          onNewChat={handleNewChat}
-          onSelectThread={(threadId) => void loadThread(threadId)}
-          onStartRename={startRename}
-          onRenameValueChange={setRenameValue}
-          onCancelRename={() => setRenamingThreadId(null)}
-          onSubmitRename={(threadId) => void submitRename(threadId)}
-          onDelete={setDeletingThread}
-        />
+    <div className="flex h-full min-h-0 overflow-hidden rounded-xl bg-border p-px shadow-sm">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[calc(var(--radius-xl)-1px)] bg-background">
+        <aside
+          className={cn(
+            "hidden min-h-0 shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 motion-reduce:transition-none lg:block",
+            historyCollapsed ? "w-0 border-r-0" : "w-72 xl:w-80",
+          )}
+          aria-hidden={historyCollapsed}
+        >
+          {!historyCollapsed ? (
+            <div className="h-full w-72 xl:w-80">
+              <ChatHistoryPanel
+                className="rounded-bl-[calc(var(--radius-xl)-1px)]"
+                threads={threads}
+                selectedThreadId={selectedThreadId}
+                loading={threadsLoading}
+                disabled={isStreaming || threadLoading}
+                renamingThreadId={renamingThreadId}
+                renameValue={renameValue}
+                renameLoading={renameLoading}
+                onNewChat={handleNewChat}
+                onSelectThread={(threadId) => void loadThread(threadId)}
+                onStartRename={startRename}
+                onRenameValueChange={setRenameValue}
+                onCancelRename={() => setRenamingThreadId(null)}
+                onSubmitRename={(threadId) => void submitRename(threadId)}
+                onDelete={setDeletingThread}
+              />
+            </div>
+          ) : null}
+        </aside>
 
         <ConversationPanel
+          className={cn(
+            "rounded-b-[calc(var(--radius-xl)-1px)]",
+            !historyCollapsed && "lg:rounded-bl-none",
+          )}
           selectedThread={selectedThread}
           messages={messages}
           question={question}
@@ -360,6 +387,10 @@ export default function AiAssistantPage() {
           textareaRef={textareaRef}
           messagesContainerRef={messagesContainerRef}
           messagesEndRef={messagesEndRef}
+          historyCollapsed={historyCollapsed}
+          onOpenHistory={() => setMobileHistoryOpen(true)}
+          onToggleHistory={() => setHistoryCollapsed((collapsed) => !collapsed)}
+          onNewChat={handleNewChat}
           onQuestionChange={setQuestion}
           onSelectPrompt={(nextQuestion) => {
             setQuestion(nextQuestion);
@@ -371,6 +402,36 @@ export default function AiAssistantPage() {
           onMessagesScroll={handleMessagesScroll}
         />
       </div>
+
+      <Sheet
+        open={mobileHistoryOpen && !isDesktop}
+        onOpenChange={setMobileHistoryOpen}
+      >
+        <SheetContent
+          side="left"
+          showCloseButton={false}
+          className="w-[min(88vw,320px)] gap-0 p-0 lg:hidden"
+        >
+          <SheetTitle className="sr-only">Chat history</SheetTitle>
+          <ChatHistoryPanel
+            threads={threads}
+            selectedThreadId={selectedThreadId}
+            loading={threadsLoading}
+            disabled={isStreaming || threadLoading}
+            renamingThreadId={renamingThreadId}
+            renameValue={renameValue}
+            renameLoading={renameLoading}
+            onNewChat={handleNewChat}
+            onSelectThread={(threadId) => void loadThread(threadId)}
+            onStartRename={startRename}
+            onRenameValueChange={setRenameValue}
+            onCancelRename={() => setRenamingThreadId(null)}
+            onSubmitRename={(threadId) => void submitRename(threadId)}
+            onDelete={setDeletingThread}
+            onClose={() => setMobileHistoryOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
 
       <DeleteThreadDialog
         thread={deletingThread}

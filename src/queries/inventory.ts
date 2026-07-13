@@ -108,11 +108,14 @@ export const getInventories = (
 export const getInventory = (id: string): Promise<InventoryDetail> =>
   api.get<RawInventoryDetail>(`/inventory/${id}`).then((r) => {
     const raw = r.data;
+    const products = Array.isArray(raw.products)
+      ? raw.products
+      : raw.products?.data ?? [];
     const detail: InventoryDetail = {
       id: raw.id,
       name: raw.name,
       address: raw.address ?? "",
-      products: raw.products.map(
+      products: products.map(
         (p): InventoryProduct => ({
           id: p.id,
           name: p.name,

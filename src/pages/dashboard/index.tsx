@@ -82,11 +82,17 @@ export default function DashboardPage() {
     weeklyLoading,
     isCustomActive,
     hasChart,
+    setLowStockPage,
+    setLowStockPageSize,
+    setOutOfStockPage,
+    setOutOfStockPageSize,
   } = useDashboard();
 
-  const lowStockCount =
-    (stats?.outOfStockProducts?.length ?? 0) +
-    (stats?.lowStockProducts?.length ?? 0);
+  const outOfStockCount = stats?.outOfStockProducts?.total ?? 0;
+  const lowStockCount = stats?.lowStockProducts?.total ?? 0;
+  const hasStockData =
+    stats?.outOfStockProducts !== undefined ||
+    stats?.lowStockProducts !== undefined;
 
   return (
     <div>
@@ -163,15 +169,13 @@ export default function DashboardPage() {
             />
             <StatCard
               label="Out of Stock"
-              value={String(stats?.outOfStockProducts?.length ?? 0)}
+              value={String(outOfStockCount)}
               icon={AlertTriangle}
               accent="rose"
               trend={{
                 value:
-                  (stats?.outOfStockProducts?.length ?? 0) > 0
-                    ? "Needs restocking"
-                    : "All stocked",
-                positive: (stats?.outOfStockProducts?.length ?? 0) === 0,
+                  outOfStockCount > 0 ? "Needs restocking" : "All stocked",
+                positive: outOfStockCount === 0,
               }}
             />
             <StatCard
@@ -234,12 +238,16 @@ export default function DashboardPage() {
       </Card>
 
       {/* ── Stock alerts ── */}
-      {!loading && (
+      {!loading && hasStockData ? (
         <StockAlerts
-          outOfStock={stats?.outOfStockProducts ?? []}
-          lowStock={stats?.lowStockProducts ?? []}
+          outOfStock={stats?.outOfStockProducts}
+          lowStock={stats?.lowStockProducts}
+          onOutOfStockPageChange={setOutOfStockPage}
+          onOutOfStockPageSizeChange={setOutOfStockPageSize}
+          onLowStockPageChange={setLowStockPage}
+          onLowStockPageSizeChange={setLowStockPageSize}
         />
-      )}
+      ) : null}
     </div>
   );
 }

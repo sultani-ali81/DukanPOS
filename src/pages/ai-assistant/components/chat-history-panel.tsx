@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +16,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import { formatThreadTime, getThreadTitle } from "../ai-assistant.utils";
 
@@ -35,6 +35,8 @@ type ChatHistoryPanelProps = {
   onCancelRename: () => void;
   onSubmitRename: (threadId: string) => void;
   onDelete: (thread: AiChatThreadSummary) => void;
+  onClose?: () => void;
+  className?: string;
 };
 
 export function ChatHistoryPanel({
@@ -52,24 +54,43 @@ export function ChatHistoryPanel({
   onCancelRename,
   onSubmitRename,
   onDelete,
+  onClose,
+  className,
 }: ChatHistoryPanelProps) {
   return (
-    <Card className="min-h-0 gap-0 border border-border py-0">
-      <CardHeader className="h-[72px] shrink-0 border-b border-border px-4 py-4">
-        <div className="flex h-full items-center justify-between gap-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <MessageSquare className="size-4 text-muted-foreground" />
-            Chats
-          </CardTitle>
-          <Button type="button" size="sm" onClick={onNewChat} disabled={disabled}>
+    <div className={cn("flex h-full min-h-0 flex-col bg-muted/20", className)}>
+      <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border px-3">
+        <div className="flex min-w-0 items-center gap-2 px-1 text-sm font-semibold">
+          <MessageSquare className="size-4 text-muted-foreground" />
+          <span>Chats</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onNewChat}
+            disabled={disabled}
+          >
             <Plus className="size-4" />
             New
           </Button>
+          {onClose ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={onClose}
+              aria-label="Close chat history"
+            >
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-2.5">
           {loading ? (
             <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
@@ -92,8 +113,8 @@ export function ChatHistoryPanel({
                 className={cn(
                   "group flex items-center rounded-lg transition-colors",
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted",
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                    : "text-foreground hover:bg-muted/80",
                   disabled && "cursor-not-allowed opacity-60",
                 )}
               >
@@ -111,7 +132,7 @@ export function ChatHistoryPanel({
                       maxLength={120}
                       disabled={renameLoading}
                       aria-label="Conversation title"
-                      className="h-8 bg-white text-foreground"
+                      className="h-8 bg-background text-foreground"
                       onChange={(event) => onRenameValueChange(event.target.value)}
                       onKeyDown={(event) => {
                         if (event.key === "Escape") onCancelRename();
@@ -127,6 +148,7 @@ export function ChatHistoryPanel({
                       type="button"
                       disabled={disabled}
                       onClick={() => onSelectThread(thread.id)}
+                      aria-current={active ? "page" : undefined}
                       className="min-w-0 flex-1 px-3 py-2 text-left"
                     >
                       <span className="block truncate text-sm font-medium">
@@ -135,9 +157,7 @@ export function ChatHistoryPanel({
                       <span
                         className={cn(
                           "mt-1 flex items-center gap-1 text-xs",
-                          active
-                            ? "text-primary-foreground/75"
-                            : "text-muted-foreground",
+                          "text-muted-foreground",
                         )}
                       >
                         <Clock3 className="size-3" />
@@ -154,8 +174,7 @@ export function ChatHistoryPanel({
                           disabled={disabled}
                           className={cn(
                             "mr-1 shrink-0 opacity-70 hover:opacity-100",
-                            active &&
-                              "text-primary-foreground hover:bg-white/15 hover:text-primary-foreground",
+                            active && "hover:bg-muted",
                           )}
                         >
                           <MoreHorizontal className="size-4" />
@@ -179,7 +198,7 @@ export function ChatHistoryPanel({
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

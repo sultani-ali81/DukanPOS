@@ -111,5 +111,10 @@ export interface RawInventoryDetail {
   id: string;
   name: string;
   address?: string;
-  products: RawInventoryDetailProduct[];
+  products:
+    | RawInventoryDetailProduct[]
+    | {
+        data: RawInventoryDetailProduct[];
+        meta?: PaginationMeta;
+      };
 }

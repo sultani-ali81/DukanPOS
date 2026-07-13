@@ -9,8 +9,6 @@ import type {
   UpdateProductPayload,
 } from "@/types/product";
 
-// ── Pagination ─────────────────────────────────────────────────────────────
-
 export interface PaginationMeta {
   currentPage: number;
   itemsPerPage: number;
@@ -87,16 +85,12 @@ export const getProducts = (params?: {
       };
     });
 
-// ── getProductById ─────────────────────────────────────────────────────────
-
 export const getProductById = (id: string): Promise<Product | void> =>
   api.get(`/products/${id}`).then((r) => {
     const p: unknown = r.data?.data ?? r.data ?? null;
     if (!p) return;
     return mapProduct(p as Record<string, unknown>);
   });
-
-// ── uploadProductImages ────────────────────────────────────────────────────
 
 export const uploadProductImages = (
   files: File[],
@@ -111,8 +105,6 @@ export const uploadProductImages = (
     .then((r) => r.data);
 };
 
-// ── createProduct ──────────────────────────────────────────────────────────
-
 export const createProduct = (
   data: CreateProductPayload,
 ): Promise<{ id: string }> => api.post("/products", data).then((r) => r.data);
@@ -123,8 +115,6 @@ export const updateProduct = (
 ): Promise<{ message: string }> =>
   api.put(`/products/${id}`, data).then((r) => r.data);
 
-// ── deleteProduct ───────────────────────────────────────────────────────────
-
 export const deleteProduct = (id: string): Promise<{ message: string }> =>
   api.delete(`/products/${id}`).then((r) => r.data);
 
@@ -133,11 +123,7 @@ export const deleteProductImage = (
 ): Promise<{ message: string }> =>
   api.delete(`/products/images/${imageId}`).then((r) => r.data);
 
-// ── get categories for dropdown ─────────────────────────────────────────────
-
 export const getCategories = () => api.get("/categories?itemsPerPage=12");
-
-// ── unused (keep for compat) ────────────────────────────────────────────────
 
 export const orderFood = (payload: OrderFoodPayload) => {
   return { message: "Order placed successfully!", payload: payload };
