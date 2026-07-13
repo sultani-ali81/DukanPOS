@@ -1,13 +1,20 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/use-pagination";
-import { useSearch } from "@/hooks/use-search";
 import { useUtilsStore } from "@/lib/utilsStore";
 import { getCustomers } from "@/queries/customer";
 import type { PosProduct } from "@/queries/pos-inventory";
 import { getPosInventory } from "@/queries/pos-inventory";
 import type { Category } from "@/types";
-import type { SaleReceipt } from "@/types/sale";
+import type { SalePaymentStatus, SaleReceipt } from "@/types/sale";
 import {
   ArrowLeft,
   ArrowLeftRight,
@@ -17,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useBlocker, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PosCashMovementDialog } from "./components/pos-cash-movement-dialog";
 import { PosCategoryFilter } from "./components/pos-category-filter";
@@ -33,6 +40,7 @@ import { usePosOrder } from "./components/use-pos-order";
 import { usePosSession } from "./components/use-pos-session";
 
 const ITEMS_PER_PAGE = 20;
+const WALK_IN_CUSTOMER_NAME = /^walk[\s-]?in customer$/i;
 
 function useBarcodeScanner({
   onBarcode,
@@ -98,13 +106,19 @@ export default function PosPage() {
   const navigate = useNavigate();
 
   const [allProducts, setAllProducts] = useState<PosProduct[]>([]);
+  const [inventoryTotalPages, setInventoryTotalPages] = useState(0);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const inventoryRequestRef = useRef(0);
 
   // ── Session state — derived live from hasSession(), never persisted ──────
-  const { hasActiveSession, refresh: refreshSession } = usePosSession();
+  const {
+    hasActiveSession,
+    checkingSession,
+    refresh: refreshSession,
+  } = usePosSession();
 
   const [openSessionOpen, setOpenSessionOpen] = useState(false);
   const [closeSessionOpen, setCloseSessionOpen] = useState(false);
@@ -116,12 +130,16 @@ export default function PosPage() {
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<SaleReceipt | null>(null);
   const [lastReceiptCreatedAt, setLastReceiptCreatedAt] = useState<string>("");
+  const [lastSaleId, setLastSaleId] = useState("");
+  const [lastPaymentStatus, setLastPaymentStatus] =
+    useState<SalePaymentStatus>("fully_paid");
+  const [lastPaymentAmount, setLastPaymentAmount] = useState(0);
 
-  const { page, setPage, resetToPage1 } = usePagination();
-  const { search, debouncedSearch, handleSearch } = useSearch({
-    onSearch: resetToPage1,
+  const { page, setPage, resetToPage1 } = usePagination({
+    initialPage: 1,
+    initialItemsPerPage: ITEMS_PER_PAGE,
+    pageParam: "posProductPage",
   });
-
   // ── Cart / order ─────────────────────────────────────────────────────────────
 
   const { setWalkInCustomer } = useUtilsStore();
@@ -140,38 +158,73 @@ export default function PosPage() {
     updateQuantity,
     removeFromCart,
     setItemQuantity,
+    clearCart,
     subtotal,
     tax,
     total,
+    paymentStatus,
+    setPaymentStatus,
+    partialPaymentAmount,
+    setPartialPaymentAmount,
+    partialPaymentError,
+    amountDueNow,
     submitting,
     handlePay,
   } = usePosOrder({
-    onSaleSuccess: (receipt, createdAt) => {
-      loadInventoryRef.current(inventoryIdRef.current);
+    hasActiveSession,
+    checkingSession,
+    onSaleSuccess: (receipt, createdAt, sale) => {
+      loadInventoryRef.current(inventoryIdRef.current, productPageRef.current);
       setLastReceipt(receipt);
-      setLastReceiptCreatedAt(createdAt);
+      setLastReceiptCreatedAt(createdAt ?? new Date().toISOString());
+      setLastSaleId(sale.saleId);
+      setLastPaymentStatus(sale.paymentStatus);
+      setLastPaymentAmount(sale.amount);
       setReceiptDialogOpen(true);
       setMobileSheetOpen(false);
     },
   });
+  const cartNavigationBlocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      cart.length > 0 && currentLocation.pathname !== nextLocation.pathname,
+  );
 
   const inventoryIdRef = useRef(inventoryId);
   useEffect(() => {
     inventoryIdRef.current = inventoryId;
   }, [inventoryId]);
 
+  const productPageRef = useRef(page);
+  useEffect(() => {
+    productPageRef.current = page;
+  }, [page]);
+
   // ── Load inventory products ───────────────────────────────────────────────────
 
-  const loadInventory = useCallback((id: string) => {
+  const loadInventory = useCallback((id: string, requestedPage = 1) => {
+    const requestId = ++inventoryRequestRef.current;
     if (!id) {
       setAllProducts([]);
       setCategories([]);
+      setInventoryTotalPages(0);
       return;
     }
     setLoadingInventory(true);
-    getPosInventory(id)
+    getPosInventory(id, {
+      page: requestedPage,
+      itemsPerPage: ITEMS_PER_PAGE,
+    })
       .then((detail) => {
+        if (requestId !== inventoryRequestRef.current) return;
         setAllProducts(detail.products);
+        setInventoryTotalPages(detail.productsMeta.totalPages);
+        if (
+          detail.productsMeta.totalPages > 0 &&
+          requestedPage > detail.productsMeta.totalPages
+        ) {
+          setPage(detail.productsMeta.totalPages);
+          return;
+        }
         const seen = new Set<string>();
         const cats: Category[] = [];
         detail.products.forEach((p) => {
@@ -183,38 +236,90 @@ export default function PosPage() {
           });
         });
         setCategories(cats);
-        setSelectedCategory("all");
-        resetToPage1();
       })
       .catch(() => {
+        if (requestId !== inventoryRequestRef.current) return;
         setAllProducts([]);
         setCategories([]);
+        setInventoryTotalPages(0);
+        toast.error("Failed to load inventory products.");
       })
-      .finally(() => setLoadingInventory(false));
-  }, []);
+      .finally(() => {
+        if (requestId === inventoryRequestRef.current) {
+          setLoadingInventory(false);
+        }
+      });
+  }, [setPage]);
 
   const loadInventoryRef = useRef(loadInventory);
   useEffect(() => {
     loadInventoryRef.current = loadInventory;
   }, [loadInventory]);
 
-  // ── On mount: restore inventory + ensure walk-in customer is always set ───────
+  useEffect(() => {
+    // Fetch the server page whenever the inventory/page URL state changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (inventoryId) loadInventory(inventoryId, page);
+  }, [inventoryId, page, loadInventory]);
+
+  // ── On mount: revalidate the persisted walk-in customer for this store ───────
 
   useEffect(() => {
-    if (inventoryId) loadInventory(inventoryId);
+    let cancelled = false;
 
-    if (!customerId) {
-      getCustomers({ page: 1, itemsPerPage: 10 })
-        .then(({ data }) => {
-          if (data.length > 0) {
-            const c = data[0];
-            setCustomerId(c.id);
-            setCustomerLabel(c.name);
-            setWalkInCustomer(c.id, c.name);
+    const clearDefaultCustomer = () => {
+      setCustomerId("");
+      setCustomerLabel("");
+      setWalkInCustomer("", "");
+    };
+
+    const initializeCustomer = async () => {
+      try {
+        if (customerId && customerLabel) {
+          const persistedResult = await getCustomers({
+            search: customerLabel,
+            page: 1,
+            itemsPerPage: 100,
+          });
+          const persistedWalkIn = persistedResult.data.find(
+            (customer) =>
+              customer.id === customerId &&
+              WALK_IN_CUSTOMER_NAME.test(customer.name.trim()),
+          );
+          if (persistedWalkIn) {
+            if (!cancelled) {
+              setCustomerLabel(persistedWalkIn.name);
+              setWalkInCustomer(persistedWalkIn.id, persistedWalkIn.name);
+            }
+            return;
           }
-        })
-        .catch(() => {});
-    }
+        }
+
+        const result = await getCustomers({
+          search: "Walk-in Customer",
+          page: 1,
+          itemsPerPage: 100,
+        });
+        const walkInCustomer = result.data.find((customer) =>
+          WALK_IN_CUSTOMER_NAME.test(customer.name.trim()),
+        );
+        if (cancelled) return;
+        if (walkInCustomer) {
+          setCustomerId(walkInCustomer.id);
+          setCustomerLabel(walkInCustomer.name);
+          setWalkInCustomer(walkInCustomer.id, walkInCustomer.name);
+        } else {
+          clearDefaultCustomer();
+        }
+      } catch {
+        if (!cancelled) clearDefaultCustomer();
+      }
+    };
+
+    void initializeCustomer();
+    return () => {
+      cancelled = true;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Stable refs for barcode handler ──────────────────────────────────────────
@@ -245,7 +350,9 @@ export default function PosPage() {
         (p) => (p.sequence ?? p.id) === barcode,
       );
       if (!product) {
-        toast.warning(`Product not found: ${barcode}`);
+        toast.warning(
+          `Product ${barcode} is not on this page. Try another product page.`,
+        );
         return;
       }
       addToCartRef.current(product);
@@ -265,35 +372,46 @@ export default function PosPage() {
 
   const totalCartItems = cart.reduce((s, i) => s + i.quantity, 0);
 
+  useEffect(() => {
+    if (cart.length === 0) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [cart.length]);
+
   const filteredProducts = useMemo(() => {
     let result = allProducts;
-    if (selectedCategory !== "all") {
+    if (inventoryTotalPages <= 1 && selectedCategory !== "all") {
       result = result.filter((p) =>
         p.categories.some((c) => c.id === selectedCategory),
       );
     }
-    if (debouncedSearch.trim()) {
-      const q = debouncedSearch.toLowerCase();
-      result = result.filter((p) => p.name.toLowerCase().includes(q));
-    }
     return result;
-  }, [allProducts, selectedCategory, debouncedSearch]);
+  }, [allProducts, inventoryTotalPages, selectedCategory]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredProducts.length / ITEMS_PER_PAGE),
-  );
-  const pagedProducts = filteredProducts.slice(
-    (page - 1) * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE,
-  );
+  const totalPages = inventoryTotalPages;
+  const pagedProducts = filteredProducts;
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
 
   const handleInventoryChange = (id: string, name: string) => {
+    if (id === inventoryId) return;
+    if (
+      cart.length > 0 &&
+      !window.confirm(
+        "Changing inventory will clear the current cart. Continue?",
+      )
+    ) {
+      return;
+    }
+    clearCart();
+    setSelectedCategory("all");
     setInventoryId(id);
     setInventoryLabel(name);
-    loadInventory(id);
+    resetToPage1();
   };
 
   const handleCustomerChange = (id: string, name: string) => {
@@ -303,12 +421,15 @@ export default function PosPage() {
 
   const handleCategorySelect = (id: string) => {
     setSelectedCategory(id);
-    resetToPage1();
+    if (page !== 1) setPage(1);
   };
 
-  const handlePayAndClose = async () => {
-    await handlePay();
-    // receipt dialog + sheet close handled inside onSaleSuccess
+  const handleProductPageChange = (nextPage: number) => {
+    setPage(nextPage);
+  };
+
+  const handleExitPos = () => {
+    navigate("/sales");
   };
 
   // ── Session button helpers ────────────────────────────────────────────────────
@@ -365,7 +486,7 @@ export default function PosPage() {
   const exitSessionRow = (
     <div className="flex-none flex items-center justify-between gap-2 mb-3">
       <Button
-        onClick={() => navigate("/dashboard")}
+        onClick={handleExitPos}
         className="flex items-center gap-1.5 h-9 px-3 rounded-xl transition-colors cursor-pointer"
         variant="default"
       >
@@ -423,15 +544,15 @@ export default function PosPage() {
           />
         </div>
 
-        <div className="flex-none mb-2">
-          <PosCategoryFilter
-            categories={categories}
-            selected={selectedCategory}
-            onSelect={handleCategorySelect}
-            searchQuery={search}
-            onSearchChange={handleSearch}
-          />
-        </div>
+        {inventoryTotalPages <= 1 && categories.length > 0 && (
+          <div className="flex-none mb-2">
+            <PosCategoryFilter
+              categories={categories}
+              selected={selectedCategory}
+              onSelect={handleCategorySelect}
+            />
+          </div>
+        )}
 
         {/* Product results */}
         <div className="flex-1 overflow-y-auto py-1">
@@ -482,7 +603,7 @@ export default function PosPage() {
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              onPageChange={setPage}
+              onPageChange={handleProductPageChange}
               className="py-0"
             />
           </div>
@@ -506,6 +627,15 @@ export default function PosPage() {
             subtotal={subtotal}
             tax={tax}
             total={total}
+            paymentStatus={paymentStatus}
+            onPaymentStatusChange={setPaymentStatus}
+            partialPaymentAmount={partialPaymentAmount}
+            onPartialPaymentAmountChange={setPartialPaymentAmount}
+            partialPaymentError={partialPaymentError}
+            amountDueNow={amountDueNow}
+            hasActiveSession={hasActiveSession}
+            checkingSession={checkingSession}
+            onOpenSession={handleOpenSessionClick}
             submitting={submitting}
             onPay={handlePay}
           />
@@ -565,8 +695,17 @@ export default function PosPage() {
                 subtotal={subtotal}
                 tax={tax}
                 total={total}
+                paymentStatus={paymentStatus}
+                onPaymentStatusChange={setPaymentStatus}
+                partialPaymentAmount={partialPaymentAmount}
+                onPartialPaymentAmountChange={setPartialPaymentAmount}
+                partialPaymentError={partialPaymentError}
+                amountDueNow={amountDueNow}
+                hasActiveSession={hasActiveSession}
+                checkingSession={checkingSession}
+                onOpenSession={handleOpenSessionClick}
                 submitting={submitting}
-                onPay={handlePayAndClose}
+                onPay={handlePay}
               />
             </div>
           </div>
@@ -574,6 +713,35 @@ export default function PosPage() {
       )}
 
       {/* ── Session dialogs ── */}
+      <AlertDialog
+        open={cartNavigationBlocker.state === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && cartNavigationBlocker.state === "blocked") {
+            cartNavigationBlocker.reset();
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-sm rounded-2xl">
+          <AlertDialogTitle>Discard the current cart?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have items in this order. Leaving POS will remove the cart and
+            its payment selections.
+          </AlertDialogDescription>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Stay in POS</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (cartNavigationBlocker.state === "blocked") {
+                  cartNavigationBlocker.proceed();
+                }
+              }}
+            >
+              Discard and leave
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <OpenSessionDialog
         open={openSessionOpen}
         onOpenChange={setOpenSessionOpen}
@@ -603,6 +771,9 @@ export default function PosPage() {
         onOpenChange={setReceiptDialogOpen}
         receipt={lastReceipt}
         createdAt={lastReceiptCreatedAt}
+        saleId={lastSaleId}
+        paymentStatus={lastPaymentStatus}
+        paidAmount={lastPaymentAmount}
       />
     </div>
   );

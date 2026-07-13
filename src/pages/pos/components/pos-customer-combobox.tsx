@@ -30,7 +30,7 @@ export function PosCustomerCombobox({
     search,
     handleSearch,
     isLoading,
-  } = useCustomers();
+  } = useCustomers({ pageParam: "posCustomerPage" });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

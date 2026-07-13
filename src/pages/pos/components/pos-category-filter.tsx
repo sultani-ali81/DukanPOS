@@ -18,8 +18,6 @@ interface PosCategoryFilterProps {
   categories: Category[];
   selected: string;
   onSelect: (id: string) => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
 }
 
 export function PosCategoryFilter({

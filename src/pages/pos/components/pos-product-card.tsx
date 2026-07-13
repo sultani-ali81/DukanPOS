@@ -1,4 +1,5 @@
 import type { PosProduct } from "@/queries/pos-inventory";
+import { formatCurrency } from "@/lib/data";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -32,15 +33,18 @@ export function PosProductCard({
     setCurrentIndex((i) => (i + 1) % images.length);
   };
 
-  const outOfStock = product.quantity === 0;
+  const outOfStock = product.quantity <= 0;
+  const unavailable = !product.hasPrice;
   const atStockLimit = cartQuantity >= product.quantity && !outOfStock;
 
   return (
     <div
-      onClick={() => !outOfStock && !atStockLimit && onAdd(product)}
+      onClick={() =>
+        !outOfStock && !atStockLimit && !unavailable && onAdd(product)
+      }
       className={[
         "overflow-hidden rounded-xl border border-gray-200 transition-all duration-150 select-none",
-        outOfStock || atStockLimit
+        outOfStock || atStockLimit || unavailable
           ? " cursor-not-allowed"
           : "cursor-pointer hover:shadow-md hover:border-blue-200 active:scale-[0.98]",
       ].join(" ")}
@@ -65,6 +69,14 @@ export function PosProductCard({
           <div className="absolute inset-0 bg-white/60 flex items-center justify-center rounded-xl">
             <span className="text-sm font-semibold text-red-500 bg-white px-2 py-1 rounded-lg shadow-sm border border-gray-200">
               Out of stock
+            </span>
+          </div>
+        )}
+
+        {!outOfStock && unavailable && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-xl">
+            <span className="text-sm font-semibold text-red-600 bg-white px-2 py-1 rounded-lg shadow-sm border border-red-200">
+              Price unavailable
             </span>
           </div>
         )}
@@ -120,7 +132,7 @@ export function PosProductCard({
             {product.name}
           </h3>
           <span className="text-sm font-semibold text-green-600 shrink-0 whitespace-nowrap">
-            {product.price} AFN
+            {product.hasPrice ? formatCurrency(product.price) : "No price"}
           </span>
         </div>
         {/* Stock indicator */}

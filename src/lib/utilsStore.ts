@@ -35,6 +35,7 @@ export const useUtilsStore = create<UtilsState>()(
           inventoryLabel: "",
           walkInCustomerId: "",
           walkInCustomerLabel: "",
+          sessionId: "",
         });
       },
       getInventoryId: () => get().inventoryId,

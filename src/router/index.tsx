@@ -15,6 +15,8 @@ import ViewPurchase from "@/pages/purchases/[id]";
 import Purchases from "@/pages/purchases/index";
 import NewPurchasePage from "@/pages/purchases/new";
 import Report from "@/pages/reports/page";
+import SaleDetailPage from "@/pages/sales/[id]";
+import SalesPage from "@/pages/sales";
 import NewStockMovementPage from "@/pages/stock-movement/new";
 import UnauthorizedPage from "@/pages/unauthorized";
 import UsersPage from "@/pages/users/page";
@@ -84,6 +86,22 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allowed={["Admin"]}>
             <CategoriesPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: "/sales",
+        element: (
+          <RoleRoute allowed={["Admin", "Cashier"]}>
+            <SalesPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: "/sales/:id",
+        element: (
+          <RoleRoute allowed={["Admin", "Cashier"]}>
+            <SaleDetailPage />
           </RoleRoute>
         ),
       },

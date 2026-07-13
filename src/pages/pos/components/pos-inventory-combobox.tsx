@@ -30,13 +30,19 @@ export function PosInventoryCombobox({
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const { page, setPage, resetToPage1 } = usePagination();
+  const { page, setPage, resetToPage1 } = usePagination({
+    initialPage: 1,
+    initialItemsPerPage: PAGE_SIZE,
+    pageParam: "posInventoryPage",
+  });
   const { search, debouncedSearch, handleSearch } = useSearch({
     onSearch: resetToPage1,
   });
 
   useEffect(() => {
     if (!open) return;
+    // The popover owns this short-lived request state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     getInventories({ search: debouncedSearch, page, itemsPerPage: PAGE_SIZE })
       .then(({ data, meta }) => {

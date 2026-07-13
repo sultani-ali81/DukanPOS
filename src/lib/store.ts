@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       clearAuth: () => {
+        useUtilsStore.getState().clearUtilsStore();
         set({
           user: null,
           token: null,
@@ -48,7 +49,6 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         get().clearAuth();
-        useUtilsStore.getState().clearUtilsStore();
       },
     }),
     {

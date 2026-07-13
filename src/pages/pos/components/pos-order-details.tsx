@@ -8,8 +8,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { formatCurrency } from "@/lib/data";
+import type { SalePaymentStatus } from "@/types/sale";
+import {
+  Banknote,
+  Clock3,
+  CreditCard,
+  Loader2,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { PosCustomerCombobox } from "./pos-customer-combobox";
 import { PosInventoryCombobox } from "./pos-inventory-combobox";
@@ -29,8 +41,17 @@ interface PosOrderDetailsProps {
   subtotal: number;
   tax: number;
   total: number;
+  paymentStatus: SalePaymentStatus;
+  onPaymentStatusChange: (status: SalePaymentStatus) => void;
+  partialPaymentAmount: string;
+  onPartialPaymentAmountChange: (amount: string) => void;
+  partialPaymentError: string | null;
+  amountDueNow: number;
+  hasActiveSession: boolean;
+  checkingSession: boolean;
+  onOpenSession: () => void;
   submitting: boolean;
-  onPay: () => void;
+  onPay: () => Promise<boolean>;
 }
 
 // ── Editable quantity cell ────────────────────────────────────────────────────
@@ -153,15 +174,49 @@ export function PosOrderDetails({
   subtotal,
   tax,
   total,
+  paymentStatus,
+  onPaymentStatusChange,
+  partialPaymentAmount,
+  onPartialPaymentAmountChange,
+  partialPaymentError,
+  amountDueNow,
+  hasActiveSession,
+  checkingSession,
+  onOpenSession,
   submitting,
   onPay,
 }: PosOrderDetailsProps) {
+  const paymentGroupName = useId();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
   const canPay =
     cart.length > 0 &&
-    cart.every((i) => i.quantity > 0) &&
+    cart.every(
+      (item) =>
+        item.quantity > 0 &&
+        item.quantity <= item.stock &&
+        Number.isFinite(item.price) &&
+        item.price >= 0,
+    ) &&
     !!customerId &&
-    !!inventoryId;
+    !!inventoryId &&
+    hasActiveSession &&
+    !checkingSession &&
+    !partialPaymentError;
+
+  const paymentLabel =
+    paymentStatus === "fully_paid"
+      ? "Fully paid"
+      : paymentStatus === "partially_paid"
+        ? "Partially paid"
+        : "Unpaid";
+
+  const actionLabel =
+    paymentStatus === "fully_paid"
+      ? `Pay ${formatCurrency(total)}`
+      : paymentStatus === "partially_paid"
+        ? `Receive ${formatCurrency(amountDueNow)}`
+        : "Complete as unpaid";
 
   return (
     <div className="flex flex-col h-full p-4 gap-3">
@@ -230,9 +285,9 @@ export function PosOrderDetails({
                   {item.name}
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {item.price} AFN ={" "}
+                  {formatCurrency(item.price)} ={" "}
                   <span className="font-semibold text-gray-700">
-                    {(item.price * item.quantity).toFixed(0)} AFN
+                    {formatCurrency(item.price * item.quantity)}
                   </span>
                 </p>
               </div>
@@ -262,22 +317,127 @@ export function PosOrderDetails({
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-400">Subtotal</span>
             <span className="font-medium text-gray-700">
-              {subtotal.toFixed(2)} AFN
+              {formatCurrency(subtotal)}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Tax (10%)</span>
+            <span
+              className="text-gray-400"
+              title="10% tax, rounded on each item"
+            >
+              Tax (rounded)
+            </span>
             <span className="font-medium text-gray-700">
-              {tax.toFixed(2)} AFN
+              {formatCurrency(tax)}
             </span>
           </div>
           <div className="flex items-center justify-between text-base font-semibold">
             <span className="text-gray-900">Total</span>
-            <span className="text-gray-900">{total.toFixed(2)} AFN</span>
+            <span className="text-gray-900">{formatCurrency(total)}</span>
           </div>
 
+          <fieldset className="space-y-2 pt-1">
+            <legend className="text-xs font-semibold text-gray-700 mb-2">
+              Payment
+            </legend>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(
+                [
+                  ["fully_paid", "Full", CreditCard],
+                  ["partially_paid", "Partial", Banknote],
+                  ["unpaid", "Unpaid", Clock3],
+                ] as const
+              ).map(([status, label, Icon]) => {
+                const selected = paymentStatus === status;
+                return (
+                  <label
+                    key={status}
+                    className={`cursor-pointer rounded-xl border px-2 py-2 text-center transition-colors ${
+                      selected
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                    }`}
+                  >
+                    <input
+                      className="sr-only"
+                      type="radio"
+                      name={paymentGroupName}
+                      value={status}
+                      checked={selected}
+                      onChange={() => onPaymentStatusChange(status)}
+                    />
+                    <Icon className="mx-auto mb-1 h-4 w-4" />
+                    <span className="block text-[11px] font-semibold">
+                      {label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {paymentStatus === "partially_paid" && (
+              <div className="space-y-1">
+                <label
+                  htmlFor={`${paymentGroupName}-amount`}
+                  className="text-xs font-medium text-gray-600"
+                >
+                  Amount received now
+                </label>
+                <div className="relative">
+                  <Input
+                    id={`${paymentGroupName}-amount`}
+                    value={partialPaymentAmount}
+                    onChange={(event) =>
+                      onPartialPaymentAmountChange(event.target.value)
+                    }
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    aria-invalid={Boolean(partialPaymentError)}
+                    className="h-10 rounded-xl pr-12"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">
+                    AFN
+                  </span>
+                </div>
+                {partialPaymentError ? (
+                  <p className="text-xs text-red-600" role="alert">
+                    {partialPaymentError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    Remaining after checkout:{" "}
+                    {formatCurrency(Math.max(0, total - amountDueNow))}
+                  </p>
+                )}
+              </div>
+            )}
+          </fieldset>
+
+          {!checkingSession && !hasActiveSession && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="text-xs text-amber-800">
+                Open a session before checkout.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onOpenSession}
+                className="h-8 shrink-0 border-amber-300 bg-white text-xs text-amber-800"
+              >
+                Open session
+              </Button>
+            </div>
+          )}
+          {checkingSession && (
+            <p className="flex items-center gap-2 text-xs text-gray-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Checking active session…
+            </p>
+          )}
+
           {/* ── Confirmation dialog ── */}
-          <AlertDialog>
+          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <AlertDialogTrigger asChild>
               <Button
                 disabled={!canPay || submitting}
@@ -285,7 +445,7 @@ export function PosOrderDetails({
                 variant="default"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {submitting ? "Processing…" : `Pay ${total.toFixed(2)} AFN`}
+                {submitting ? "Processing…" : actionLabel}
               </Button>
             </AlertDialogTrigger>
 
@@ -316,7 +476,7 @@ export function PosOrderDetails({
                       </span>
                     </div>
                     <span className="text-sm font-semibold text-gray-900 shrink-0">
-                      {(item.price * item.quantity).toFixed(0)} AFN
+                      {formatCurrency(item.price * item.quantity)}
                     </span>
                   </div>
                 ))}
@@ -326,15 +486,27 @@ export function PosOrderDetails({
               <div className="px-5 py-3 bg-gray-50 space-y-1.5 border-t border-gray-100">
                 <div className="flex justify-between text-sm text-gray-500">
                   <span>Subtotal</span>
-                  <span>{subtotal.toFixed(2)} AFN</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-500">
-                  <span>Tax (10%)</span>
-                  <span>{tax.toFixed(2)} AFN</span>
+                  <span title="10% tax, rounded on each item">
+                    Tax (rounded)
+                  </span>
+                  <span>{formatCurrency(tax)}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-gray-900 pt-1 border-t border-gray-200">
                   <span>Total</span>
-                  <span>{total.toFixed(2)} AFN</span>
+                  <span>{formatCurrency(total)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600 pt-1">
+                  <span>Payment</span>
+                  <span className="font-medium">{paymentLabel}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Received now</span>
+                  <span className="font-semibold">
+                    {formatCurrency(amountDueNow)}
+                  </span>
                 </div>
               </div>
 
@@ -344,10 +516,16 @@ export function PosOrderDetails({
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={onPay}
+                  disabled={submitting}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void onPay().then((success) => {
+                      if (success) setConfirmOpen(false);
+                    });
+                  }}
                   className="flex-1 h-11 rounded-xl bg-black text-white hover:bg-black/90 text-sm font-semibold"
                 >
-                  Confirm & Pay
+                  {submitting ? "Processing…" : "Complete sale"}
                 </AlertDialogAction>
               </div>
             </AlertDialogContent>

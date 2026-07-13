@@ -1,9 +1,15 @@
+import { extractError } from "@/lib/error";
 import { useUtilsStore } from "@/lib/utilsStore";
 import type { PosProduct } from "@/queries/pos-inventory";
 import { finalizeSale } from "@/queries/sale";
-import type { SaleReceipt } from "@/types/sale";
-import { useState } from "react";
+import type {
+  CheckoutSaleRequest,
+  SalePaymentStatus,
+  SaleReceipt,
+} from "@/types/sale";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
 
 export interface PosCartItem {
   id: string;
@@ -14,13 +20,40 @@ export interface PosCartItem {
   stock: number;
 }
 
-interface UsePosOrderOptions {
-  onSaleSuccess?: (receipt: SaleReceipt, createdAt: string) => void;
+export interface CompletedSaleSnapshot {
+  saleId: string;
+  paymentStatus: SalePaymentStatus;
+  amount: number;
 }
 
-export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
+interface UsePosOrderOptions {
+  hasActiveSession?: boolean;
+  checkingSession?: boolean;
+  onSaleSuccess?: (
+    receipt: SaleReceipt,
+    createdAt: string | undefined,
+    sale: CompletedSaleSnapshot,
+  ) => void;
+}
+
+const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+function hasAtMostTwoDecimals(value: string) {
+  return /^(?:\d+|\d*\.\d{1,2})$/.test(value.trim());
+}
+
+export function usePosOrder({
+  hasActiveSession = false,
+  checkingSession = false,
+  onSaleSuccess,
+}: UsePosOrderOptions = {}) {
   const [cart, setCart] = useState<PosCartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const [paymentStatus, setPaymentStatus] =
+    useState<SalePaymentStatus>("fully_paid");
+  const [partialPaymentAmount, setPartialPaymentAmount] = useState("");
+  const { mutate } = useSWRConfig();
 
   const {
     inventoryId,
@@ -31,30 +64,34 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
     walkInCustomerLabel,
   } = useUtilsStore();
 
-  // customerId / customerLabel live in local state so the combobox stays
-  // reactive, but they are seeded from the persisted walk-in values.
   const [customerId, setCustomerId] = useState<string>(walkInCustomerId);
   const [customerLabel, setCustomerLabel] =
     useState<string>(walkInCustomerLabel);
 
   const addToCart = (product: PosProduct) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === product.id);
+    if (!product.hasPrice) {
+      toast.error("Set a selling price before adding this product.");
+      return;
+    }
+    setCart((previous) => {
+      const existing = previous.find((item) => item.id === product.id);
       if (existing) {
         if (existing.quantity >= product.quantity) {
           toast.warning(`Only ${product.quantity} in stock`);
-          return prev;
+          return previous;
         }
-        return prev.map((i) =>
-          i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
+        return previous.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item,
         );
       }
-      if (product.quantity === 0) {
+      if (product.quantity <= 0) {
         toast.warning("This product is out of stock");
-        return prev;
+        return previous;
       }
       return [
-        ...prev,
+        ...previous,
         {
           id: product.id,
           name: product.name,
@@ -68,84 +105,169 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
   };
 
   const updateQuantity = (productId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((i) => {
-          if (i.id !== productId) return i;
-          const next = i.quantity + delta;
-          if (next > i.stock) {
-            toast.warning(`Only ${i.stock} in stock`);
-            return i;
+    setCart((previous) =>
+      previous
+        .map((item) => {
+          if (item.id !== productId) return item;
+          const next = item.quantity + delta;
+          if (next > item.stock) {
+            toast.warning(`Only ${item.stock} in stock`);
+            return item;
           }
-          return { ...i, quantity: Math.max(0, next) };
+          return { ...item, quantity: Math.max(0, next) };
         })
-        .filter((i) => i.quantity > 0),
+        .filter((item) => item.quantity > 0),
     );
   };
 
   const setItemQuantity = (productId: string, value: number) => {
     if (value <= 0) {
-      setCart((prev) => prev.filter((i) => i.id !== productId));
+      setCart((previous) =>
+        previous.filter((item) => item.id !== productId),
+      );
       return;
     }
-    setCart((prev) =>
-      prev.map((i) => {
-        if (i.id !== productId) return i;
-        const clamped = Math.min(value, i.stock);
-        if (value > i.stock) toast.warning(`Only ${i.stock} in stock`);
-        return { ...i, quantity: clamped };
+    setCart((previous) =>
+      previous.map((item) => {
+        if (item.id !== productId) return item;
+        const clamped = Math.min(value, item.stock);
+        if (value > item.stock) toast.warning(`Only ${item.stock} in stock`);
+        return { ...item, quantity: clamped };
       }),
     );
   };
 
   const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((i) => i.id !== productId));
+    setCart((previous) =>
+      previous.filter((item) => item.id !== productId),
+    );
   };
 
-  // Only clears the cart — customer stays selected (walk-in by default)
-  const clearCart = () => {
-    setCart([]);
+  const clearCart = () => setCart([]);
+
+  const subtotal = roundMoney(
+    cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+  );
+  // Preserve the existing POS tax rule, but round each submitted unit price so
+  // every monetary value satisfies the checkout contract.
+  const checkoutItems = cart.map((item) => ({
+    productId: item.id,
+    quantity: item.quantity,
+    unitPrice: roundMoney(item.price * 1.1),
+  }));
+  const total = roundMoney(
+    checkoutItems.reduce(
+      (sum, item) => sum + item.unitPrice * item.quantity,
+      0,
+    ),
+  );
+  const tax = roundMoney(total - subtotal);
+
+  let partialPaymentError: string | null = null;
+  const parsedPartialAmount = Number(partialPaymentAmount);
+  if (paymentStatus === "partially_paid") {
+    if (!partialPaymentAmount.trim()) {
+      partialPaymentError = "Enter the amount received now.";
+    } else if (
+      !hasAtMostTwoDecimals(partialPaymentAmount) ||
+      !Number.isFinite(parsedPartialAmount)
+    ) {
+      partialPaymentError = "Use a valid amount with at most 2 decimals.";
+    } else if (parsedPartialAmount <= 0) {
+      partialPaymentError = "A partial payment must be greater than zero.";
+    } else if (parsedPartialAmount >= total) {
+      partialPaymentError = "A partial payment must be less than the total.";
+    }
+  }
+
+  const amountDueNow =
+    paymentStatus === "fully_paid"
+      ? total
+      : paymentStatus === "unpaid" || partialPaymentError
+        ? 0
+        : roundMoney(parsedPartialAmount);
+
+  const refreshRelatedData = () => {
+    void mutate(
+      (key) => {
+        if (typeof key === "string") return key.startsWith("/sales");
+        if (!Array.isArray(key)) return false;
+        return key[0] === "dashboard" || key[0] === "inventory-detail";
+      },
+      undefined,
+      { revalidate: true },
+    );
   };
 
-  const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const tax = subtotal * 0.1;
-  const total = subtotal + tax;
-
-  const handlePay = async () => {
+  const handlePay = async (): Promise<boolean> => {
+    if (submittingRef.current) return false;
+    if (checkingSession) {
+      toast.error("Please wait while the active session is checked.");
+      return false;
+    }
+    if (!hasActiveSession) {
+      toast.error("Open a session before completing a sale.");
+      return false;
+    }
     if (!customerId) {
       toast.error("Please select a customer");
-      return;
+      return false;
     }
     if (!inventoryId) {
       toast.error("Please select an inventory");
-      return;
+      return false;
     }
     if (cart.length === 0) {
       toast.error("Cart is empty");
-      return;
+      return false;
+    }
+    if (
+      cart.some(
+        (item) =>
+          item.quantity <= 0 ||
+          item.quantity > item.stock ||
+          !Number.isFinite(item.price) ||
+          item.price < 0,
+      )
+    ) {
+      toast.error("Review item quantities and prices before checkout.");
+      return false;
+    }
+    if (partialPaymentError) {
+      toast.error(partialPaymentError);
+      return false;
     }
 
+    const payload: CheckoutSaleRequest = {
+      customerId,
+      inventoryId,
+      paymentStatus,
+      amount: amountDueNow,
+      items: checkoutItems,
+    };
+
+    submittingRef.current = true;
     setSubmitting(true);
     try {
-      const res = await finalizeSale({
-        customerId,
-        inventoryId,
-        items: cart.map((i) => ({
-          productId: i.id,
-          quantity: i.quantity,
-          unitPrice: i.price + i.price * 0.1,
-        })),
-      });
-      toast.success("Sale completed and stock updated");
-      // Only clear cart — customer stays as-is (walk-in)
+      const response = await finalizeSale(payload);
+      toast.success(response.message || "Sale completed and stock updated");
       clearCart();
-      onSaleSuccess?.(res.receipt, res.createdAt);
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to complete sale. Please try again.";
-      toast.error(msg);
+      setPaymentStatus("fully_paid");
+      setPartialPaymentAmount("");
+      refreshRelatedData();
+      onSaleSuccess?.(response.receipt, response.createdAt, {
+        saleId: response.saleId,
+        paymentStatus,
+        amount: amountDueNow,
+      });
+      return true;
+    } catch (error: unknown) {
+      toast.error(
+        extractError(error, "Failed to complete sale. Please try again."),
+      );
+      return false;
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -168,6 +290,12 @@ export function usePosOrder({ onSaleSuccess }: UsePosOrderOptions = {}) {
     subtotal,
     tax,
     total,
+    paymentStatus,
+    setPaymentStatus,
+    partialPaymentAmount,
+    setPartialPaymentAmount,
+    partialPaymentError,
+    amountDueNow,
     submitting,
     handlePay,
   };

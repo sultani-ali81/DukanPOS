@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/data";
 
 import {
   Dialog,
@@ -7,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import type { SaleReceipt } from "@/types/sale";
+import type { SalePaymentStatus, SaleReceipt } from "@/types/sale";
 
 import {
   Document,
@@ -17,12 +18,30 @@ import {
   View,
   pdf,
 } from "@react-pdf/renderer";
-import { Printer, X } from "lucide-react";
+import { Eye, Printer, X } from "lucide-react";
+import { useNavigate } from "react-router";
 interface PosReceiptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipt: SaleReceipt | null;
   createdAt?: string;
+  saleId?: string;
+  paymentStatus?: SalePaymentStatus;
+  paidAmount?: number;
+}
+
+function formatPaymentStatus(status?: SalePaymentStatus) {
+  if (status === "fully_paid") return "Fully paid";
+  if (status === "partially_paid") return "Partially paid";
+  if (status === "unpaid") return "Unpaid";
+  return "";
+}
+
+function balanceAfterCheckout(total: number, paidAmount = 0) {
+  return Math.max(
+    0,
+    Math.round((total - paidAmount + Number.EPSILON) * 100) / 100,
+  );
 }
 
 function formatDate(iso?: string) {
@@ -154,9 +173,21 @@ interface ReceiptPdfProps {
   receipt: SaleReceipt;
   createdAt?: string;
   customerDisplay: string;
+  paymentStatus?: SalePaymentStatus;
+  paidAmount?: number;
 }
 
-function ReceiptPdf({ receipt, createdAt, customerDisplay }: ReceiptPdfProps) {
+function ReceiptPdf({
+  receipt,
+  createdAt,
+  customerDisplay,
+  paymentStatus,
+  paidAmount,
+}: ReceiptPdfProps) {
+  const balanceDue = balanceAfterCheckout(
+    receipt.totalAmount,
+    paidAmount,
+  );
   return (
     <Document>
       <Page size={[226, 700]} style={styles.page}>
@@ -231,12 +262,12 @@ function ReceiptPdf({ receipt, createdAt, customerDisplay }: ReceiptPdfProps) {
             </View>
 
             <View style={styles.colUnit}>
-              <Text style={styles.itemNum}>{item.unitPrice.toFixed(0)}</Text>
+              <Text style={styles.itemNum}>{item.unitPrice.toFixed(2)}</Text>
             </View>
 
             <View style={styles.colTotal}>
               <Text style={[styles.itemNum, { fontFamily: "Courier-Bold" }]}>
-                {item.subTotal.toFixed(0)}
+                {item.subTotal.toFixed(2)}
               </Text>
             </View>
           </View>
@@ -250,9 +281,34 @@ function ReceiptPdf({ receipt, createdAt, customerDisplay }: ReceiptPdfProps) {
           <Text style={styles.totalLabel}>Total</Text>
 
           <Text style={styles.totalValue}>
-            {receipt.totalAmount.toFixed(2)} AFN
+            {formatCurrency(receipt.totalAmount)}
           </Text>
         </View>
+
+        {paymentStatus && (
+          <>
+            <View style={styles.row}>
+              <Text style={styles.label}>Payment</Text>
+              <Text style={styles.valueBold}>
+                {formatPaymentStatus(paymentStatus)}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Received now</Text>
+              <Text style={styles.value}>
+                {formatCurrency(paidAmount ?? 0)}
+              </Text>
+            </View>
+            {paymentStatus !== "fully_paid" && (
+              <View style={styles.row}>
+                <Text style={styles.label}>Balance due</Text>
+                <Text style={styles.valueBold}>
+                  {formatCurrency(balanceDue)}
+                </Text>
+              </View>
+            )}
+          </>
+        )}
 
         <View style={styles.dividerDashed} />
 
@@ -274,10 +330,21 @@ export function PosReceiptDialog({
   receipt,
 
   createdAt,
+
+  saleId,
+
+  paymentStatus,
+
+  paidAmount,
 }: PosReceiptDialogProps) {
+  const navigate = useNavigate();
   if (!receipt) return null;
 
   const customerDisplay = displayCustomerName(receipt.customerName);
+  const balanceDue = balanceAfterCheckout(
+    receipt.totalAmount,
+    paidAmount,
+  );
 
   const handlePrint = async () => {
     const blob = await pdf(
@@ -285,6 +352,8 @@ export function PosReceiptDialog({
         receipt={receipt}
         createdAt={createdAt}
         customerDisplay={customerDisplay}
+        paymentStatus={paymentStatus}
+        paidAmount={paidAmount}
       />,
     ).toBlob();
 
@@ -394,11 +463,11 @@ export function PosReceiptDialog({
                   </span>
 
                   <span className="text-right pr-0.5 tabular-nums">
-                    {item.unitPrice.toFixed(0)}
+                    {item.unitPrice.toFixed(2)}
                   </span>
 
                   <span className="text-right pr-0.5 font-semibold tabular-nums">
-                    {item.subTotal.toFixed(0)}
+                    {item.subTotal.toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -410,9 +479,34 @@ export function PosReceiptDialog({
               <span>Total</span>
 
               <span className="tabular-nums">
-                {receipt.totalAmount.toFixed(2)} AFN
+                {formatCurrency(receipt.totalAmount)}
               </span>
             </div>
+
+            {paymentStatus && (
+              <div className="mt-2 space-y-1 border-t border-gray-100 pt-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Payment</span>
+                  <span className="font-semibold">
+                    {formatPaymentStatus(paymentStatus)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Received now</span>
+                  <span className="font-semibold tabular-nums">
+                    {formatCurrency(paidAmount ?? 0)}
+                  </span>
+                </div>
+                {paymentStatus !== "fully_paid" && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Balance due</span>
+                    <span className="font-bold tabular-nums">
+                      {formatCurrency(balanceDue)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="border-t border-dashed border-gray-300 my-3" />
 
@@ -424,23 +518,37 @@ export function PosReceiptDialog({
 
         {/* Actions */}
 
-        <div className="px-5 pb-5 pt-3 border-t border-gray-100 flex gap-2">
+        <div className="px-5 pb-5 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
           <Button
             variant="outline"
-            className="flex-1 h-11 rounded-xl border-gray-200 text-sm"
+            className="h-11 rounded-xl border-gray-200 text-sm"
             onClick={() => onOpenChange(false)}
           >
             Close
           </Button>
 
           <Button
-            variant="default"
-            className="flex-1 h-11 rounded-xl text-sm font-semibold flex items-center gap-2"
+            variant="outline"
+            className="h-11 rounded-xl text-sm font-semibold flex items-center gap-2"
             onClick={handlePrint}
           >
             <Printer className="w-4 h-4" />
             Print Receipt
           </Button>
+
+          {saleId && (
+            <Button
+              variant="default"
+              className="col-span-2 h-11 rounded-xl text-sm font-semibold flex items-center gap-2"
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/sales/${saleId}`);
+              }}
+            >
+              <Eye className="w-4 h-4" />
+              View Sale
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

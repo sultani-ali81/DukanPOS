@@ -5,10 +5,14 @@ import useSWR from "swr";
 
 const PAGE_SIZE = 20;
 
-export function useCustomers() {
-  const { page, setPage, resetToPage1 } = usePagination();
+export function useCustomers(options: { pageParam?: string } = {}) {
+  const { page, setPage, resetToPage1 } = usePagination({
+    initialPage: 1,
+    initialItemsPerPage: PAGE_SIZE,
+    pageParam: options.pageParam ?? "page",
+  });
   const { search, debouncedSearch, handleSearch, clearSearch } = useSearch({
-    onSearch: resetToPage1, // resets to page 1 on every new search
+    onSearch: resetToPage1,
   });
 
   const swrKey = customersKey({

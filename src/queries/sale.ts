@@ -1,14 +1,50 @@
 import api from "@/lib/axios";
 
 import type {
+  AddSalePaymentRequest,
+  CheckoutSaleRequest,
+  CheckoutSaleResponse,
   CreateSalePayload,
   CreateSaleResponse,
   CreateStockOutPayload,
   CreateStockOutResponse,
   FinalizeSaleResponse,
-  SaleListItem,
-  SalesMeta,
+  PaginatedSales,
+  SaleDetail,
+  SaleListQuery,
+  UpdateSalePayload,
+  UpdateSaleResponse,
 } from "@/types/sale";
+
+// ── List ─────────────────────────────────────────────────────────────────────
+
+export function salesKey(query: SaleListQuery = {}) {
+  const { page = 1, itemsPerPage = 20, search = "" } = query;
+  return `/sales?page=${page}&itemsPerPage=${itemsPerPage}&search=${encodeURIComponent(search)}`;
+}
+
+export async function getSales(
+  query: SaleListQuery = {},
+): Promise<PaginatedSales> {
+  const { page = 1, itemsPerPage = 20, search } = query;
+  const res = await api.get<PaginatedSales>("/sales", {
+    params: {
+      page,
+      itemsPerPage,
+      ...(search ? { search } : {}),
+    },
+  });
+  return res.data;
+}
+
+// ── Detail ───────────────────────────────────────────────────────────────────
+
+export async function getSale(id: string): Promise<SaleDetail> {
+  const res = await api.get<SaleDetail>(`/sales/${id}`);
+  return res.data;
+}
+
+// ── Checkout ─────────────────────────────────────────────────────────────────
 
 export async function createSale(
   payload: CreateSalePayload,
@@ -17,12 +53,42 @@ export async function createSale(
   return res.data;
 }
 
-export async function finalizeSale(
+export function finalizeSale(
+  payload: CheckoutSaleRequest,
+): Promise<CheckoutSaleResponse>;
+export function finalizeSale(
   payload: CreateSalePayload,
-): Promise<FinalizeSaleResponse> {
-  const res = await api.post("/sales/checkout", payload);
+): Promise<FinalizeSaleResponse>;
+export async function finalizeSale(
+  payload: CheckoutSaleRequest | CreateSalePayload,
+): Promise<CheckoutSaleResponse> {
+  const res = await api.post<CheckoutSaleResponse>("/sales/checkout", payload);
   return res.data;
 }
+
+// ── Update status / collect payment ──────────────────────────────────────────
+
+export function updateSale(id: string): Promise<UpdateSaleResponse>;
+export function updateSale(
+  id: string,
+  payload: UpdateSalePayload,
+): Promise<UpdateSaleResponse>;
+export async function updateSale(
+  id: string,
+  payload: UpdateSalePayload = { status: "Done" },
+): Promise<UpdateSaleResponse> {
+  const res = await api.put<UpdateSaleResponse>(`/sales/${id}`, payload);
+  return res.data;
+}
+
+export function addSalePayment(
+  id: string,
+  payload: AddSalePaymentRequest,
+): Promise<UpdateSaleResponse> {
+  return updateSale(id, payload);
+}
+
+// ── Legacy stock-out workflow ────────────────────────────────────────────────
 
 export async function createStockOut(
   payload: CreateStockOutPayload,
@@ -38,23 +104,8 @@ export async function completeStockOut(
   return res.data;
 }
 
-export async function updateSale(id: string): Promise<{ message: string }> {
-  const res = await api.put(`/sales/${id}`, { status: "Done" });
-  return res.data;
-}
-
+/** Existing compact-list helper used by legacy dashboard/POS consumers. */
 export const getRecentSales = (
   page = 1,
   itemsPerPage = 5,
-): Promise<{ data: SaleListItem[]; meta: SalesMeta }> =>
-  api.get("/sales", { params: { page, itemsPerPage } }).then((r) => {
-    const raw = r.data;
-    const items: SaleListItem[] = Array.isArray(raw) ? raw : (raw.data ?? []);
-    const meta: SalesMeta = raw.meta ?? {
-      currentPage: 1,
-      itemsPerPage,
-      totalItems: items.length,
-      totalPages: 1,
-    };
-    return { data: items, meta };
-  });
+): Promise<PaginatedSales> => getSales({ page, itemsPerPage });

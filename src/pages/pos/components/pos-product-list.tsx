@@ -24,7 +24,7 @@ export function PosProductList({
           No products found
         </p>
         <p className="text-sm text-gray-400 mt-1">
-          Select an inventory or try a different search.
+          Select an inventory or try a different product page.
         </p>
       </div>
     );
