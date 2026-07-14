@@ -13,6 +13,37 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     if (item.hideFromCashier && user?.role === "Cashier") return false;
     return true;
   });
+  const assistantItem = visibleItems.find(
+    (item) => item.href === "/ai-assistant",
+  );
+  const mainItems = visibleItems.filter(
+    (item) => item.href !== "/ai-assistant",
+  );
+
+  const renderNavItem = (item: (typeof navItems)[number]) => {
+    const active =
+      item.href === "/dashboard"
+        ? pathname === "/dashboard"
+        : pathname.startsWith(item.href);
+    const Icon = item.icon;
+
+    return (
+      <Link
+        key={item.href}
+        to={item.href}
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 text-md font-medium rounded-lg transition-colors",
+          active
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {item.title}
+      </Link>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full ">
@@ -29,29 +60,13 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 px-3 pt-6">
-        {visibleItems.map((item) => {
-          const active =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 text-md font-medium rounded-lg transition-colors",
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.title}
-            </Link>
-          );
-        })}
+        {mainItems.map(renderNavItem)}
+
+        {assistantItem && (
+          <div className="mt-4 border-t border-sidebar-border pt-4">
+            {renderNavItem(assistantItem)}
+          </div>
+        )}
       </nav>
     </div>
   );

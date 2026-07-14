@@ -48,6 +48,7 @@ const profileFormSchema = z
     storeName: z.string().min(1, "Store name is required"),
     oldPassword: z.string().optional(),
     password: z.string().optional(),
+    confirmPassword: z.string().optional(),
   })
   .refine((data) => !data.password || data.password.length >= 8, {
     message: "Password must be at least 8 characters",
@@ -56,6 +57,14 @@ const profileFormSchema = z
   .refine((data) => !data.password || !!data.oldPassword, {
     message: "Current password is required to set a new password",
     path: ["oldPassword"],
+  })
+  .refine((data) => !data.password || !!data.confirmPassword, {
+    message: "Please confirm your new password",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => !data.password || data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
   });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -93,6 +102,7 @@ export function EditProfileDialog({
       storeName: "",
       oldPassword: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -100,6 +110,7 @@ export function EditProfileDialog({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // pendingAttachmentId: the id returned by the upload endpoint for a newly
   // selected photo that hasn't been claimed yet (claim happens on save).
@@ -123,6 +134,7 @@ export function EditProfileDialog({
     if (!open) return;
     setShowOldPassword(false);
     setShowPassword(false);
+    setShowConfirmPassword(false);
     reset({
       firstName: profile.firstName ?? "",
       lastName: profile.lastName ?? "",
@@ -133,6 +145,7 @@ export function EditProfileDialog({
       storeName: profile.storeName ?? "",
       oldPassword: "",
       password: "",
+      confirmPassword: "",
     });
     updateAvatarPreview(null);
     setPendingAttachmentId(null);
@@ -199,7 +212,12 @@ export function EditProfileDialog({
     // Include dirty form fields (excluding password pair, handled separately).
     (Object.keys(dirtyFields) as (keyof typeof dirtyFields)[]).forEach(
       (key) => {
-        if (key === "oldPassword" || key === "password") return;
+        if (
+          key === "oldPassword" ||
+          key === "password" ||
+          key === "confirmPassword"
+        )
+          return;
         if (dirtyFields[key]) {
           (payload as Record<string, unknown>)[key] = values[key];
         }
@@ -536,6 +554,44 @@ export function EditProfileDialog({
                     {errors.password && (
                       <p className="text-xs text-destructive">
                         {errors.password.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid gap-2 sm:col-span-2">
+                    <Label htmlFor="ep-confirmPassword">
+                      Confirm New Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="ep-confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        className="pr-11"
+                        {...register("confirmPassword")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          setShowConfirmPassword((prev) => !prev)
+                        }
+                        className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-slate-400 hover:bg-transparent active:not-aria-[haspopup]:-translate-y-1/2"
+                        aria-label={
+                          showConfirmPassword
+                            ? "Hide confirm password"
+                            : "Show confirm password"
+                        }
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff size={18} />
+                        ) : (
+                          <Eye size={18} />
+                        )}
+                      </Button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-xs text-destructive">
+                        {errors.confirmPassword.message}
                       </p>
                     )}
                   </div>

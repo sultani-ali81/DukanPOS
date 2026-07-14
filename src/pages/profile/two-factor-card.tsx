@@ -87,9 +87,9 @@ export function TwoFactorCard() {
   return (
     <>
       {/* ── The card — never changes shape ── */}
-      <Card>
+      <Card size="sm" className="h-fit self-start">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between gap-3">
             <span>Two-Factor Authentication</span>
             <Badge
               variant={twoFAEnabled ? "default" : "secondary"}
@@ -103,10 +103,10 @@ export function TwoFactorCard() {
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {twoFAEnabled ? (
             <>
-              <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+              <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-green-600" />
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium text-green-800">
@@ -123,7 +123,7 @@ export function TwoFactorCard() {
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                    className="h-10 w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive"
                     disabled={loading}
                   >
                     {loading ? (
@@ -156,7 +156,7 @@ export function TwoFactorCard() {
             </>
           ) : (
             <>
-              <div className="flex items-start gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+              <div className="flex items-start gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
                 <ShieldOff className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium">
@@ -170,7 +170,7 @@ export function TwoFactorCard() {
               </div>
 
               <Button
-                className="w-full"
+                className="h-10 w-full"
                 onClick={handleEnable}
                 disabled={loading}
               >

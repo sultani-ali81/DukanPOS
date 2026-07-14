@@ -68,7 +68,7 @@ export default function ProfileClient() {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         title="Profile Settings"
         description="Manage your account information."
@@ -78,10 +78,10 @@ export default function ProfileClient() {
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* ── Left: Personal information ── */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="min-w-0">
+          <CardHeader className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Personal Information</CardTitle>
             <Button
               type="button"
@@ -93,7 +93,7 @@ export default function ProfileClient() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-4">
               <div className="flex size-16 items-center justify-center overflow-hidden rounded-full border bg-muted text-lg font-semibold text-muted-foreground">
                 {profile.imageUrl ? (
                   <img
@@ -105,7 +105,7 @@ export default function ProfileClient() {
                   getInitials(profile)
                 )}
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold text-foreground">
                   {getDisplayName(profile)}
                 </p>
@@ -116,39 +116,39 @@ export default function ProfileClient() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Email</p>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                <div className="break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm">
                   {display(profile.email)}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Phone</p>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                <div className="break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm">
                   {display(profile.phone)}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Date of Birth</p>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                <div className="break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm">
                   {formatDate(profile.dob)}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Gender</p>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm capitalize">
+                <div className="break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm capitalize">
                   {display(profile.gender)}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Store Name</p>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                <div className="break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm">
                   {display(profile.storeName)}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Member Since</p>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                <div className="break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm">
                   {formatDate(profile.createdAt)}
                 </div>
               </div>

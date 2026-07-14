@@ -57,9 +57,6 @@ function TableSkeleton({ rows = 8 }: { rows?: number }) {
             <div className="h-4 w-16 animate-pulse rounded bg-muted" />
           </TableCell>
           <TableCell>
-            <div className="h-5 w-10 animate-pulse rounded bg-muted" />
-          </TableCell>
-          <TableCell>
             <div className="flex gap-1">
               <div className="h-8 w-8 animate-pulse rounded bg-muted" />
               <div className="h-8 w-8 animate-pulse rounded bg-muted" />
@@ -186,13 +183,19 @@ export default function ProductsPage() {
 
       <Card className="overflow-hidden border">
         <CardContent className="p-0">
-          <Table className="table-fixed min-w-[630-px]">
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="py-3 pl-3 w-2/5">Product</TableHead>
-                <TableHead className="py-3 w-1/5">Category</TableHead>
-                <TableHead className="py-3 w-[14%] text-right">Price</TableHead>
-                <TableHead className="py-3 w-[12%] text-right">
+          <Table className="table-fixed min-w-[630px]">
+            <TableHeader className="bg-muted/50">
+              <TableRow className="h-12 hover:bg-transparent">
+                <TableHead className="h-12 w-1/4 py-3 pl-3 text-left font-medium">
+                  Product
+                </TableHead>
+                <TableHead className="h-12 w-1/4 py-3 text-left font-medium">
+                  Category
+                </TableHead>
+                <TableHead className="h-12 w-1/4 py-3 text-center font-medium">
+                  Price
+                </TableHead>
+                <TableHead className="h-12 w-1/4 py-3 text-center font-medium">
                   Actions
                 </TableHead>
               </TableRow>
@@ -202,7 +205,7 @@ export default function ProductsPage() {
                 <TableSkeleton rows={PAGE_SIZE} />
               ) : products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center">
+                  <TableCell colSpan={4} className="py-12 text-center">
                     <Package className="mx-auto mb-2 size-8 text-muted-foreground/50" />
                     <p className="text-sm text-muted-foreground">
                       {search
@@ -231,8 +234,8 @@ export default function ProductsPage() {
                       onClick={() => navigate(`/products/${p.id}`)}
                     >
                       <TableCell className="py-3.5 pl-3 pr-2">
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
+                        <div className="flex items-center justify-left text-center gap-3">
+                          <div className="flex size-9 shrink-0 items-center  overflow-hidden rounded-md border bg-muted">
                             {p.primaryImage ? (
                               <img
                                 src={p.primaryImage}
@@ -255,14 +258,14 @@ export default function ProductsPage() {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-2 py-3.5 text-right font-mono font-semibold text-primary">
+                      <TableCell className="px-2 py-3.5 text-center font-mono font-semibold text-primary">
                         {formatCurrency(p.price)}
                       </TableCell>
                       <TableCell
-                        className="px-2 py-3.5 text-right"
+                        className="px-2 py-3.5 text-center"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
