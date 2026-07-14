@@ -16,15 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import {
-  ArrowLeft,
-  Calendar,
-  CheckCircle2,
-  Hash,
-  Package,
-  Truck,
-  Warehouse,
-} from "lucide-react";
+import { ArrowLeft, Calendar, Hash, Truck, Warehouse } from "lucide-react";
 
 import LogsTable from "@/components/logs-table";
 import { createAuditLogsMatcher } from "@/lib/audit-logs-cache";
@@ -53,9 +45,6 @@ function fmtCurrency(n: number) {
   return "AFN " + Number(n).toLocaleString("id-ID");
 }
 
-type StockInRecord = NonNullable<PurchaseDetail["stockIns"]>[number];
-type StockInProduct = NonNullable<StockInRecord["products"]>[number];
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function PurchaseDetailClient() {
@@ -80,7 +69,6 @@ export function PurchaseDetailClient() {
   const inventoryId = purchase?.inventoryId ?? "";
   const [confirming, setConfirming] = useState(false);
   const [stockingIn, setStockingIn] = useState(false);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const revalidateStockCaches = (currentPurchase: PurchaseDetail) =>
@@ -159,7 +147,8 @@ export function PurchaseDetailClient() {
       });
 
       const detail = await mutatePurchase();
-      if (!detail) throw new Error("Purchase not found after stock-in creation.");
+      if (!detail)
+        throw new Error("Purchase not found after stock-in creation.");
       const pendingStockIn = detail.stockIns?.find(
         (s) => s.status === "Pending",
       );
@@ -186,28 +175,6 @@ export function PurchaseDetailClient() {
     }
   };
 
-  // ── Approve existing pending stock-in ─────────────────────────────────────
-
-  const handleApproveStockIn = async (stockInId: string) => {
-    setApprovingId(stockInId);
-    try {
-      await updateStockIn(stockInId, { status: "Done" });
-      if (purchase) await revalidateStockCaches(purchase);
-      toast.success("Stock-in confirmed", {
-        description: "Items have been added to inventory.",
-      });
-      await mutateCache(createAuditLogsMatcher(stockInId), undefined, {
-        revalidate: true,
-      });
-    } catch (err: unknown) {
-      toast.error("Could not confirm stock-in", {
-        description: extractError(err),
-      });
-    } finally {
-      setApprovingId(null);
-    }
-  };
-
   // ── Loading / error states ────────────────────────────────────────────────
 
   if (loading) {
@@ -231,8 +198,6 @@ export function PurchaseDetailClient() {
     );
   }
 
-  const stockIns = purchase.stockIns ?? [];
-  const hasStockIns = stockIns.length > 0;
   const grandTotal = purchase.totalPrice;
   const totalItems = purchase.items.reduce(
     (sum, item) => sum + item.quantity,
@@ -277,6 +242,7 @@ export function PurchaseDetailClient() {
               <CardTitle>Purchased Items</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
+              <hr />
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
@@ -343,6 +309,7 @@ export function PurchaseDetailClient() {
               <CardTitle>Purchase Details</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
+              <hr />
               <dl>
                 <div className="flex items-center justify-between px-6 py-3.5 border-b border-border">
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -375,7 +342,7 @@ export function PurchaseDetailClient() {
                 </div>
 
                 {inventoryId && (
-                  <div className="flex items-center justify-between px-6 py-3.5 border-b border-border bg-muted/20">
+                  <div className="flex items-center justify-between px-6 py-3.5  bg-muted/20">
                     <dt className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Warehouse className="size-3.5 shrink-0" />
                       Destination Inventory
@@ -385,15 +352,6 @@ export function PurchaseDetailClient() {
                     </dd>
                   </div>
                 )}
-
-                <div className="flex items-center justify-between px-6 py-4 bg-muted/30 rounded-b-xl">
-                  <dt className="text-base font-bold text-foreground">
-                    Grand Total
-                  </dt>
-                  <dd className="text-2xl font-bold text-primary">
-                    {fmtCurrency(grandTotal)}
-                  </dd>
-                </div>
               </dl>
             </CardContent>
           </Card>
@@ -411,104 +369,6 @@ export function PurchaseDetailClient() {
             stockingIn={stockingIn}
             inventoryId={inventoryId}
           />
-          {/* Stock-In Records */}
-          {hasStockIns && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Stock-In Records</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-border">
-                  {stockIns.map((stockIn: StockInRecord, idx: number) => {
-                    const products: StockInProduct[] = stockIn.products ?? [];
-                    const totalQty = products.reduce(
-                      (sum, p) => sum + p.quantity,
-                      0,
-                    );
-                    const isPending = stockIn.status === "Pending";
-                    const isDone = stockIn.status === "Done";
-                    const isApproving = approvingId === stockIn.stockInId;
-
-                    return (
-                      <div
-                        key={stockIn.stockInId}
-                        className="flex items-center justify-between px-6 py-4 gap-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "flex size-8 items-center justify-center rounded-full",
-                              isDone ? "bg-primary/10" : "bg-muted",
-                            )}
-                          >
-                            <Package
-                              className={cn(
-                                "size-4",
-                                isDone
-                                  ? "text-primary"
-                                  : "text-muted-foreground",
-                              )}
-                            />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">
-                              Stock-In #{idx + 1}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {products.length} line
-                              {products.length !== 1 ? "s" : ""} · {totalQty}{" "}
-                              unit
-                              {totalQty !== 1 ? "s" : ""}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full",
-                              isDone
-                                ? "bg-green-50 text-green-700 border border-green-200"
-                                : isPending
-                                  ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                                  : "bg-red-50 text-red-500 border border-red-200",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                isDone
-                                  ? "bg-green-500"
-                                  : isPending
-                                    ? "bg-yellow-400"
-                                    : "bg-red-400",
-                              )}
-                            />
-                            {stockIn.status}
-                          </span>
-
-                          {isPending && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={() =>
-                                handleApproveStockIn(stockIn.stockInId)
-                              }
-                              disabled={isApproving}
-                              className="h-8 text-xs gap-1.5"
-                            >
-                              <CheckCircle2 className="size-3.5" />
-                              {isApproving ? "Confirming…" : "Confirm"}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Audit history */}
           <Card className="mt-6 overflow-hidden">
