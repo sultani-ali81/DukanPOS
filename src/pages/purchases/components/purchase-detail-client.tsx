@@ -249,13 +249,13 @@ export function PurchaseDetailClient() {
                     <TableHead className="pl-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Product
                     </TableHead>
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-right">
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
                       Unit Price
                     </TableHead>
-                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-right">
+                    <TableHead className="py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
                       Qty
                     </TableHead>
-                    <TableHead className="pr-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-right">
+                    <TableHead className="pr-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
                       Line Total
                     </TableHead>
                   </TableRow>
@@ -271,13 +271,13 @@ export function PurchaseDetailClient() {
                       <TableCell className="pl-6 py-3.5 font-medium text-foreground">
                         {item.product?.name}
                       </TableCell>
-                      <TableCell className="py-3.5 text-right text-muted-foreground">
+                      <TableCell className="py-3.5 text-center text-muted-foreground">
                         {fmtCurrency(item.unitPrice)}
                       </TableCell>
-                      <TableCell className="py-3.5 text-right font-semibold text-foreground">
+                      <TableCell className="py-3.5 text-center font-semibold text-foreground">
                         {item.quantity}
                       </TableCell>
-                      <TableCell className="pr-6 py-3.5 text-right font-semibold text-foreground">
+                      <TableCell className="pr-6 py-3.5 text-center font-semibold text-foreground">
                         {fmtCurrency(item.unitPrice * item.quantity)}
                       </TableCell>
                     </TableRow>
@@ -291,10 +291,10 @@ export function PurchaseDetailClient() {
                     >
                       Total
                     </TableCell>
-                    <TableCell className="py-3.5 text-right font-semibold text-foreground">
+                    <TableCell className="py-3.5 text-center font-semibold text-foreground">
                       {totalItems}
                     </TableCell>
-                    <TableCell className="pr-6 py-3.5 text-right text-lg font-bold text-primary">
+                    <TableCell className="pr-6 py-3.5 text-center text-lg font-bold text-primary">
                       {fmtCurrency(grandTotal)}
                     </TableCell>
                   </TableRow>

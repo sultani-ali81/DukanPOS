@@ -46,19 +46,22 @@ export const router = createBrowserRouter([
     ),
   },
 
+  // Keep access-denied screens outside the application shell so restricted
+  // users never see navigation for pages they cannot access.
+  {
+    path: "/unauthorized",
+    element: (
+      <PrivateRoute>
+        <UnauthorizedPage />
+      </PrivateRoute>
+    ),
+  },
+
   ...authRoutes,
 
   {
     element: <AppLayout />,
     children: [
-      {
-        path: "/unauthorized",
-        element: (
-          <PrivateRoute>
-            <UnauthorizedPage />
-          </PrivateRoute>
-        ),
-      },
       {
         path: "/dashboard",
         element: (

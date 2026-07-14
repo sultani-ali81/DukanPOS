@@ -1,6 +1,17 @@
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
 import { SearchField } from "@/components/search-field";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useCustomers } from "@/hooks/use-customers";
 import { createCrudFamilyMatcher } from "@/lib/crud-cache";
@@ -10,7 +21,7 @@ import {
   updateCustomer,
 } from "@/queries/customer";
 import type { Customer, PaginatedCustomers } from "@/types/customer";
-import { Plus } from "lucide-react";
+import { Loader2, Plus, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
@@ -51,6 +62,7 @@ export default function ContactsPage() {
   // ── Selection state ─────────────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Customer | null>(null);
 
   function toggleAll() {
     setSelected((prev) => {
@@ -147,13 +159,22 @@ export default function ContactsPage() {
       toast.success("Contact deleted", {
         description: `${customer.name} has been removed.`,
       });
+      return true;
     } catch {
       toast.error("Could not delete contact", {
         description: "Please try again.",
       });
+      return false;
     } finally {
       setDeletingId(null);
     }
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+
+    const deleted = await onDelete(pendingDelete);
+    if (deleted) setPendingDelete(null);
   }
 
   return (
@@ -206,7 +227,7 @@ export default function ContactsPage() {
         onToggleAll={toggleAll}
         onToggleOne={toggleOne}
         onEdit={openEdit}
-        onDelete={onDelete}
+        onDelete={setPendingDelete}
         onRowClick={openEdit}
         onAddFirst={openCreate}
       />
@@ -230,6 +251,47 @@ export default function ContactsPage() {
         onOpenChange={setDialogOpen}
         onSubmit={onSubmit}
       />
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && deletingId === null) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <TriangleAlert className="size-6" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete contact?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove{" "}
+              <span className="font-medium text-foreground">
+                &ldquo;{pendingDelete?.name}&rdquo;
+              </span>
+              . This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingId !== null}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deletingId !== null}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {deletingId !== null && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

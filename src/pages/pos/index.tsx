@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/drawer";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/use-pagination";
+import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { useUtilsStore } from "@/lib/utilsStore";
 import { getCustomers } from "@/queries/customer";
@@ -29,6 +30,7 @@ import {
   ArrowLeft,
   ArrowLeftRight,
   Lock,
+  LogOut,
   ShoppingCart,
   Unlock,
   X,
@@ -154,9 +156,13 @@ function useBarcodeScanner({
 
 export default function PosPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const isCashier = user?.role === "Cashier";
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   // ── Session state — derived live from hasSession(), never persisted ──────
   const {
@@ -407,7 +413,25 @@ export default function PosPage() {
   };
 
   const handleExitPos = () => {
+    if (isCashier) {
+      if (cart.length > 0) {
+        setLogoutConfirmationOpen(true);
+        return;
+      }
+
+      logout();
+      navigate("/", { replace: true });
+      return;
+    }
+
     navigate("/sales");
+  };
+
+  const confirmCashierLogout = () => {
+    clearCart();
+    setLogoutConfirmationOpen(false);
+    logout();
+    navigate("/", { replace: true });
   };
 
   // ── Session button helpers ────────────────────────────────────────────────────
@@ -468,8 +492,12 @@ export default function PosPage() {
         className="flex items-center gap-1.5 h-9 px-3 rounded-xl transition-colors cursor-pointer"
         variant="default"
       >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        Exit POS
+        {isCashier ? (
+          <LogOut className="w-3.5 h-3.5" />
+        ) : (
+          <ArrowLeft className="w-3.5 h-3.5" />
+        )}
+        {isCashier ? "Log Out" : "Exit POS"}
       </Button>
 
       <div className="flex items-center gap-2">
@@ -697,6 +725,25 @@ export default function PosPage() {
       </Drawer>
 
       {/* ── Session dialogs ── */}
+      <AlertDialog
+        open={logoutConfirmationOpen}
+        onOpenChange={setLogoutConfirmationOpen}
+      >
+        <AlertDialogContent className="max-w-sm rounded-2xl">
+          <AlertDialogTitle>Log out and discard cart?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have items in this order. Logging out will remove the cart and
+            its payment selections.
+          </AlertDialogDescription>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Stay in POS</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCashierLogout}>
+              Discard and log out
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog
         open={cartNavigationBlocker.state === "blocked"}
         onOpenChange={(open) => {

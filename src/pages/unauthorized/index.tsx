@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 export default function Unauthorized() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-6 text-center">
       <ShieldAlert className="size-16 text-muted-foreground" />
       <h1 className="text-3xl font-bold">Access denied</h1>
       <p className="text-muted-foreground max-w-md">
