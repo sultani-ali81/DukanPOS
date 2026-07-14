@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
+import { SearchField } from "@/components/search-field";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +13,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useInventory } from "@/hooks/use-inventory";
 import {
   createInventory,
@@ -24,10 +24,8 @@ import {
   ArrowLeftRight,
   Loader2,
   Plus,
-  Search,
   TriangleAlert,
   Warehouse,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -81,13 +79,13 @@ export default function InventoryPage() {
         toast.success("Inventory updated", {
           description: `"${values.name}" has been updated.`,
         });
-        handleInventoryUpdated(id);
+        await handleInventoryUpdated(id);
       } else {
         await createInventory(values);
         toast.success("Inventory created", {
           description: `"${values.name}" is ready.`,
         });
-        handleInventoryAdded();
+        await handleInventoryAdded();
       }
     } catch {
       toast.error("Something went wrong", { description: "Please try again." });
@@ -106,7 +104,7 @@ export default function InventoryPage() {
     setDeletingId(inv.id);
     try {
       await deleteInventory(inv.id);
-      handleInventoryDeleted();
+      await handleInventoryDeleted(inv.id);
       toast.success("Inventory deleted", {
         description: `"${inv.name}" has been removed.`,
       });
@@ -146,23 +144,14 @@ export default function InventoryPage() {
       )}
 
       {/* Search */}
-      <div className="mb-4 relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={listSearch}
-          onChange={(e) => setListSearch(e.target.value)}
-          placeholder="Search inventories…"
-          className="pl-9 pr-8"
-        />
-        {listSearch && (
-          <button
-            onClick={clearListSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        )}
-      </div>
+      <SearchField
+        value={listSearch}
+        onValueChange={setListSearch}
+        onClear={clearListSearch}
+        placeholder="Search inventories…"
+        aria-label="Search inventories"
+        className="mb-4"
+      />
 
       {/* Grid */}
       {loading ? (

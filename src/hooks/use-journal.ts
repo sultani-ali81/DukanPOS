@@ -2,6 +2,8 @@ import { usePagination } from "@/hooks/use-pagination";
 
 import { useSearch } from "@/hooks/use-search";
 
+import { extractError } from "@/lib/error";
+
 import { getJournalEntries, getJournalEntry } from "@/queries/journal";
 
 import type { JournalEntry } from "@/types/journal";
@@ -11,6 +13,14 @@ import { useMemo, useState } from "react";
 import useSWR from "swr";
 
 const ITEMS_PER_PAGE = 20;
+const EMPTY_JOURNALS: JournalEntry[] = [];
+const EMPTY_META = {
+  currentPage: 1,
+  itemsPerPage: ITEMS_PER_PAGE,
+  totalItems: 0,
+  totalPages: 1,
+  totalCount: 0,
+};
 
 export interface JournalStats {
   totalEntries: number;
@@ -75,9 +85,8 @@ export function useJournals(): UseJournalsReturn {
 
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
-
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedListEntry, setSelectedListEntry] =
+    useState<JournalEntry | null>(null);
 
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -117,24 +126,26 @@ export function useJournals(): UseJournalsReturn {
     }),
   );
 
-  const journals = data?.data ?? [];
+  const journals = data?.data ?? EMPTY_JOURNALS;
 
-  const meta = data?.meta ?? {
-    currentPage: 1,
+  const meta = data?.meta ?? EMPTY_META;
 
-    itemsPerPage: ITEMS_PER_PAGE,
+  const error = swrError
+    ? extractError(swrError, "Failed to load journal entries")
+    : null;
 
-    totalItems: 0,
-
-    totalPages: 1,
-
-    totalCount: 0,
-  };
-
-  const error: string | null = swrError
-    ? (swrError?.response?.data?.message ??
-      swrError?.message ??
-      "Failed to load journal entries")
+  const { data: journalDetail, isLoading: detailLoading } = useSWR(
+    detailOpen && selectedListEntry
+      ? (["journal-entry", selectedListEntry.id] as const)
+      : null,
+    ([, entryId]) => getJournalEntry(entryId),
+  );
+  const selectedEntry = selectedListEntry
+    ? {
+        ...selectedListEntry,
+        ...journalDetail,
+        createdAt: journalDetail?.createdAt ?? selectedListEntry.createdAt,
+      }
     : null;
 
   // ── Derived stats ────────────────────────────────────────────────────────────
@@ -180,38 +191,15 @@ export function useJournals(): UseJournalsReturn {
   // ── Detail open/close ────────────────────────────────────────────────────────
 
   const openDetail = (je: JournalEntry) => {
-    setSelectedEntry(je);
+    setSelectedListEntry(je);
 
     setDetailOpen(true);
-
-    setDetailLoading(true);
-
-    getJournalEntry(je.id)
-      .then((detail) =>
-        setSelectedEntry({
-          // Preserve fields the list row has but the detail endpoint may omit
-
-          // (e.g. createdAt) so the header keeps showing them after the
-
-          // detail fetch completes.
-
-          ...je,
-
-          ...detail,
-
-          createdAt: detail.createdAt ?? je.createdAt,
-        }),
-      )
-
-      .catch(() => {})
-
-      .finally(() => setDetailLoading(false));
   };
 
   const closeDetail = () => {
     setDetailOpen(false);
 
-    setSelectedEntry(null);
+    setSelectedListEntry(null);
   };
 
   return {

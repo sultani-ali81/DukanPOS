@@ -1,9 +1,9 @@
+import { CompactDialogContent } from "@/components/compact-dialog";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/data";
 
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -370,7 +370,7 @@ export function PosReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0 shadow-none border border-gray-200">
+      <CompactDialogContent className="shadow-none border border-gray-200">
         {/* Dialog header */}
 
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-gray-100 flex flex-row items-center justify-between">
@@ -394,7 +394,7 @@ export function PosReceiptDialog({
               {receipt.storeName}
             </p>
 
-            <p className="text-center text-gray-500 text-[11px] mt-0.5">
+            <p className="text-center text-gray-500 text-caption mt-0.5">
               Point of Sale Receipt
             </p>
 
@@ -434,7 +434,7 @@ export function PosReceiptDialog({
 
             {/* Column headers — fixed widths matching data rows */}
 
-            <div className="grid grid-cols-[1fr_48px_44px_48px] gap-x-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+            <div className="grid grid-cols-[1fr_48px_44px_48px] gap-x-3 text-micro font-bold text-gray-400 uppercase tracking-wider mb-1">
               <span>Item</span>
 
               <span className="text-right pr-0.5">Qty</span>
@@ -510,7 +510,7 @@ export function PosReceiptDialog({
 
             <div className="border-t border-dashed border-gray-300 my-3" />
 
-            <p className="text-center text-[11px] text-gray-400">
+            <p className="text-center text-caption text-gray-400">
               Thank you for your purchase!
             </p>
           </div>
@@ -550,7 +550,7 @@ export function PosReceiptDialog({
             </Button>
           )}
         </div>
-      </DialogContent>
+      </CompactDialogContent>
     </Dialog>
   );
 }

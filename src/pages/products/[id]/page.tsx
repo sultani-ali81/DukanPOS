@@ -11,16 +11,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { invalidateAuditLogs } from "@/lib/audit-logs-cache";
+import { createAuditLogsMatcher } from "@/lib/audit-logs-cache";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import { formatCurrency } from "@/lib/data";
+import { extractError } from "@/lib/error";
+import { getStockStatus } from "@/lib/stock-status";
+import { cn } from "@/lib/utils";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
+import { getCategories } from "@/queries/category";
 import {
   deleteProduct,
-  getCategories,
   getProductById,
   updateProduct,
 } from "@/queries/products";
-import type { Product, ProductFormSubmitValues } from "@/types/product";
+import type { ProductFormSubmitValues } from "@/types/product";
 import {
   ArrowLeft,
   Boxes,
@@ -29,76 +33,51 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import useSWR, { useSWRConfig } from "swr";
+
+const PRODUCT_CATEGORIES_KEY = [
+  "categories",
+  { page: 1, itemsPerPage: 12, search: "" },
+] as const;
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { mutate: mutateCache } = useSWRConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
-    [],
-  );
   const [activeImage, setActiveImage] = useState(0);
 
-  useEffect(() => {
-    if (!id) {
-      setError("Product not found");
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-
-    (async () => {
-      try {
-        const data = await getProductById(id);
-        if (cancelled) return;
-        if (!data) {
-          setError("Product not found");
-          return;
-        }
-        setProduct(data);
-        setActiveImage(0);
-      } catch (err) {
-        if (!cancelled) {
-          setError((err as Error).message ?? "Failed to load product");
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
-
-  // Categories only load once the edit dialog is actually opened, and only once.
-  useEffect(() => {
-    if (!dialogOpen || categories.length > 0) return;
-    getCategories().then((res) => {
-      const cats: { data: { id: string; name: string }[] } = res.data;
-      setCategories(cats.data ?? []);
-    });
-  }, [dialogOpen, categories.length]);
+  const {
+    data: product,
+    isLoading,
+    error: productError,
+  } = useSWR(
+    id ? (["product-detail", id] as const) : null,
+    ([, productId]) => getProductById(productId),
+  );
+  const { data: categoriesData } = useSWR(
+    dialogOpen ? PRODUCT_CATEGORIES_KEY : null,
+    ([, params]) => getCategories(params),
+  );
+  const categories = categoriesData?.data ?? [];
+  const errorMessage = !id
+    ? "Product not found."
+    : productError
+      ? extractError(productError, "Failed to load product")
+      : null;
 
   async function handleSubmit(values: ProductFormSubmitValues) {
     if (!product) return;
     await updateProduct(product.id, values);
-    const refreshed = await getProductById(product.id);
-    if (refreshed) {
-      setProduct(refreshed);
-      setActiveImage(0);
-    }
-    invalidateAuditLogs(product.id);
+    await mutateCache(createCrudFamilyMatcher("products", product.id));
+    setActiveImage(0);
+    await mutateCache(createAuditLogsMatcher(product.id), undefined, {
+      revalidate: true,
+    });
     toast.success("Product updated", {
       description: `"${values.name ?? product.name}" has been updated.`,
     });
@@ -109,6 +88,7 @@ export default function ProductDetailPage() {
     setDeleting(true);
     try {
       await deleteProduct(product.id);
+      await mutateCache(createCrudFamilyMatcher("products", product.id));
       toast.success("Product deleted", {
         description: `"${product.name}" has been removed.`,
       });
@@ -130,7 +110,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  if (error || !product) {
+  if (errorMessage || !product) {
     return (
       <div>
         <PageHeader title="Product" description="Product not found.">
@@ -141,7 +121,7 @@ export default function ProductDetailPage() {
           </Button>
         </PageHeader>
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error ?? "Product not found."}
+          {errorMessage ?? "Product not found."}
         </div>
       </div>
     );
@@ -151,7 +131,7 @@ export default function ProductDetailPage() {
   const inventories = product.inventories ?? [];
   const totalStock =
     product.totalStock ?? inventories.reduce((s, i) => s + i.quantity, 0);
-  const isOutOfStock = totalStock <= 0;
+  const stockStatus = getStockStatus(totalStock);
 
   return (
     <div>
@@ -209,11 +189,12 @@ export default function ProductDetailPage() {
                         key={img.id}
                         type="button"
                         onClick={() => setActiveImage(i)}
-                        className={`size-14 shrink-0 overflow-hidden rounded-md border-2 transition-colors ${
+                        className={cn(
+                          "size-14 shrink-0 overflow-hidden rounded-md border-2 transition-colors",
                           i === activeImage
                             ? "border-primary"
-                            : "border-transparent hover:border-muted-foreground/30"
-                        }`}
+                            : "border-transparent hover:border-muted-foreground/30",
+                        )}
                       >
                         <img
                           src={img.imageUrlSigned ?? img.imageUrl}
@@ -261,14 +242,14 @@ export default function ProductDetailPage() {
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Status</p>
                   <Badge
-                    variant={isOutOfStock ? "destructive" : "secondary"}
+                    variant={
+                      stockStatus === "Out of Stock"
+                        ? "destructive"
+                        : "secondary"
+                    }
                     className="mt-1.5"
                   >
-                    {totalStock < 10 && totalStock > 1
-                      ? "Low Stock"
-                      : totalStock > 10
-                        ? "In Stock"
-                        : "Out of Stock"}
+                    {stockStatus}
                   </Badge>
                 </div>
               </div>
@@ -304,13 +285,14 @@ export default function ProductDetailPage() {
                         <TableCell className="py-3 pl-6">{inv.name}</TableCell>
                         <TableCell className="py-3 pr-6 text-right tabular-nums">
                           <span
-                            className={
-                              inv.quantity === 0
-                                ? "font-medium text-red-500"
-                                : inv.quantity < 10
-                                  ? "font-medium text-orange-500"
-                                  : "font-medium text-green-500"
-                            }
+                            className={cn(
+                              "font-medium",
+                              getStockStatus(inv.quantity) === "Out of Stock"
+                                ? "text-red-500"
+                                : getStockStatus(inv.quantity) === "Low Stock"
+                                  ? "text-orange-500"
+                                  : "text-green-500",
+                            )}
                           >
                             {inv.quantity}
                           </span>

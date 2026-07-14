@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   Combobox,
@@ -10,8 +10,17 @@ import {
 } from "@/components/ui/combobox";
 
 import type { Inventory } from "@/queries/inventory";
-import { getInventories } from "@/queries/inventory";
+import { getInventories, getInventory } from "@/queries/inventory";
+import useSWR from "swr";
 import { useDebounce } from "use-debounce";
+
+interface InventoryOption {
+  value: string;
+  label: string;
+  address?: string;
+}
+
+const EMPTY_INVENTORIES: Inventory[] = [];
 
 interface InventoryComboboxProps {
   id?: string;
@@ -28,53 +37,61 @@ export default function InventoryCombobox({
   disabled,
   excludeId,
 }: InventoryComboboxProps) {
-  const [inventories, setInventories] = useState<Inventory[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
   const [debouncedSearch] = useDebounce(search, 400);
-
-  useEffect(() => {
-    if (!open) return;
-
-    let cancelled = false;
-    setLoading(true);
-    getInventories({
-      page: 1,
-      itemsPerPage: 8,
-      search: debouncedSearch.trim() || undefined,
-    })
-      .then(({ data }) => {
-        if (!cancelled) setInventories(data);
-      })
-      .catch(() => {
-        if (!cancelled) setInventories([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, debouncedSearch]);
+  const { data: selectedInventory } = useSWR(
+    value ? ["inventory-detail", value] : null,
+    ([, inventoryId]) => getInventory(inventoryId),
+  );
+  const { data: inventoryData, isLoading: loading } = useSWR(
+    open
+      ? ([
+          "inventories",
+          {
+            page: 1,
+            itemsPerPage: 8,
+            search: debouncedSearch.trim() || undefined,
+          },
+        ] as const)
+      : null,
+    ([, params]) => getInventories(params),
+  );
+  const inventories = inventoryData?.data ?? EMPTY_INVENTORIES;
 
   const visibleInventories = excludeId
     ? inventories.filter((inv) => inv.id !== excludeId)
     : inventories;
 
-  const selectedName = inventories.find((inv) => inv.id === value)?.name ?? "";
+  const options: InventoryOption[] = visibleInventories.map((inventory) => ({
+    value: inventory.id,
+    label: inventory.name,
+    address: inventory.address,
+  }));
+  const selectedFromPage = inventories.find(
+    (inventory) => inventory.id === value,
+  );
+  const selectedName = selectedFromPage?.name ?? selectedInventory?.name ?? "";
+  const selectedOption: InventoryOption | null = value
+    ? { value, label: selectedName || value }
+    : null;
 
   return (
     <Combobox
       open={disabled ? false : open}
       onOpenChange={setOpen}
-      value={selectedName}
+      items={options}
+      value={selectedOption}
       filter={() => true}
-      onValueChange={(name: string | null) => {
+      itemToStringLabel={(option: InventoryOption) => option.label}
+      itemToStringValue={(option: InventoryOption) => option.value}
+      isItemEqualToValue={(option, selected) =>
+        option.value === selected.value
+      }
+      onValueChange={(option: InventoryOption | null) => {
         if (disabled) return;
-        const inv = visibleInventories.find((i) => i.name === (name ?? ""));
-        onChange(inv?.id ?? "");
+        onChange(option?.value ?? "");
         setSearch("");
       }}
     >
@@ -102,20 +119,20 @@ export default function InventoryCombobox({
               No inventories found
             </ComboboxEmpty>
           )}
-          {visibleInventories.map((inv) => (
+          {options.map((option) => (
             <ComboboxItem
-              key={inv.id}
-              value={inv.name}
+              key={option.value}
+              value={option}
               className="rounded-xl px-4 py-3 cursor-pointer transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
             >
               <div className="flex w-full items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">
-                    {inv.name}
+                    {option.label}
                   </div>
-                  {inv.address && (
+                  {option.address && (
                     <div className="mt-1 truncate text-xs text-muted-foreground">
-                      {inv.address}
+                      {option.address}
                     </div>
                   )}
                 </div>

@@ -6,6 +6,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
@@ -38,12 +39,12 @@ export function PosCategoryFilter({
             <Button
               key={cat.id}
               onClick={() => onSelect(cat.id)}
-              className={[
+              className={cn(
                 "shrink-0 h-9 px-4 rounded-lg text-sm font-medium border transition-colors",
                 selected === cat.id
                   ? "bg-white border-blue-600 text-blue-600 hover:bg-blue-50"
                   : "bg-transparent border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-400 hover:border-blue-200",
-              ].join(" ")}
+              )}
             >
               {cat.name}
             </Button>
@@ -75,12 +76,12 @@ export function PosCategoryFilter({
                     onSelect(cat.id);
                     setSheetOpen(false);
                   }}
-                  className={[
+                  className={cn(
                     "h-11 rounded-xl text-sm font-medium border transition-colors",
                     selected === cat.id
                       ? "bg-black text-white border-black"
                       : "bg-white text-gray-700 border-gray-200 hover:border-gray-400",
-                  ].join(" ")}
+                  )}
                 >
                   {cat.name}
                 </Button>

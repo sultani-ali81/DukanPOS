@@ -1,8 +1,10 @@
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
+import { extractError } from "@/lib/error";
 import { getInventories } from "@/queries/inventory";
 import type { Inventory, PaginationMeta } from "@/types/inventory";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -16,12 +18,13 @@ export interface UseInventoryReturn {
   listSearch: string;
   setListSearch: (value: string) => void;
   clearListSearch: () => void;
-  handleInventoryAdded: () => void;
-  handleInventoryUpdated: (id: string) => void;
-  handleInventoryDeleted: () => void;
+  handleInventoryAdded: () => Promise<void>;
+  handleInventoryUpdated: (id: string) => Promise<void>;
+  handleInventoryDeleted: (id: string) => Promise<void>;
 }
 
 export function useInventory(): UseInventoryReturn {
+  const { mutate: mutateCache } = useSWRConfig();
   const { page, setPage, goToPage, resetToPage1 } = usePagination({
     initialPage: 1,
     initialItemsPerPage: ITEMS_PER_PAGE,
@@ -43,7 +46,6 @@ export function useInventory(): UseInventoryReturn {
     data: listData,
     isLoading: listLoading,
     error: listError,
-    mutate: mutateInventories,
   } = useSWR(listKey, ([, params]) => getInventories(params));
 
   const inventories = listData?.data ?? [];
@@ -59,22 +61,20 @@ export function useInventory(): UseInventoryReturn {
   const loading = listLoading && !listData;
 
   const error = listError
-    ? (listError?.response?.data?.message ??
-      listError?.message ??
-      "Failed to load inventories")
+    ? extractError(listError, "Failed to load inventories")
     : null;
 
-  const handleInventoryAdded = () => {
-    mutateInventories();
+  const handleInventoryAdded = async () => {
+    await mutateCache(createCrudFamilyMatcher("inventories"));
   };
 
-  const handleInventoryUpdated = (_id: string) => {
-    mutateInventories();
+  const handleInventoryUpdated = async (id: string) => {
+    await mutateCache(createCrudFamilyMatcher("inventories", id));
   };
 
-  const handleInventoryDeleted = () => {
+  const handleInventoryDeleted = async (id: string) => {
     setPage(1);
-    mutateInventories();
+    await mutateCache(createCrudFamilyMatcher("inventories", id));
   };
 
   return {

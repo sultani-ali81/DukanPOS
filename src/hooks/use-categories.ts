@@ -1,4 +1,5 @@
 import { getCategories } from "@/queries/category";
+import { extractError } from "@/lib/error";
 import type { Category } from "@/types";
 import useSWR from "swr";
 import { usePagination } from "./use-pagination";
@@ -57,10 +58,8 @@ export function useCategories(): UseCategoriesReturn {
 
   const loading = isLoading && !data;
 
-  const errorMessage: string | null = error
-    ? (error?.response?.data?.message ??
-      error?.message ??
-      "Failed to load categories")
+  const errorMessage = error
+    ? extractError(error, "Failed to load categories")
     : null;
   return {
     categories,

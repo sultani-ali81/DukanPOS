@@ -1,12 +1,18 @@
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
+import { extractError } from "@/lib/error";
+import {
+  getStockStatus,
+  matchesStockFilter,
+  type StockFilter,
+} from "@/lib/stock-status";
 import { getInventory } from "@/queries/inventory";
 import type { InventoryProduct } from "@/types/inventory";
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 
 export function useInventoryDetail(id: string) {
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState<StockFilter>("all");
 
   const { page, setPage, resetToPage1 } = usePagination({
     initialPage: 1,
@@ -27,11 +33,7 @@ export function useInventoryDetail(id: string) {
   const filtered = useMemo((): InventoryProduct[] => {
     const products = data?.products ?? [];
     return products.filter((p) => {
-      const matchesStatus =
-        status === "all" ||
-        (status === "in_stock" && p.quantity > 10) ||
-        (status === "low_stock" && p.quantity > 0 && p.quantity <= 10) ||
-        (status === "out_of_stock" && p.quantity === 0);
+      const matchesStatus = matchesStockFilter(p.quantity, status);
 
       const matchesSearch =
         !debouncedSearch ||
@@ -52,10 +54,15 @@ export function useInventoryDetail(id: string) {
     const products = data?.products ?? [];
     return {
       total: products.length,
-      inStock: products.filter((p) => p.quantity > 10).length,
-      lowStock: products.filter((p) => p.quantity > 0 && p.quantity <= 10)
-        .length,
-      outOfStock: products.filter((p) => p.quantity === 0).length,
+      inStock: products.filter(
+        (p) => getStockStatus(p.quantity) === "In Stock",
+      ).length,
+      lowStock: products.filter(
+        (p) => getStockStatus(p.quantity) === "Low Stock",
+      ).length,
+      outOfStock: products.filter(
+        (p) => getStockStatus(p.quantity) === "Out of Stock",
+      ).length,
       totalUnits: products.reduce((s, p) => s + p.quantity, 0),
       stockValue: products.reduce((s, p) => s + p.quantity * p.price, 0),
     };
@@ -64,11 +71,7 @@ export function useInventoryDetail(id: string) {
   return {
     inventory: data ?? null,
     loading: isLoading,
-    error: error
-      ? (error?.response?.data?.message ??
-        error?.message ??
-        "Failed to load inventory")
-      : null,
+    error: error ? extractError(error, "Failed to load inventory") : null,
     mutate,
     // products
     filtered: paged,

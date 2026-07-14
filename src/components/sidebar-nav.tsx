@@ -41,7 +41,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               to={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 text-md font-medium rounded-lg transition-colors",
+                "flex items-center gap-3 px-3 py-2 text-base font-medium rounded-lg transition-colors",
                 active
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",

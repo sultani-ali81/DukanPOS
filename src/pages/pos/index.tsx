@@ -7,8 +7,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/use-pagination";
+import { cn } from "@/lib/utils";
 import { useUtilsStore } from "@/lib/utilsStore";
 import { getCustomers } from "@/queries/customer";
 import type { PosProduct } from "@/queries/pos-inventory";
@@ -23,9 +33,10 @@ import {
   Unlock,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate } from "react-router";
 import { toast } from "sonner";
+import useSWR from "swr";
 import { PosCashMovementDialog } from "./components/pos-cash-movement-dialog";
 import { PosCategoryFilter } from "./components/pos-category-filter";
 import { PosInventoryCombobox } from "./components/pos-inventory-combobox";
@@ -41,6 +52,45 @@ import { usePosSession } from "./components/use-pos-session";
 
 const ITEMS_PER_PAGE = 20;
 const WALK_IN_CUSTOMER_NAME = /^walk[\s-]?in customer$/i;
+const EMPTY_POS_PRODUCTS: PosProduct[] = [];
+
+function posInventoryKey(inventoryId: string, page: number) {
+  return [
+    "pos-inventory",
+    inventoryId,
+    { page, itemsPerPage: ITEMS_PER_PAGE },
+  ] as const;
+}
+
+async function findWalkInCustomer(
+  persistedId: string,
+  persistedLabel: string,
+) {
+  if (persistedId && persistedLabel) {
+    const persistedResult = await getCustomers({
+      search: persistedLabel,
+      page: 1,
+      itemsPerPage: 100,
+    });
+    const persistedWalkIn = persistedResult.data.find(
+      (customer) =>
+        customer.id === persistedId &&
+        WALK_IN_CUSTOMER_NAME.test(customer.name.trim()),
+    );
+    if (persistedWalkIn) return persistedWalkIn;
+  }
+
+  const result = await getCustomers({
+    search: "Walk-in Customer",
+    page: 1,
+    itemsPerPage: 100,
+  });
+  return (
+    result.data.find((customer) =>
+      WALK_IN_CUSTOMER_NAME.test(customer.name.trim()),
+    ) ?? null
+  );
+}
 
 function useBarcodeScanner({
   onBarcode,
@@ -105,20 +155,17 @@ function useBarcodeScanner({
 export default function PosPage() {
   const navigate = useNavigate();
 
-  const [allProducts, setAllProducts] = useState<PosProduct[]>([]);
-  const [inventoryTotalPages, setInventoryTotalPages] = useState(0);
-  const [loadingInventory, setLoadingInventory] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-  const inventoryRequestRef = useRef(0);
 
   // ── Session state — derived live from hasSession(), never persisted ──────
   const {
     hasActiveSession,
     checkingSession,
+    sessionError,
     refresh: refreshSession,
   } = usePosSession();
+  const sessionUnavailable = checkingSession || Boolean(sessionError);
 
   const [openSessionOpen, setOpenSessionOpen] = useState(false);
   const [closeSessionOpen, setCloseSessionOpen] = useState(false);
@@ -142,7 +189,7 @@ export default function PosPage() {
   });
   // ── Cart / order ─────────────────────────────────────────────────────────────
 
-  const { setWalkInCustomer } = useUtilsStore();
+  const setWalkInCustomer = useUtilsStore((state) => state.setWalkInCustomer);
 
   const {
     cart,
@@ -164,6 +211,7 @@ export default function PosPage() {
     total,
     paymentStatus,
     setPaymentStatus,
+    isWalkInCustomer,
     partialPaymentAmount,
     setPartialPaymentAmount,
     partialPaymentError,
@@ -172,9 +220,8 @@ export default function PosPage() {
     handlePay,
   } = usePosOrder({
     hasActiveSession,
-    checkingSession,
+    checkingSession: sessionUnavailable,
     onSaleSuccess: (receipt, createdAt, sale) => {
-      loadInventoryRef.current(inventoryIdRef.current, productPageRef.current);
       setLastReceipt(receipt);
       setLastReceiptCreatedAt(createdAt ?? new Date().toISOString());
       setLastSaleId(sale.saleId);
@@ -189,138 +236,69 @@ export default function PosPage() {
       cart.length > 0 && currentLocation.pathname !== nextLocation.pathname,
   );
 
-  const inventoryIdRef = useRef(inventoryId);
-  useEffect(() => {
-    inventoryIdRef.current = inventoryId;
-  }, [inventoryId]);
-
-  const productPageRef = useRef(page);
-  useEffect(() => {
-    productPageRef.current = page;
-  }, [page]);
-
   // ── Load inventory products ───────────────────────────────────────────────────
+  const {
+    data: inventoryData,
+    isLoading: inventoryLoading,
+    isValidating: inventoryValidating,
+  } = useSWR(
+    inventoryId ? posInventoryKey(inventoryId, page) : null,
+    ([, id, params]) => getPosInventory(id, params),
+    {
+      onSuccess: (detail) => {
+        const totalPages = detail.productsMeta.totalPages;
+        if (totalPages > 0 && page > totalPages) setPage(totalPages);
+      },
+      onError: () => toast.error("Failed to load inventory products."),
+    },
+  );
 
-  const loadInventory = useCallback((id: string, requestedPage = 1) => {
-    const requestId = ++inventoryRequestRef.current;
-    if (!id) {
-      setAllProducts([]);
-      setCategories([]);
-      setInventoryTotalPages(0);
-      return;
-    }
-    setLoadingInventory(true);
-    getPosInventory(id, {
-      page: requestedPage,
-      itemsPerPage: ITEMS_PER_PAGE,
-    })
-      .then((detail) => {
-        if (requestId !== inventoryRequestRef.current) return;
-        setAllProducts(detail.products);
-        setInventoryTotalPages(detail.productsMeta.totalPages);
-        if (
-          detail.productsMeta.totalPages > 0 &&
-          requestedPage > detail.productsMeta.totalPages
-        ) {
-          setPage(detail.productsMeta.totalPages);
-          return;
-        }
-        const seen = new Set<string>();
-        const cats: Category[] = [];
-        detail.products.forEach((p) => {
-          p.categories.forEach((c) => {
-            if (!seen.has(c.id)) {
-              seen.add(c.id);
-              cats.push({ id: c.id, name: c.name });
-            }
-          });
-        });
-        setCategories(cats);
-      })
-      .catch(() => {
-        if (requestId !== inventoryRequestRef.current) return;
-        setAllProducts([]);
-        setCategories([]);
-        setInventoryTotalPages(0);
-        toast.error("Failed to load inventory products.");
-      })
-      .finally(() => {
-        if (requestId === inventoryRequestRef.current) {
-          setLoadingInventory(false);
+  const allProducts = inventoryData?.products ?? EMPTY_POS_PRODUCTS;
+  const inventoryTotalPages = inventoryData?.productsMeta.totalPages ?? 0;
+  const loadingInventory = inventoryLoading || inventoryValidating;
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const result: Category[] = [];
+    allProducts.forEach((product) => {
+      product.categories.forEach((category) => {
+        if (!seen.has(category.id)) {
+          seen.add(category.id);
+          result.push({ id: category.id, name: category.name });
         }
       });
-  }, [setPage]);
-
-  const loadInventoryRef = useRef(loadInventory);
-  useEffect(() => {
-    loadInventoryRef.current = loadInventory;
-  }, [loadInventory]);
-
-  useEffect(() => {
-    // Fetch the server page whenever the inventory/page URL state changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (inventoryId) loadInventory(inventoryId, page);
-  }, [inventoryId, page, loadInventory]);
+    });
+    return result;
+  }, [allProducts]);
 
   // ── On mount: revalidate the persisted walk-in customer for this store ───────
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const clearDefaultCustomer = () => {
-      setCustomerId("");
-      setCustomerLabel("");
-      setWalkInCustomer("", "");
-    };
-
-    const initializeCustomer = async () => {
-      try {
-        if (customerId && customerLabel) {
-          const persistedResult = await getCustomers({
-            search: customerLabel,
-            page: 1,
-            itemsPerPage: 100,
-          });
-          const persistedWalkIn = persistedResult.data.find(
-            (customer) =>
-              customer.id === customerId &&
-              WALK_IN_CUSTOMER_NAME.test(customer.name.trim()),
-          );
-          if (persistedWalkIn) {
-            if (!cancelled) {
-              setCustomerLabel(persistedWalkIn.name);
-              setWalkInCustomer(persistedWalkIn.id, persistedWalkIn.name);
-            }
-            return;
-          }
-        }
-
-        const result = await getCustomers({
-          search: "Walk-in Customer",
-          page: 1,
-          itemsPerPage: 100,
-        });
-        const walkInCustomer = result.data.find((customer) =>
-          WALK_IN_CUSTOMER_NAME.test(customer.name.trim()),
-        );
-        if (cancelled) return;
+  const [initialCustomer] = useState(() => ({
+    id: customerId,
+    label: customerLabel,
+  }));
+  useSWR(
+    ["pos-walk-in-customer", initialCustomer.id, initialCustomer.label],
+    ([, persistedId, persistedLabel]) =>
+      findWalkInCustomer(persistedId, persistedLabel),
+    {
+      revalidateOnFocus: false,
+      onSuccess: (walkInCustomer) => {
         if (walkInCustomer) {
           setCustomerId(walkInCustomer.id);
           setCustomerLabel(walkInCustomer.name);
           setWalkInCustomer(walkInCustomer.id, walkInCustomer.name);
         } else {
-          clearDefaultCustomer();
+          setCustomerId("");
+          setCustomerLabel("");
+          setWalkInCustomer("", "");
         }
-      } catch {
-        if (!cancelled) clearDefaultCustomer();
-      }
-    };
-
-    void initializeCustomer();
-    return () => {
-      cancelled = true;
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      },
+      onError: () => {
+        setCustomerId("");
+        setCustomerLabel("");
+        setWalkInCustomer("", "");
+      },
+    },
+  );
 
   // ── Stable refs for barcode handler ──────────────────────────────────────────
 
@@ -460,26 +438,26 @@ export default function PosPage() {
 
   // ── Button styles ─────────────────────────────────────────────────────────────
 
-  const openBtnClass = [
+  const openBtnClass = cn(
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
-    hasActiveSession
+    hasActiveSession || sessionError
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
       : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100",
-  ].join(" ");
+  );
 
-  const closeBtnClass = [
+  const closeBtnClass = cn(
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
     !hasActiveSession
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
       : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100",
-  ].join(" ");
+  );
 
-  const cashMovementBtnClass = [
+  const cashMovementBtnClass = cn(
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
     !hasActiveSession
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
       : "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100",
-  ].join(" ");
+  );
 
   // ── Exit + session row — shared between desktop and mobile ───────────────────
 
@@ -497,7 +475,7 @@ export default function PosPage() {
       <div className="flex items-center gap-2">
         <button
           onClick={handleOpenSessionClick}
-          disabled={hasActiveSession}
+          disabled={hasActiveSession || Boolean(sessionError)}
           className={openBtnClass}
         >
           <Unlock className="w-3.5 h-3.5" />
@@ -534,6 +512,12 @@ export default function PosPage() {
       <div className="bg-white flex-1 rounded-lg min-w-0 flex flex-col h-full p-4 border border-gray-200">
         {/* ── Exit POS + Open/Close Session row (left / right) ── */}
         {exitSessionRow}
+
+        {sessionError && (
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {sessionError}
+          </div>
+        )}
 
         {/* MOBILE: inventory picker */}
         <div className="lg:hidden flex-none mb-3">
@@ -629,12 +613,13 @@ export default function PosPage() {
             total={total}
             paymentStatus={paymentStatus}
             onPaymentStatusChange={setPaymentStatus}
+            isWalkInCustomer={isWalkInCustomer}
             partialPaymentAmount={partialPaymentAmount}
             onPartialPaymentAmountChange={setPartialPaymentAmount}
             partialPaymentError={partialPaymentError}
             amountDueNow={amountDueNow}
             hasActiveSession={hasActiveSession}
-            checkingSession={checkingSession}
+            checkingSession={sessionUnavailable}
             onOpenSession={handleOpenSessionClick}
             submitting={submitting}
             onPay={handlePay}
@@ -642,44 +627,43 @@ export default function PosPage() {
         </div>
       </div>
 
-      {/* ── MOBILE: Floating cart button ── */}
-      <div className="lg:hidden fixed bottom-6 right-4 z-40">
-        <button
-          onClick={() => setMobileSheetOpen(true)}
-          className="relative flex items-center gap-2.5 bg-black text-white pl-4 pr-5 py-3 rounded-2xl shadow-xl active:scale-95 transition-transform"
-        >
-          <ShoppingCart className="w-5 h-5" />
-          <span className="text-sm font-semibold">
-            {totalCartItems > 0 ? `Order (${totalCartItems})` : "Order"}
-          </span>
-          {totalCartItems > 0 && (
-            <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-blue-500 text-white text-[11px] font-bold flex items-center justify-center shadow">
-              {totalCartItems}
-            </span>
-          )}
-        </button>
-      </div>
+      <Drawer open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+        {/* ── MOBILE: Floating cart button ── */}
+        <div className="lg:hidden fixed bottom-6 right-4 z-40">
+          <DrawerTrigger asChild>
+            <button className="relative flex items-center gap-2.5 bg-black text-white pl-4 pr-5 py-3 rounded-2xl shadow-xl active:scale-95 transition-transform">
+              <ShoppingCart className="w-5 h-5" />
+              <span className="text-sm font-semibold">
+                {totalCartItems > 0 ? `Order (${totalCartItems})` : "Order"}
+              </span>
+              {totalCartItems > 0 && (
+                <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-blue-500 text-white text-caption font-bold flex items-center justify-center shadow">
+                  {totalCartItems}
+                </span>
+              )}
+            </button>
+          </DrawerTrigger>
+        </div>
 
-      {/* ── MOBILE: Bottom sheet ── */}
-      {mobileSheetOpen && (
-        <>
-          <div
-            className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
-            onClick={() => setMobileSheetOpen(false)}
-          />
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[90dvh]">
-            <div className="relative flex items-center justify-between px-5 pt-5 pb-3 shrink-0 border-b border-gray-100">
-              <div className="w-10 h-1 rounded-full bg-gray-200 absolute left-1/2 -translate-x-1/2 top-2" />
-              <h2 className="text-base font-semibold text-gray-900">
-                Order Details
-              </h2>
+        {/* ── MOBILE: Bottom sheet ── */}
+        <DrawerContent className="lg:hidden max-h-[90dvh] rounded-t-3xl shadow-2xl">
+          <DrawerHeader className="relative flex-row items-center justify-between border-b border-gray-100 px-5 pb-3 pt-3 text-left">
+            <DrawerTitle className="text-base font-semibold text-gray-900">
+              Order Details
+            </DrawerTitle>
+            <DrawerDescription className="sr-only">
+              Review the current order and complete payment.
+            </DrawerDescription>
+            <DrawerClose asChild>
               <button
-                onClick={() => setMobileSheetOpen(false)}
+                type="button"
+                aria-label="Close order details"
                 className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
-            </div>
+            </DrawerClose>
+          </DrawerHeader>
             <div className="flex-1 overflow-y-auto">
               <PosOrderDetails
                 inventoryId={inventoryId}
@@ -697,20 +681,20 @@ export default function PosPage() {
                 total={total}
                 paymentStatus={paymentStatus}
                 onPaymentStatusChange={setPaymentStatus}
+                isWalkInCustomer={isWalkInCustomer}
                 partialPaymentAmount={partialPaymentAmount}
                 onPartialPaymentAmountChange={setPartialPaymentAmount}
                 partialPaymentError={partialPaymentError}
                 amountDueNow={amountDueNow}
                 hasActiveSession={hasActiveSession}
-                checkingSession={checkingSession}
+                checkingSession={sessionUnavailable}
                 onOpenSession={handleOpenSessionClick}
                 submitting={submitting}
                 onPay={handlePay}
               />
             </div>
-          </div>
-        </>
-      )}
+        </DrawerContent>
+      </Drawer>
 
       {/* ── Session dialogs ── */}
       <AlertDialog

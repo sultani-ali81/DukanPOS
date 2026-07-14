@@ -1,5 +1,6 @@
-import type { PosProduct } from "@/queries/pos-inventory";
 import { formatCurrency } from "@/lib/data";
+import { cn } from "@/lib/utils";
+import type { PosProduct } from "@/queries/pos-inventory";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -42,12 +43,12 @@ export function PosProductCard({
       onClick={() =>
         !outOfStock && !atStockLimit && !unavailable && onAdd(product)
       }
-      className={[
+      className={cn(
         "overflow-hidden rounded-xl border border-gray-200 transition-all duration-150 select-none",
         outOfStock || atStockLimit || unavailable
-          ? " cursor-not-allowed"
+          ? "cursor-not-allowed"
           : "cursor-pointer hover:shadow-md hover:border-blue-200 active:scale-[0.98]",
-      ].join(" ")}
+      )}
     >
       {/* Image */}
       <div className="relative aspect-square w-full h-20 w-20 sm:h-60 sm:w-full group">
@@ -59,7 +60,7 @@ export function PosProductCard({
 
         {/* Cart badge */}
         {cartQuantity > 0 && (
-          <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center shadow">
+          <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 text-white text-caption font-bold flex items-center justify-center shadow">
             {cartQuantity}
           </div>
         )}
@@ -114,11 +115,12 @@ export function PosProductCard({
             {images.map((_, i) => (
               <span
                 key={i}
-                className={`block rounded-full transition-all ${
+                className={cn(
+                  "block rounded-full transition-all",
                   i === currentIndex
                     ? "w-2 h-2 bg-white"
-                    : "w-1.5 h-1.5 bg-white/50"
-                }`}
+                    : "w-1.5 h-1.5 bg-white/50",
+                )}
               />
             ))}
           </div>
@@ -137,7 +139,7 @@ export function PosProductCard({
         </div>
         {/* Stock indicator */}
         <div className="mt-1.5 flex items-center gap-1">
-          <span className="text-[11px] text-gray-600">
+          <span className="text-caption text-gray-600">
             Stock: {product.quantity}
           </span>
         </div>

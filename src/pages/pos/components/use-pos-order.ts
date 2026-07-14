@@ -1,4 +1,5 @@
 import { extractError } from "@/lib/error";
+import { createStockMutationMatcher } from "@/lib/stock-cache";
 import { useUtilsStore } from "@/lib/utilsStore";
 import type { PosProduct } from "@/queries/pos-inventory";
 import { finalizeSale } from "@/queries/sale";
@@ -7,9 +8,10 @@ import type {
   SalePaymentStatus,
   SaleReceipt,
 } from "@/types/sale";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { useShallow } from "zustand/react/shallow";
 
 export interface PosCartItem {
   id: string;
@@ -37,6 +39,7 @@ interface UsePosOrderOptions {
 }
 
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+const WALK_IN_CUSTOMER_NAME = /^walk[\s-]?in customer$/i;
 
 function hasAtMostTwoDecimals(value: string) {
   return /^(?:\d+|\d*\.\d{1,2})$/.test(value.trim());
@@ -62,11 +65,34 @@ export function usePosOrder({
     setInventoryLabel,
     walkInCustomerId,
     walkInCustomerLabel,
-  } = useUtilsStore();
+  } = useUtilsStore(
+    useShallow((state) => ({
+      inventoryId: state.inventoryId,
+      setInventoryId: state.setInventoryId,
+      inventoryLabel: state.inventoryLabel,
+      setInventoryLabel: state.setInventoryLabel,
+      walkInCustomerId: state.walkInCustomerId,
+      walkInCustomerLabel: state.walkInCustomerLabel,
+    })),
+  );
 
   const [customerId, setCustomerId] = useState<string>(walkInCustomerId);
   const [customerLabel, setCustomerLabel] =
     useState<string>(walkInCustomerLabel);
+  const isWalkInCustomer = Boolean(
+    customerId &&
+      ((walkInCustomerId && customerId === walkInCustomerId) ||
+        WALK_IN_CUSTOMER_NAME.test(customerLabel.trim())),
+  );
+  const effectivePaymentStatus: SalePaymentStatus = isWalkInCustomer
+    ? "fully_paid"
+    : paymentStatus;
+
+  useEffect(() => {
+    if (!isWalkInCustomer) return;
+    setPaymentStatus("fully_paid");
+    setPartialPaymentAmount("");
+  }, [isWalkInCustomer]);
 
   const addToCart = (product: PosProduct) => {
     if (!product.hasPrice) {
@@ -165,7 +191,7 @@ export function usePosOrder({
 
   let partialPaymentError: string | null = null;
   const parsedPartialAmount = Number(partialPaymentAmount);
-  if (paymentStatus === "partially_paid") {
+  if (effectivePaymentStatus === "partially_paid") {
     if (!partialPaymentAmount.trim()) {
       partialPaymentError = "Enter the amount received now.";
     } else if (
@@ -181,23 +207,22 @@ export function usePosOrder({
   }
 
   const amountDueNow =
-    paymentStatus === "fully_paid"
+    effectivePaymentStatus === "fully_paid"
       ? total
-      : paymentStatus === "unpaid" || partialPaymentError
+      : effectivePaymentStatus === "unpaid" || partialPaymentError
         ? 0
         : roundMoney(parsedPartialAmount);
 
-  const refreshRelatedData = () => {
-    void mutate(
-      (key) => {
-        if (typeof key === "string") return key.startsWith("/sales");
-        if (!Array.isArray(key)) return false;
-        return key[0] === "dashboard" || key[0] === "inventory-detail";
-      },
+  const refreshRelatedData = (saleId: string) =>
+    mutate(
+      createStockMutationMatcher({
+        inventoryIds: new Set([inventoryId]),
+        productIds: new Set(checkoutItems.map((item) => item.productId)),
+        saleId,
+      }),
       undefined,
       { revalidate: true },
     );
-  };
 
   const handlePay = async (): Promise<boolean> => {
     if (submittingRef.current) return false;
@@ -241,7 +266,7 @@ export function usePosOrder({
     const payload: CheckoutSaleRequest = {
       customerId,
       inventoryId,
-      paymentStatus,
+      paymentStatus: effectivePaymentStatus,
       amount: amountDueNow,
       items: checkoutItems,
     };
@@ -250,14 +275,14 @@ export function usePosOrder({
     setSubmitting(true);
     try {
       const response = await finalizeSale(payload);
+      await refreshRelatedData(response.saleId);
       toast.success(response.message || "Sale completed and stock updated");
       clearCart();
       setPaymentStatus("fully_paid");
       setPartialPaymentAmount("");
-      refreshRelatedData();
       onSaleSuccess?.(response.receipt, response.createdAt, {
         saleId: response.saleId,
-        paymentStatus,
+        paymentStatus: effectivePaymentStatus,
         amount: amountDueNow,
       });
       return true;
@@ -290,8 +315,9 @@ export function usePosOrder({
     subtotal,
     tax,
     total,
-    paymentStatus,
+    paymentStatus: effectivePaymentStatus,
     setPaymentStatus,
+    isWalkInCustomer,
     partialPaymentAmount,
     setPartialPaymentAmount,
     partialPaymentError,

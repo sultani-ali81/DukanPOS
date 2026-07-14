@@ -175,10 +175,22 @@ export interface UseSaleReturn {
   errorMessage: string | null;
 }
 
-export function useSale(id: string | undefined): UseSaleReturn {
+interface UseSaleOptions {
+  onSuccess?: (sale: SaleDetail) => void;
+  onError?: (error: unknown) => void;
+}
+
+export function useSale(
+  id: string | undefined,
+  options: UseSaleOptions = {},
+): UseSaleReturn {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     id ? `/sales/${id}` : null,
     () => getSale(id as string),
+    {
+      ...(options.onSuccess ? { onSuccess: options.onSuccess } : {}),
+      ...(options.onError ? { onError: options.onError } : {}),
+    },
   );
 
   return {

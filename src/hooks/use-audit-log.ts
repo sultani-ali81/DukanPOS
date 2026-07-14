@@ -3,6 +3,7 @@ import {
   AUDIT_LOGS_KEY,
   auditLogsFetcher,
 } from "@/queries/audit-logs";
+import { extractError } from "@/lib/error";
 import type { AuditEntityType, AuditLog } from "@/types/audit";
 import useSWR from "swr";
 
@@ -28,5 +29,11 @@ export function useAuditLogs({
   const logs: AuditLog[] = data?.data ?? [];
   const meta = data?.meta;
 
-  return { logs, meta, isLoading, error, mutate };
+  return {
+    logs,
+    meta,
+    isLoading,
+    error: error ? extractError(error, "Failed to load logs") : null,
+    mutate,
+  };
 }

@@ -1,13 +1,19 @@
+import {
+  CompactDialogBody,
+  CompactDialogContent,
+  CompactDialogFooter,
+  CompactDialogHeader,
+} from "@/components/compact-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { extractError } from "@/lib/error";
+import { cn } from "@/lib/utils";
 import { createCashMovement } from "@/queries/cash-movement";
 import type { CashMovementPayload } from "@/types/cash-movement";
 import { ArrowDownLeft, ArrowUpRight, Loader2 } from "lucide-react";
@@ -58,10 +64,7 @@ export function PosCashMovementDialog({
       onSuccess?.();
       handleClose();
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to record cash movement";
-      toast.error(msg);
+      toast.error(extractError(err, "Failed to record cash movement"));
     } finally {
       setSubmitting(false);
     }
@@ -99,14 +102,17 @@ export function PosCashMovementDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0">
+      <CompactDialogContent>
         {/* Header */}
-        <DialogHeader className="px-5 pt-5 pb-4 border-b border-gray-100">
+        <CompactDialogHeader>
           <div className="flex items-center gap-3">
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${active.iconBg}`}
+              className={cn(
+                "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                active.iconBg,
+              )}
             >
-              <ActiveIcon className={`w-4 h-4 ${active.iconColor}`} />
+              <ActiveIcon className={cn("w-4 h-4", active.iconColor)} />
             </div>
             <div>
               <DialogTitle className="text-base font-semibold text-gray-900">
@@ -115,10 +121,10 @@ export function PosCashMovementDialog({
               <p className="text-xs text-gray-400 mt-0.5">{active.subtitle}</p>
             </div>
           </div>
-        </DialogHeader>
+        </CompactDialogHeader>
 
         {/* Body */}
-        <div className="px-5 py-4 space-y-4">
+        <CompactDialogBody>
           {/* Type toggle */}
           <div className="grid grid-cols-2 gap-2">
             {(["cash_in", "cash_out"] as MovementType[]).map((t) => {
@@ -129,9 +135,10 @@ export function PosCashMovementDialog({
                 <button
                   key={t}
                   onClick={() => setType(t)}
-                  className={`flex items-center gap-2 h-10 px-3 rounded-xl border text-sm font-medium transition-colors ${
-                    isActive ? cfg.activeBg : cfg.inactiveBg
-                  }`}
+                  className={cn(
+                    "flex items-center gap-2 h-10 px-3 rounded-xl border text-sm font-medium transition-colors",
+                    isActive ? cfg.activeBg : cfg.inactiveBg,
+                  )}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
                   {cfg.label}
@@ -170,10 +177,10 @@ export function PosCashMovementDialog({
               className="rounded-xl border-gray-200 text-sm resize-none h-20"
             />
           </div>
-        </div>
+        </CompactDialogBody>
 
         {/* Footer */}
-        <div className="px-5 pb-5 flex gap-2">
+        <CompactDialogFooter>
           <Button
             variant="outline"
             className="flex-1 h-11 rounded-xl border-gray-200 text-sm"
@@ -191,8 +198,8 @@ export function PosCashMovementDialog({
             {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             {active.confirmLabel}
           </Button>
-        </div>
-      </DialogContent>
+        </CompactDialogFooter>
+      </CompactDialogContent>
     </Dialog>
   );
 }

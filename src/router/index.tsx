@@ -1,35 +1,37 @@
 import AppLayout from "@/components/layout/app-layout";
-import Login from "@/pages/(auth)/login";
-import AiAssistantPage from "@/pages/ai-assistant/page";
-import CategoriesPage from "@/pages/categories";
-import ContactsPage from "@/pages/contacts";
-import Dashboard from "@/pages/dashboard";
-import InventoryDetailPage from "@/pages/inventory/[id]/page";
-import InventoryPage from "@/pages/inventory/page";
-import JournalPage from "@/pages/journal/page";
-import PosPage from "@/pages/pos";
-import ProductDetailPage from "@/pages/products/[id]/page";
-import ProductsPage from "@/pages/products/page";
-import ProfilePage from "@/pages/profile/page";
-import ViewPurchase from "@/pages/purchases/[id]";
-import Purchases from "@/pages/purchases/index";
-import NewPurchasePage from "@/pages/purchases/new";
-import Report from "@/pages/reports/page";
-import SaleDetailPage from "@/pages/sales/[id]";
-import SalesPage from "@/pages/sales";
-import NewStockMovementPage from "@/pages/stock-movement/new";
-import UnauthorizedPage from "@/pages/unauthorized";
-import UsersPage from "@/pages/users/page";
 import { createBrowserRouter } from "react-router-dom";
 import { authRoutes } from "./auth";
 import { PrivateRoute, PublicRoute, RoleRoute } from "./guards";
+import {
+  AiAssistantPage,
+  CategoriesPage,
+  ContactsPage,
+  DashboardPage,
+  InventoryDetailPage,
+  InventoryPage,
+  JournalPage,
+  LoginPage,
+  NewPurchasePage,
+  NewStockMovementPage,
+  PosPage,
+  ProductDetailPage,
+  ProductsPage,
+  ProfilePage,
+  PurchaseDetailPage,
+  PurchasesPage,
+  ReportsPage,
+  SaleDetailPage,
+  SalesPage,
+  UnauthorizedPage,
+  UsersPage,
+} from "./lazy-pages";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: (
       <PublicRoute>
-        <Login />
+        <LoginPage />
       </PublicRoute>
     ),
   },
@@ -61,7 +63,7 @@ export const router = createBrowserRouter([
         path: "/dashboard",
         element: (
           <RoleRoute allowed={["Admin"]}>
-            <Dashboard />
+            <DashboardPage />
           </RoleRoute>
         ),
       },
@@ -125,7 +127,7 @@ export const router = createBrowserRouter([
         path: "/reports",
         element: (
           <RoleRoute allowed={["Admin"]}>
-            <Report />
+            <ReportsPage />
           </RoleRoute>
         ),
       },
@@ -157,7 +159,7 @@ export const router = createBrowserRouter([
         path: "/purchases",
         element: (
           <RoleRoute allowed={["Admin"]}>
-            <Purchases />
+            <PurchasesPage />
           </RoleRoute>
         ),
       },
@@ -173,7 +175,7 @@ export const router = createBrowserRouter([
         path: "/purchases/:id",
         element: (
           <RoleRoute allowed={["Admin"]}>
-            <ViewPurchase />
+            <PurchaseDetailPage />
           </RoleRoute>
         ),
       },

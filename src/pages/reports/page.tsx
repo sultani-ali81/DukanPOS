@@ -11,8 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/data";
+import { cn } from "@/lib/utils";
 import {
   getStatusClassName,
   getStatusLabel,
@@ -311,11 +317,12 @@ const cashMovementColumns: ReportColumn<CashMovementReportRow>[] = [
       const isCashIn = row.type === "cash_in";
       return (
         <span
-          className={`inline-flex items-center gap-1.5 text-sm font-medium ${
+          className={cn(
+            "inline-flex items-center gap-1.5 text-sm font-medium",
             isCashIn
               ? "text-emerald-600 dark:text-emerald-400"
-              : "text-destructive"
-          }`}
+              : "text-destructive",
+          )}
         >
           {isCashIn ? (
             <ArrowDownCircle className="size-4" />
@@ -334,11 +341,12 @@ const cashMovementColumns: ReportColumn<CashMovementReportRow>[] = [
       const isCashIn = row.type === "cash_in";
       return (
         <span
-          className={`block text-center items-center font-semibold tabular-nums ${
+          className={cn(
+            "block text-center items-center font-semibold tabular-nums",
             isCashIn
               ? "text-emerald-600 dark:text-emerald-400"
-              : "text-destructive"
-          }`}
+              : "text-destructive",
+          )}
         >
           {isCashIn ? "+" : "-"}
           {formatCurrency(row.amount)}
@@ -401,22 +409,17 @@ export default function ReportsPage() {
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as ReportType)}
       >
-        <div className="mb-5 flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1 w-fit flex-wrap">
+        <TabsList className="mb-5 h-auto flex-wrap gap-1 rounded-xl border border-border bg-muted/40 p-1">
           {REPORT_TABS.map((tab) => (
-            <button
+            <TabsTrigger
               key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={[
-                "h-6 rounded-lg px-3.5 text-sm font-medium cursor-pointer transition-colors",
-                activeTab === tab.value
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              ].join(" ")}
+              value={tab.value}
+              className="h-6 flex-none cursor-pointer rounded-lg px-3.5 data-active:text-primary-foreground dark:data-active:text-primary-foreground"
             >
               {tab.label}
-            </button>
+            </TabsTrigger>
           ))}
-        </div>
+        </TabsList>
 
         <TabsContent value="sale" className="mt-4">
           <ReportPanel

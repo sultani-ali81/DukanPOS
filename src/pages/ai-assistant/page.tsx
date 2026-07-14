@@ -14,8 +14,9 @@ import {
 } from "@/queries/ai-assistant";
 import type { AiChatThreadSummary } from "@/types/ai-assistant";
 import { cn } from "@/lib/utils";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import useSWR from "swr";
 import {
   createLocalMessage,
   getAssistantErrorMessage,
@@ -27,16 +28,16 @@ import { ChatHistoryPanel } from "./components/chat-history-panel";
 import { ConversationPanel } from "./components/conversation-panel";
 import { DeleteThreadDialog } from "./components/delete-thread-dialog";
 
+const AI_THREADS_KEY = ["ai-chat-threads"] as const;
+const EMPTY_THREADS: AiChatThreadSummary[] = [];
+
 export default function AiAssistantPage() {
   const token = useAuthStore((state) => state.token);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [question, setQuestion] = useState("");
-  const [threads, setThreads] = useState<AiChatThreadSummary[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<UiChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [threadsLoading, setThreadsLoading] = useState(false);
-  const [threadLoading, setThreadLoading] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -57,26 +58,34 @@ export default function AiAssistantPage() {
   const shouldAutoScrollRef = useRef(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const loadThreads = useCallback(async () => {
-    setThreadsLoading(true);
+  const {
+    data: threadData,
+    isLoading: threadsLoading,
+    mutate: mutateThreads,
+  } = useSWR(AI_THREADS_KEY, () => getAiChatThreads(), {
+    onError: (error) => setInlineError(getAssistantErrorMessage(error)),
+  });
+  const threads = threadData ?? EMPTY_THREADS;
 
-    try {
-      const data = await getAiChatThreads();
-      setThreads(data);
-    } catch (error) {
-      setInlineError(getAssistantErrorMessage(error));
-    } finally {
-      setThreadsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadThreads();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadThreads]);
+  const { isLoading: threadLoading, isValidating: threadValidating } = useSWR(
+    selectedThreadId
+      ? (["ai-chat-thread", selectedThreadId] as const)
+      : null,
+    ([, threadId]) => getAiChatThread(threadId),
+    {
+      revalidateOnFocus: false,
+      onSuccess: (thread) => {
+        if (isStreaming) return;
+        setMessages(
+          [...thread.messages].sort((a, b) =>
+            (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
+          ),
+        );
+      },
+      onError: (error) => setInlineError(getAssistantErrorMessage(error)),
+    },
+  );
+  const isThreadLoading = threadLoading || threadValidating;
 
   useEffect(() => {
     if (shouldAutoScrollRef.current) {
@@ -128,28 +137,13 @@ export default function AiAssistantPage() {
     window.setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
-  const loadThread = async (threadId: string) => {
+  const loadThread = (threadId: string) => {
     if (isStreaming) return;
 
     setMobileHistoryOpen(false);
     setSelectedThreadId(threadId);
-    setThreadLoading(true);
     setInlineError(null);
     shouldAutoScrollRef.current = true;
-
-    try {
-      const thread = await getAiChatThread(threadId);
-      setSelectedThreadId(thread.id);
-      setMessages(
-        [...thread.messages].sort((a, b) =>
-          (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
-        ),
-      );
-    } catch (error) {
-      setInlineError(getAssistantErrorMessage(error));
-    } finally {
-      setThreadLoading(false);
-    }
   };
 
   const startRename = (thread: AiChatThreadSummary) => {
@@ -164,10 +158,12 @@ export default function AiAssistantPage() {
     setRenameLoading(true);
     try {
       await renameAiChatThread(threadId, { name });
-      setThreads((current) =>
-        current.map((thread) =>
-          thread.id === threadId ? { ...thread, title: name } : thread,
-        ),
+      await mutateThreads(
+        (current) =>
+          current?.map((thread) =>
+            thread.id === threadId ? { ...thread, title: name } : thread,
+          ),
+        { revalidate: false },
       );
       setRenamingThreadId(null);
       toast.success("Conversation renamed");
@@ -187,7 +183,11 @@ export default function AiAssistantPage() {
     setDeleteLoading(true);
     try {
       await deleteAiChatThread(threadId);
-      setThreads((current) => current.filter((thread) => thread.id !== threadId));
+      await mutateThreads(
+        (current) =>
+          current?.filter((thread) => thread.id !== threadId),
+        { revalidate: false },
+      );
       if (selectedThreadId === threadId) handleNewChat();
       setDeletingThread(null);
       toast.success("Conversation deleted");
@@ -239,7 +239,6 @@ export default function AiAssistantPage() {
     try {
       await askAssistantSseStream({
         question: trimmedQuestion,
-        token,
         threadId: streamThreadId ?? undefined,
         onChunk: (chunk) => {
           if (!chunk) return;
@@ -301,11 +300,11 @@ export default function AiAssistantPage() {
         });
       }
 
-      void loadThreads();
+      void mutateThreads();
     } catch (error) {
       if (controller.signal.aborted) {
         updateMessage(activeAssistantMessageId, { status: "stopped" });
-        void loadThreads();
+        void mutateThreads();
         return;
       }
 
@@ -357,12 +356,12 @@ export default function AiAssistantPage() {
                 threads={threads}
                 selectedThreadId={selectedThreadId}
                 loading={threadsLoading}
-                disabled={isStreaming || threadLoading}
+                disabled={isStreaming || isThreadLoading}
                 renamingThreadId={renamingThreadId}
                 renameValue={renameValue}
                 renameLoading={renameLoading}
                 onNewChat={handleNewChat}
-                onSelectThread={(threadId) => void loadThread(threadId)}
+                onSelectThread={loadThread}
                 onStartRename={startRename}
                 onRenameValueChange={setRenameValue}
                 onCancelRename={() => setRenamingThreadId(null)}
@@ -383,7 +382,7 @@ export default function AiAssistantPage() {
           question={question}
           inlineError={inlineError}
           isStreaming={isStreaming}
-          threadLoading={threadLoading}
+          threadLoading={isThreadLoading}
           textareaRef={textareaRef}
           messagesContainerRef={messagesContainerRef}
           messagesEndRef={messagesEndRef}
@@ -417,12 +416,12 @@ export default function AiAssistantPage() {
             threads={threads}
             selectedThreadId={selectedThreadId}
             loading={threadsLoading}
-            disabled={isStreaming || threadLoading}
+            disabled={isStreaming || isThreadLoading}
             renamingThreadId={renamingThreadId}
             renameValue={renameValue}
             renameLoading={renameLoading}
             onNewChat={handleNewChat}
-            onSelectThread={(threadId) => void loadThread(threadId)}
+            onSelectThread={loadThread}
             onStartRename={startRename}
             onRenameValueChange={setRenameValue}
             onCancelRename={() => setRenamingThreadId(null)}

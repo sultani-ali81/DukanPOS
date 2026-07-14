@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import useSWR, { useSWRConfig } from "swr";
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,11 @@ import {
 } from "lucide-react";
 
 import LogsTable from "@/components/logs-table";
-import { invalidateAuditLogs } from "@/lib/audit-logs-cache";
+import { createAuditLogsMatcher } from "@/lib/audit-logs-cache";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import { extractError } from "@/lib/error";
+import { createStockMutationMatcher } from "@/lib/stock-cache";
+import { cn } from "@/lib/utils";
 import { getPurchase, updatePurchaseStatus } from "@/queries/purchase";
 import { createStockIn, updateStockIn } from "@/queries/stock-in";
 import type { PurchaseDetail, PurchasedItemResponse } from "@/types/purchases";
@@ -57,23 +61,49 @@ type StockInProduct = NonNullable<StockInRecord["products"]>[number];
 export function PurchaseDetailClient() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { mutate: mutateCache } = useSWRConfig();
 
   const [error, setError] = useState<string | null>(null);
 
-  const [purchase, setPurchase] = useState<PurchaseDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: purchase,
+    isLoading: loading,
+    mutate: mutatePurchase,
+  } = useSWR(
+    id ? (["purchase-detail", id] as const) : null,
+    ([, purchaseId]) => getPurchase(purchaseId),
+    {
+      onSuccess: () => setError(null),
+      onError: (err: unknown) => setError(extractError(err)),
+    },
+  );
   const inventoryId = purchase?.inventoryId ?? "";
   const [confirming, setConfirming] = useState(false);
   const [stockingIn, setStockingIn] = useState(false);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  const revalidateStockCaches = (currentPurchase: PurchaseDetail) =>
+    mutateCache(
+      createStockMutationMatcher({
+        inventoryIds: new Set(
+          currentPurchase.inventoryId ? [currentPurchase.inventoryId] : [],
+        ),
+        productIds: new Set(
+          currentPurchase.items.map((item) => item.product.id),
+        ),
+        purchaseId: currentPurchase.id,
+      }),
+      undefined,
+      { revalidate: true },
+    );
+
   const handleCancelPurchase = async () => {
     if (!purchase) return;
     setCancelling(true);
     try {
       await updatePurchaseStatus(purchase.id, { status: "Cancelled" });
-      setPurchase((prev) => (prev ? { ...prev, status: "Cancelled" } : prev));
+      await mutateCache(createCrudFamilyMatcher("purchases", purchase.id));
       toast.success("Purchase cancelled", {
         description: `Purchase #${purchase.sequenceId} has been cancelled.`,
       });
@@ -86,22 +116,6 @@ export function PurchaseDetailClient() {
     }
   };
 
-  // ── Load / refresh ────────────────────────────────────────────────────────
-
-  const loadPurchase = (silently = false) => {
-    if (!id) return;
-    if (!silently) setLoading(true);
-    getPurchase(id)
-      .then((data) => setPurchase(data))
-      .catch((err: unknown) => setError(extractError(err)))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadPurchase();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
   // ── Confirm purchase ──────────────────────────────────────────────────────
 
   const handleConfirmPurchase = async () => {
@@ -109,11 +123,13 @@ export function PurchaseDetailClient() {
     setConfirming(true);
     try {
       await updatePurchaseStatus(purchase.id, { status: "Done" });
-      setPurchase((prev) => (prev ? { ...prev, status: "Done" } : prev));
+      await mutateCache(createCrudFamilyMatcher("purchases", purchase.id));
       toast.success("Purchase confirmed", {
         description: `Purchase #${purchase.sequenceId} is ready for stock-in.`,
       });
-      invalidateAuditLogs(purchase.id);
+      await mutateCache(createAuditLogsMatcher(purchase.id), undefined, {
+        revalidate: true,
+      });
     } catch (err: unknown) {
       toast.error("Could not confirm purchase", {
         description: extractError(err),
@@ -142,7 +158,8 @@ export function PurchaseDetailClient() {
         })),
       });
 
-      const detail = await getPurchase(purchase.id);
+      const detail = await mutatePurchase();
+      if (!detail) throw new Error("Purchase not found after stock-in creation.");
       const pendingStockIn = detail.stockIns?.find(
         (s) => s.status === "Pending",
       );
@@ -151,13 +168,17 @@ export function PurchaseDetailClient() {
         throw new Error("Stock-in record not found after creation.");
 
       await updateStockIn(pendingStockIn.stockInId, { status: "Done" });
+      await revalidateStockCaches(purchase);
 
       toast.success("Items moved to inventory", {
         description: `${purchase.items.length} item${purchase.items.length > 1 ? "s" : ""} added to inventory.`,
       });
 
-      loadPurchase(true);
-      invalidateAuditLogs(pendingStockIn.stockInId);
+      await mutateCache(
+        createAuditLogsMatcher(pendingStockIn.stockInId),
+        undefined,
+        { revalidate: true },
+      );
     } catch (err: unknown) {
       toast.error("Stock-in failed", { description: extractError(err) });
     } finally {
@@ -171,11 +192,13 @@ export function PurchaseDetailClient() {
     setApprovingId(stockInId);
     try {
       await updateStockIn(stockInId, { status: "Done" });
+      if (purchase) await revalidateStockCaches(purchase);
       toast.success("Stock-in confirmed", {
         description: "Items have been added to inventory.",
       });
-      loadPurchase(true);
-      invalidateAuditLogs(stockInId);
+      await mutateCache(createAuditLogsMatcher(stockInId), undefined, {
+        revalidate: true,
+      });
     } catch (err: unknown) {
       toast.error("Could not confirm stock-in", {
         description: extractError(err),
@@ -275,9 +298,9 @@ export function PurchaseDetailClient() {
                   {purchase.items.map((item, idx) => (
                     <TableRow
                       key={item.id}
-                      className={
-                        idx % 2 === 0 ? "bg-background" : "bg-muted/20"
-                      }
+                      className={cn(
+                        idx % 2 === 0 ? "bg-background" : "bg-muted/20",
+                      )}
                     >
                       <TableCell className="pl-6 py-3.5 font-medium text-foreground">
                         {item.product?.name}
@@ -413,12 +436,18 @@ export function PurchaseDetailClient() {
                       >
                         <div className="flex items-center gap-3">
                           <div
-                            className={`flex size-8 items-center justify-center rounded-full ${
-                              isDone ? "bg-primary/10" : "bg-muted"
-                            }`}
+                            className={cn(
+                              "flex size-8 items-center justify-center rounded-full",
+                              isDone ? "bg-primary/10" : "bg-muted",
+                            )}
                           >
                             <Package
-                              className={`size-4 ${isDone ? "text-primary" : "text-muted-foreground"}`}
+                              className={cn(
+                                "size-4",
+                                isDone
+                                  ? "text-primary"
+                                  : "text-muted-foreground",
+                              )}
                             />
                           </div>
                           <div>
@@ -436,22 +465,24 @@ export function PurchaseDetailClient() {
 
                         <div className="flex items-center gap-3">
                           <span
-                            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+                            className={cn(
+                              "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full",
                               isDone
                                 ? "bg-green-50 text-green-700 border border-green-200"
                                 : isPending
                                   ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                                  : "bg-red-50 text-red-500 border border-red-200"
-                            }`}
+                                  : "bg-red-50 text-red-500 border border-red-200",
+                            )}
                           >
                             <span
-                              className={`w-1.5 h-1.5 rounded-full ${
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full",
                                 isDone
                                   ? "bg-green-500"
                                   : isPending
                                     ? "bg-yellow-400"
-                                    : "bg-red-400"
-                              }`}
+                                    : "bg-red-400",
+                              )}
                             />
                             {stockIn.status}
                           </span>

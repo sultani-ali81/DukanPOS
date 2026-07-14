@@ -70,9 +70,12 @@ export function ContactTable({
   onRowClick,
   onAddFirst,
 }: ContactTableProps) {
+  const selectedOnPage = customers.filter((customer) =>
+    selected.has(customer.id),
+  ).length;
   const allSelected =
-    customers.length > 0 && selected.size === customers.length;
-  const someSelected = selected.size > 0 && selected.size < customers.length;
+    customers.length > 0 && selectedOnPage === customers.length;
+  const someSelected = selectedOnPage > 0 && !allSelected;
 
   return (
     <Card className="overflow-hidden p-0">

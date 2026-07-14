@@ -29,6 +29,7 @@ import {
   actionLabel,
   entityLabel,
 } from "@/lib/audit-labels";
+import { cn } from "@/lib/utils";
 import { StockMovementDetails } from "./stock-movement-detail";
 
 interface LogsTableProps {
@@ -73,7 +74,7 @@ export default function LogsTable({ entityId }: LogsTableProps) {
   }
 
   if (error) {
-    return <p className="p-3 text-sm text-destructive">Failed to load logs.</p>;
+    return <p className="p-3 text-sm text-destructive">{error}</p>;
   }
 
   return (
@@ -143,9 +144,9 @@ export default function LogsTable({ entityId }: LogsTableProps) {
               <Fragment key={log.id}>
                 <TableRow
                   onClick={() => hasMovement && toggleExpand(log.id)}
-                  className={
-                    hasMovement ? "cursor-pointer hover:bg-muted/50" : undefined
-                  }
+                  className={cn(
+                    hasMovement && "cursor-pointer hover:bg-muted/50",
+                  )}
                 >
                   <TableCell className="p-3">
                     {hasMovement &&

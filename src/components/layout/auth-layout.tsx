@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import React from "react";
 
 type Props = {
@@ -20,18 +21,20 @@ export default function AuthLayout({
         <div className="grid min-h-screen lg:grid-cols-2">
           {/* Form Side */}
           <div
-            className={`flex items-center justify-center p-8 sm:p-12 ${
-              reverse ? "lg:order-2" : "lg:order-1"
-            }`}
+            className={cn(
+              "flex items-center justify-center p-8 sm:p-12",
+              reverse ? "lg:order-2" : "lg:order-1",
+            )}
           >
             {children}
           </div>
 
           {/* Colored Panel Side */}
           <div
-            className={`relative hidden flex-col items-center justify-center overflow-hidden bg-primary px-12 text-center text-white lg:flex ${
-              reverse ? "lg:order-1" : "lg:order-2"
-            }`}
+            className={cn(
+              "relative hidden flex-col items-center justify-center overflow-hidden bg-primary px-12 text-center text-white lg:flex",
+              reverse ? "lg:order-1" : "lg:order-2",
+            )}
           >
             {/* Decorative geometric accents (matching reference) */}
             <div className="pointer-events-none absolute -left-10 top-10 h-28 w-28 rotate-45 rounded-3xl bg-white/10" />

@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { deleteProductImage, uploadProductImages } from "@/queries/products";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
+import { uploadProductImages } from "@/queries/products";
 import type {
   Product,
   ProductFormSubmitValues,
@@ -28,6 +29,7 @@ import { AlertCircle, Loader2, Plus, UploadCloud, X } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
 
 import { CategoryDialog } from "@/pages/categories/components/category-dialog";
 // ^ adjust this path to match where category-dialog.tsx actually lives in your project
@@ -51,6 +53,7 @@ export function ProductDialog({
   onSubmit,
   onCategoryCreated,
 }: ProductDialogProps) {
+  const { mutate: mutateCache } = useSWRConfig();
   const isEdit = !!editingProduct;
 
   const [localCategories, setLocalCategories] = useState<
@@ -153,13 +156,6 @@ export function ProductDialog({
 
   function removeExistingImage(image: ProductImage) {
     setExistingImages((prev) => prev.filter((img) => img.id !== image.id));
-
-    deleteProductImage(image.id).catch(() => {
-      toast.error("Could not remove image", {
-        description: "Please try again.",
-      });
-      setExistingImages((prev) => [...prev, image]);
-    });
   }
 
   function removeUploadingImage(key: string) {
@@ -180,9 +176,18 @@ export function ProductDialog({
       return;
     }
 
-    const attachmentIds = uploadingImages
+    const uploadedAttachmentIds = uploadingImages
       .filter((img) => img.status === "done" && img.id)
       .map((img) => img.id as string);
+
+    const attachmentIds = isEdit
+      ? Array.from(
+          new Set([
+            ...existingImages.map((image) => image.id),
+            ...uploadedAttachmentIds,
+          ]),
+        )
+      : uploadedAttachmentIds;
 
     let payload: ProductFormSubmitValues;
 
@@ -469,6 +474,7 @@ export function ProductDialog({
         onSubmit={async (values) => {
           const { createCategory } = await import("@/queries/category");
           const res = await createCategory(values);
+          await mutateCache(createCrudFamilyMatcher("categories", res.id));
           return { id: res.id, name: values.name };
         }}
         onCreated={(category) => {

@@ -1,5 +1,6 @@
 import type { DashboardQueryParams } from "@/queries/dashboard";
 import { getDashboardStats } from "@/queries/dashboard";
+import { extractError } from "@/lib/error";
 import type {
   CashierBreakdown,
   DashboardRange,
@@ -22,8 +23,6 @@ export interface UseDashboardReturn {
   range: DashboardRange;
   setRange: (range: DashboardRange) => void;
   customRange: DateRange;
-  setCustomRange: (range: DateRange) => void;
-  activeCustomRange: DateRange;
   applyCustomRange: (range: DateRange) => void;
   stats: DashboardStats | null;
   loading: boolean;
@@ -44,9 +43,16 @@ const DEFAULT_STOCK_PAGE = 1;
 const DEFAULT_STOCK_PAGE_SIZE = 20;
 const MAX_STOCK_PAGE_SIZE = 100;
 
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function buildParams(
   range: DashboardRange,
-  activeCustomRange: DateRange,
+  customRange: DateRange,
   lowStockPagination: StockPaginationState,
   outOfStockPagination: StockPaginationState,
 ): DashboardQueryParams {
@@ -60,13 +66,11 @@ function buildParams(
         }
       : {};
 
-  if (range === "custom" && activeCustomRange.from && activeCustomRange.to) {
-    const toDate = new Date(activeCustomRange.to);
-    toDate.setHours(23, 59, 59, 999);
+  if (range === "custom" && customRange.from && customRange.to) {
     return {
       range: "custom",
-      from: activeCustomRange.from.toISOString().split("T")[0],
-      to: toDate.toISOString().split("T")[0],
+      from: formatLocalDate(customRange.from),
+      to: formatLocalDate(customRange.to),
       ...paginationParams,
     };
   }
@@ -79,11 +83,6 @@ export function useDashboard(
   const [range, setRangeState] = useState<DashboardRange>(initialRange);
 
   const [customRange, setCustomRangeState] = useState<DateRange>({
-    from: undefined,
-    to: undefined,
-  });
-
-  const [activeCustomRange, setActiveCustomRange] = useState<DateRange>({
     from: undefined,
     to: undefined,
   });
@@ -102,7 +101,7 @@ export function useDashboard(
 
   const mainParams = buildParams(
     range,
-    activeCustomRange,
+    customRange,
     lowStockPagination,
     outOfStockPagination,
   );
@@ -132,7 +131,11 @@ export function useDashboard(
   const shouldFetchWeeklyFallback =
     !!stats && !statsLoading && !hasChart && range !== "last-week";
 
-  const { data: weeklyFallback, isLoading: weeklyFallbackLoading } = useSWR(
+  const {
+    data: weeklyFallback,
+    isLoading: weeklyFallbackLoading,
+    error: weeklyFallbackError,
+  } = useSWR(
     shouldFetchWeeklyFallback
       ? (["dashboard", "weekly-fallback", "last-week"] as const)
       : null,
@@ -143,7 +146,11 @@ export function useDashboard(
   // today request while another range is active, and minimize its stock payload.
   const shouldFetchTodayCashiers = range !== "today";
 
-  const { data: todayStats, isLoading: todayStatsLoading } = useSWR(
+  const {
+    data: todayStats,
+    isLoading: todayStatsLoading,
+    error: todayStatsError,
+  } = useSWR(
     shouldFetchTodayCashiers
       ? (["dashboard", "cashier-breakdown-today"] as const)
       : null,
@@ -166,11 +173,13 @@ export function useDashboard(
   const cashierLoading =
     range === "today" ? loading : todayStatsLoading && !todayStats;
 
-  const error: string | null = statsError
-    ? (statsError?.response?.data?.message ??
-      statsError?.message ??
-      "Failed to load dashboard")
-    : null;
+  const error = statsError
+    ? extractError(statsError, "Failed to load dashboard")
+    : shouldFetchWeeklyFallback && weeklyFallbackError
+      ? extractError(weeklyFallbackError, "Failed to load the weekly chart")
+      : shouldFetchTodayCashiers && todayStatsError
+        ? extractError(todayStatsError, "Failed to load cashier totals")
+        : null;
 
   // ── Range handlers ──
 
@@ -182,19 +191,22 @@ export function useDashboard(
   const setRange = useCallback(
     (next: DashboardRange) => {
       setRangeState(next);
-      setActiveCustomRange({ from: undefined, to: undefined });
+      setCustomRangeState({ from: undefined, to: undefined });
       resetStockPages();
     },
     [resetStockPages],
   );
 
-  const setCustomRange = useCallback((next: DateRange) => {
-    setCustomRangeState(next);
-  }, []);
-
   const applyCustomRange = useCallback(
     (cr: DateRange) => {
-      setActiveCustomRange(cr);
+      if (!cr.from || !cr.to) {
+        setCustomRangeState({ from: undefined, to: undefined });
+        setRangeState("today");
+        resetStockPages();
+        return;
+      }
+
+      setCustomRangeState(cr);
       setRangeState("custom");
       resetStockPages();
     },
@@ -276,14 +288,12 @@ export function useDashboard(
   // ── Derived ──
 
   const isCustomActive =
-    activeCustomRange.from !== undefined && activeCustomRange.to !== undefined;
+    customRange.from !== undefined && customRange.to !== undefined;
 
   return {
     range,
     setRange,
     customRange,
-    setCustomRange,
-    activeCustomRange,
     applyCustomRange,
     stats: stats ?? null,
     loading,

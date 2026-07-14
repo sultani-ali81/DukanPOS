@@ -1,21 +1,23 @@
+import { extractError } from "@/lib/error";
 import { hasSession } from "@/queries/session";
-import { useCallback, useEffect, useState } from "react";
+import useSWR from "swr";
 
 export function usePosSession() {
-  const [hasActiveSession, setHasActiveSession] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
+    ["pos-session"],
+    () => hasSession(),
+  );
 
-  const refresh = useCallback(() => {
-    setCheckingSession(true);
-    hasSession()
-      .then((res) => setHasActiveSession(Boolean(res)))
-      .catch(() => setHasActiveSession(false))
-      .finally(() => setCheckingSession(false));
-  }, []);
+  const refresh = () => {
+    void mutate();
+  };
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { hasActiveSession, checkingSession, refresh };
+  return {
+    hasActiveSession: Boolean(data),
+    checkingSession: isLoading || isValidating,
+    sessionError: error
+      ? extractError(error, "Unable to verify the active POS session")
+      : null,
+    refresh,
+  };
 }

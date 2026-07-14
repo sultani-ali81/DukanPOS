@@ -143,7 +143,7 @@ export default function JournalPage() {
         <CardContent className="pl-4">
           <Table>
             <TableHeader>
-              <TableRow className="text-md">
+              <TableRow className="text-base">
                 <TableHead className="text-sm font-semibold">
                   Reference
                 </TableHead>

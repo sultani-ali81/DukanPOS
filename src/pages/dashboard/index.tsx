@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { formatCurrency } from "@/lib/data";
+import { cn } from "@/lib/utils";
 import type { DashboardRange } from "@/types/dashboard";
 import {
   AlertTriangle,
@@ -71,7 +72,6 @@ export default function DashboardPage() {
     range,
     setRange,
     customRange,
-    setCustomRange,
     cashierBreakdown,
     cashierLoading,
     applyCustomRange,
@@ -118,12 +118,12 @@ export default function DashboardPage() {
             <button
               key={opt.value}
               onClick={() => setRange(opt.value)}
-              className={[
+              className={cn(
                 "h-6 rounded-lg cursor-pointer px-3.5 text-sm font-medium transition-colors",
                 range === opt.value && !isCustomActive
                   ? "bg-primary text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
-              ].join(" ")}
+              )}
             >
               {opt.label}
             </button>
@@ -132,7 +132,6 @@ export default function DashboardPage() {
 
         <DateRangePicker
           value={customRange}
-          onChange={setCustomRange}
           onApply={applyCustomRange}
           disabled={loading}
         />

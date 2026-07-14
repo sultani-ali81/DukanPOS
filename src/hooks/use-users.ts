@@ -1,5 +1,6 @@
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
+import { extractError } from "@/lib/error";
 import { getUsers, usersKey } from "@/queries/user";
 import type { User } from "@/types/user";
 import { useState } from "react";
@@ -25,6 +26,7 @@ export interface UseUsersReturn {
   optimisticUpdate: (id: string, patch: Partial<User>) => void;
   optimisticDelete: (id: string) => void;
   isLoading: boolean;
+  error: string | null;
   PAGE_SIZE: number;
 }
 
@@ -47,7 +49,7 @@ export function useUsers(): UseUsersReturn {
     role: role !== "ALL" ? role : undefined,
   });
 
-  const { data, mutate, isLoading } = useSWR(swrKey, () =>
+  const { data, mutate, isLoading, error } = useSWR(swrKey, () =>
     getUsers({
       search: debouncedSearch,
       page,
@@ -118,6 +120,7 @@ export function useUsers(): UseUsersReturn {
     optimisticUpdate,
     optimisticDelete,
     isLoading,
+    error: error ? extractError(error, "Failed to load users.") : null,
     PAGE_SIZE,
   };
 }

@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePagination } from "@/hooks/use-pagination";
+import { cn } from "@/lib/utils";
 import { useReport } from "@/queries/reports";
 import type { ReportColumn, ReportType } from "@/types/reports";
 
@@ -45,8 +46,9 @@ export function ReportPanel<T extends { id: string }>({
 }: ReportPanelProps<T>) {
   const { page, setPage, itemsPerPage } = usePagination({
     initialItemsPerPage: 10,
+    pageParam: `${type}Page`,
   });
-  const { rows, meta, isLoading } = useReport<T>({
+  const { rows, meta, isLoading, error } = useReport<T>({
     type,
     page,
     limit: itemsPerPage,
@@ -84,6 +86,15 @@ export function ReportPanel<T extends { id: string }>({
             <TableBody>
               {isLoading ? (
                 <ReportSkeleton cols={totalCols} />
+              ) : error ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={totalCols}
+                    className="py-12 text-center text-sm text-destructive"
+                  >
+                    {error}
+                  </TableCell>
+                </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell
@@ -100,11 +111,10 @@ export function ReportPanel<T extends { id: string }>({
                   return (
                     <Fragment key={row.id}>
                       <TableRow
-                        className={
-                          hasExpanded
-                            ? "cursor-pointer transition-colors hover:bg-muted/50"
-                            : ""
-                        }
+                        className={cn(
+                          hasExpanded &&
+                            "cursor-pointer transition-colors hover:bg-muted/50",
+                        )}
                         onClick={() => toggleRow(row.id)}
                       >
                         {hasExpanded && (

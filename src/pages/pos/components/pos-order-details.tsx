@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/data";
+import { cn } from "@/lib/utils";
 import type { SalePaymentStatus } from "@/types/sale";
 import {
   Banknote,
@@ -43,6 +44,7 @@ interface PosOrderDetailsProps {
   total: number;
   paymentStatus: SalePaymentStatus;
   onPaymentStatusChange: (status: SalePaymentStatus) => void;
+  isWalkInCustomer: boolean;
   partialPaymentAmount: string;
   onPartialPaymentAmountChange: (amount: string) => void;
   partialPaymentError: string | null;
@@ -72,11 +74,7 @@ function QuantityInput({
 }) {
   const [raw, setRaw] = useState(String(item.quantity));
   const [focused, setFocused] = useState(false);
-
-  // Only sync externally (e.g. + / - button) when the user is NOT inside the field
-  if (!focused && raw !== "" && Number(raw) !== item.quantity) {
-    setRaw(String(item.quantity));
-  }
+  const displayValue = focused ? raw : String(item.quantity);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only update local display — never touch the cart while the user is typing
@@ -122,10 +120,11 @@ function QuantityInput({
         type="text"
         inputMode="numeric"
         pattern="[0-9]*"
-        value={raw}
+        value={displayValue}
         placeholder="0"
         onChange={handleChange}
         onFocus={(e) => {
+          setRaw(String(item.quantity));
           setFocused(true);
           e.target.select();
         }}
@@ -176,6 +175,7 @@ export function PosOrderDetails({
   total,
   paymentStatus,
   onPaymentStatusChange,
+  isWalkInCustomer,
   partialPaymentAmount,
   onPartialPaymentAmountChange,
   partialPaymentError,
@@ -349,14 +349,21 @@ export function PosOrderDetails({
                 ] as const
               ).map(([status, label, Icon]) => {
                 const selected = paymentStatus === status;
+                const disabled = isWalkInCustomer && status !== "fully_paid";
                 return (
                   <label
                     key={status}
-                    className={`cursor-pointer rounded-xl border px-2 py-2 text-center transition-colors ${
+                    aria-disabled={disabled}
+                    className={cn(
+                      "rounded-xl border px-2 py-2 text-center transition-colors",
+                      disabled
+                        ? "cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300 opacity-60"
+                        : "cursor-pointer",
                       selected
                         ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
-                    }`}
+                        : !disabled &&
+                            "border-gray-200 bg-white text-gray-500 hover:bg-gray-50",
+                    )}
                   >
                     <input
                       className="sr-only"
@@ -364,16 +371,23 @@ export function PosOrderDetails({
                       name={paymentGroupName}
                       value={status}
                       checked={selected}
+                      disabled={disabled}
                       onChange={() => onPaymentStatusChange(status)}
                     />
                     <Icon className="mx-auto mb-1 h-4 w-4" />
-                    <span className="block text-[11px] font-semibold">
+                    <span className="block text-caption font-semibold">
                       {label}
                     </span>
                   </label>
                 );
               })}
             </div>
+
+            {isWalkInCustomer && (
+              <p className="text-xs text-amber-700">
+                Walk-in sales must be paid in full.
+              </p>
+            )}
 
             {paymentStatus === "partially_paid" && (
               <div className="space-y-1">

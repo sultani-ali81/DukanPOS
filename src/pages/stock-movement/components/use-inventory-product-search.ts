@@ -19,7 +19,7 @@ export function useInventoryProductSearch(inventoryId: string) {
     ([, id]) => getInventory(id),
   );
 
-  const products = data?.products ?? [];
+  const products = useMemo(() => data?.products ?? [], [data?.products]);
 
   const metaById = useMemo(() => {
     const map = new Map<string, InventoryProductMeta>();
@@ -50,7 +50,11 @@ export function useInventoryProductSearch(inventoryId: string) {
 
   const removeRow = (index: number) => {
     setDisplays((prev) => prev.filter((_, i) => i !== index));
-    if (activeIndex === index) setActiveIndex(null);
+    setActiveIndex((current) => {
+      if (current === null || current < index) return current;
+      if (current === index) return null;
+      return current - 1;
+    });
   };
 
   const updateDisplay = (index: number, value: string) => {

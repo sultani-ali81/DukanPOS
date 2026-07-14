@@ -1,4 +1,5 @@
-import api from "@/lib/axios";
+import { forgotPassword } from "@/queries/auth";
+import { extractError } from "@/lib/error";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -15,15 +16,11 @@ export default function ForgotPassword() {
     try {
       setLoading(true);
 
-      await api.post("/auth/forgot-password", { email });
+      await forgotPassword(email);
 
       setMessage("Password reset link sent to your email");
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setMessage(err.message);
-      } else {
-        setMessage("Something went wrong");
-      }
+      setMessage(extractError(err, "Something went wrong"));
     } finally {
       setLoading(false);
     }

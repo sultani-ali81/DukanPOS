@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import DateInput from "@/components/ui/DateInput";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,7 @@ const profileFormSchema = z
     gender: z.union([
       z.literal("male"),
       z.literal("female"),
-      z.literal("other"),
+      z.literal("Other"),
       z.literal(""),
     ]),
     dob: z.string().optional(),
@@ -59,6 +60,27 @@ const profileFormSchema = z
   });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+const genderLabels: Record<Exclude<ProfileFormValues["gender"], "">, string> = {
+  male: "Male",
+  female: "Female",
+  Other: "Other",
+};
+
+function normalizeGender(
+  gender: string | null | undefined,
+): ProfileFormValues["gender"] {
+  switch (gender?.toLowerCase()) {
+    case "male":
+      return "male";
+    case "female":
+      return "female";
+    case "other":
+      return "Other";
+    default:
+      return "";
+  }
+}
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -124,7 +146,7 @@ export function EditProfileDialog({
       lastName: profile.lastName ?? "",
       email: profile.email ?? "",
       phone: profile.phone ?? "",
-      gender: (profile.gender as ProfileFormValues["gender"]) ?? "",
+      gender: normalizeGender(profile.gender),
       dob: profile.dob ? profile.dob.split("T")[0] : "",
       storeName: profile.storeName ?? "",
       oldPassword: "",
@@ -253,7 +275,7 @@ export function EditProfileDialog({
         onPointerDownOutside={(e) => {
           if (
             (e.target as HTMLElement | null)?.closest(
-              '[data-slot="select-content"]',
+              '[data-slot="select-content"], [data-slot="popover-content"]',
             )
           ) {
             e.preventDefault();
@@ -262,7 +284,7 @@ export function EditProfileDialog({
         onFocusOutside={(e) => {
           if (
             (e.target as HTMLElement | null)?.closest(
-              '[data-slot="select-content"]',
+              '[data-slot="select-content"], [data-slot="popover-content"]',
             )
           ) {
             e.preventDefault();
@@ -412,7 +434,18 @@ export function EditProfileDialog({
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="ep-dob">Date of Birth</Label>
-                  <Input id="ep-dob" type="date" {...register("dob")} />
+                  <Controller
+                    control={control}
+                    name="dob"
+                    render={({ field }) => (
+                      <DateInput
+                        id="ep-dob"
+                        value={field.value}
+                        onChange={field.onChange}
+                        className="h-9 rounded-md border-input px-2.5 shadow-xs hover:bg-transparent"
+                      />
+                    )}
+                  />
                 </div>
               </div>
 
@@ -429,16 +462,25 @@ export function EditProfileDialog({
                         onValueChange={field.onChange}
                       >
                         <SelectTrigger aria-label="Gender" className="w-full">
-                          <SelectValue placeholder="Select gender" />
+                          <SelectValue>
+                            {(value: ProfileFormValues["gender"]) =>
+                              value ? genderLabels[value] : "Select gender"
+                            }
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Male">Male</SelectItem>
-                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
                           <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
                   />
+                  {errors.gender && (
+                    <p className="text-xs text-destructive">
+                      {errors.gender.message}
+                    </p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="ep-storeName">

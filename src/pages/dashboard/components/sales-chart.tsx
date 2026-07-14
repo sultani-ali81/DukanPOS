@@ -30,21 +30,21 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-lg text-sm min-w-[160px]">
-      <p className="font-semibold text-gray-900 mb-2">{label}</p>
+    <div className="min-w-[160px] rounded-xl border border-border bg-popover p-3 text-sm text-popover-foreground shadow-lg">
+      <p className="mb-2 font-semibold text-foreground">{label}</p>
       {payload.map((entry) => (
         <div
           key={entry.name}
           className="flex items-center justify-between gap-4"
         >
-          <span className="flex items-center gap-1.5 text-gray-500">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
             <span
               className="inline-block w-2 h-2 rounded-full"
               style={{ background: entry.color }}
             />
             {entry.name}
           </span>
-          <span className="font-semibold tabular-nums text-gray-900">
+          <span className="font-semibold tabular-nums text-foreground">
             {formatCurrency(entry.value)}
           </span>
         </div>
@@ -86,40 +86,44 @@ export function SalesChart({ data }: SalesChartProps) {
       >
         <CartesianGrid
           strokeDasharray="3 3"
-          stroke="#f0f0f0"
+          stroke="var(--border)"
           vertical={false}
         />
         <XAxis
           dataKey="day"
-          tick={{ fontSize: 12, fill: "#9ca3af" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
           tickFormatter={yFormatter}
-          tick={{ fontSize: 12, fill: "#9ca3af" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           axisLine={false}
           tickLine={false}
           width={44}
         />
         <Tooltip
           content={<CustomTooltip />}
-          cursor={{ fill: "#f9fafb", radius: 6 }}
+          cursor={{ fill: "var(--muted)", radius: 6 }}
         />
         <Legend
           iconType="circle"
           iconSize={8}
-          wrapperStyle={{ fontSize: 12, paddingTop: 12, color: "#6b7280" }}
+          wrapperStyle={{
+            fontSize: 12,
+            paddingTop: 12,
+            color: "var(--muted-foreground)",
+          }}
         />
         <Bar
           dataKey="Sales"
-          fill="#6366f1"
+          fill="var(--chart-1)"
           radius={[4, 4, 0, 0]}
           maxBarSize={40}
         />
         <Bar
           dataKey="Profit"
-          fill="#10b981"
+          fill="var(--chart-2)"
           radius={[4, 4, 0, 0]}
           maxBarSize={40}
         />

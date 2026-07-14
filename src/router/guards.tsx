@@ -1,13 +1,16 @@
 import { useAuthStore } from "@/lib/store";
 import { Navigate } from "react-router-dom";
+import { useShallow } from "zustand/react/shallow";
 
 export function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore();
+  const token = useAuthStore((state) => state.token);
   return token ? <>{children}</> : <Navigate to="/" replace />;
 }
 
 export function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { token, user } = useAuthStore();
+  const { token, user } = useAuthStore(
+    useShallow((state) => ({ token: state.token, user: state.user })),
+  );
 
   if (!token) return <>{children}</>;
 
@@ -23,7 +26,9 @@ export function RoleRoute({
   children: React.ReactNode;
   allowed: string[];
 }) {
-  const { token, user } = useAuthStore();
+  const { token, user } = useAuthStore(
+    useShallow((state) => ({ token: state.token, user: state.user })),
+  );
 
   if (!token) return <Navigate to="/" replace />;
   if (!user || !allowed.includes(user.role)) {

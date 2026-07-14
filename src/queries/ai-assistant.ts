@@ -7,8 +7,7 @@ import type {
   DeleteAiChatThreadResponse,
   RenameAiChatThreadPayload,
 } from "@/types/ai-assistant";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { isAxiosError } from "axios";
 
 export class AiAssistantStreamError extends Error {
   status?: number;
@@ -30,7 +29,6 @@ type AssistantSseEventData = {
 
 type AskAssistantSseStreamOptions = {
   question: string;
-  token: string;
   threadId?: string;
   onChunk: (content: string) => void;
   onDone: (data: {
@@ -126,40 +124,44 @@ export function parseAssistantSseEvent(rawEvent: string) {
 
 export async function askAssistantSseStream({
   question,
-  token,
   threadId,
   onChunk,
   onDone,
   onError,
   signal,
 }: AskAssistantSseStreamOptions) {
-  const response = await fetch(`${API_BASE_URL}/ai-assistant/ask/stream`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      question,
-      ...(threadId ? { threadId } : {}),
-    }),
-    signal,
-  });
+  let stream: ReadableStream<Uint8Array>;
 
-  if (!response.ok) {
-    throw new AiAssistantStreamError(
-      getStreamStatusMessage(response.status),
-      response.status,
+  try {
+    const response = await api.post<ReadableStream<Uint8Array>>(
+      "/ai-assistant/ask/stream",
+      {
+        question,
+        ...(threadId ? { threadId } : {}),
+      },
+      {
+        adapter: "fetch",
+        responseType: "stream",
+        signal,
+        skipAuthErrorHandling: true,
+      },
     );
+    stream = response.data;
+  } catch (error: unknown) {
+    const status = isAxiosError(error) ? error.response?.status : undefined;
+    if (status) {
+      throw new AiAssistantStreamError(getStreamStatusMessage(status), status);
+    }
+    throw error;
   }
 
-  if (!response.body) {
+  if (!stream || typeof stream.getReader !== "function") {
     throw new AiAssistantStreamError(
       "Streaming is not supported by this browser.",
     );
   }
 
-  const reader = response.body.getReader();
+  const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let receivedTerminalEvent = false;

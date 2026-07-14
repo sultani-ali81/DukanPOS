@@ -1,8 +1,8 @@
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
+import { SearchField } from "@/components/search-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -18,20 +18,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SALES_PAGE_SIZES, useSales } from "@/hooks/use-sales";
+import { SALES_PAGE_SIZES, useSale, useSales } from "@/hooks/use-sales";
 import { formatCurrency } from "@/lib/data";
 import { extractError } from "@/lib/error";
-import { getSale } from "@/queries/sale";
-import type { SaleDetail, SaleListItem } from "@/types/sale";
+import type { SaleListItem } from "@/types/sale";
 import {
   Eye,
   Loader2,
   Plus,
   ReceiptText,
   RefreshCw,
-  Search,
   WalletCards,
-  X,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -78,11 +75,32 @@ function SalesCardSkeleton() {
 
 export function SalesClient() {
   const navigate = useNavigate();
-  const [paymentSale, setPaymentSale] = useState<SaleDetail | null>(null);
-  const [loadingPaymentSaleId, setLoadingPaymentSaleId] = useState<
-    string | null
-  >(null);
+  const [paymentSaleId, setPaymentSaleId] = useState<string>();
   const loadingPaymentRef = useRef(false);
+  const {
+    sale: paymentSale,
+    isLoading: paymentSaleLoading,
+    isValidating: paymentSaleValidating,
+  } = useSale(paymentSaleId, {
+    onSuccess: (detail) => {
+      loadingPaymentRef.current = false;
+      if (!canCollectSalePayment(detail)) {
+        toast.info("No payment is currently due for this sale.");
+        setPaymentSaleId(undefined);
+      }
+    },
+    onError: (requestError) => {
+      loadingPaymentRef.current = false;
+      setPaymentSaleId(undefined);
+      toast.error(
+        extractError(requestError, "Could not load the sale balance."),
+      );
+    },
+  });
+  const loadingPaymentSaleId =
+    paymentSaleId && (paymentSaleLoading || paymentSaleValidating)
+      ? paymentSaleId
+      : null;
   const {
     sales,
     page,
@@ -108,25 +126,10 @@ export function SalesClient() {
   const mayHaveOutstandingPayment = (sale: SaleListItem) =>
     sale.status !== "Cancelled" && sale.paymentStatus !== "fully_paid";
 
-  const openPayment = async (sale: SaleListItem) => {
+  const openPayment = (sale: SaleListItem) => {
     if (loadingPaymentRef.current) return;
     loadingPaymentRef.current = true;
-    setLoadingPaymentSaleId(sale.id);
-    try {
-      const detail = await getSale(sale.id);
-      if (!canCollectSalePayment(detail)) {
-        toast.info("No payment is currently due for this sale.");
-        return;
-      }
-      setPaymentSale(detail);
-    } catch (requestError: unknown) {
-      toast.error(
-        extractError(requestError, "Could not load the sale balance."),
-      );
-    } finally {
-      loadingPaymentRef.current = false;
-      setLoadingPaymentSaleId(null);
-    }
+    setPaymentSaleId(sale.id);
   };
 
   return (
@@ -170,27 +173,15 @@ export function SalesClient() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="relative min-w-0 sm:w-72">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by customer name…"
-                aria-label="Search sales by customer name"
-                className="w-full pl-9 pr-9"
-              />
-              {search && (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={clearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
+            <SearchField
+              value={search}
+              onValueChange={setSearch}
+              onClear={clearSearch}
+              placeholder="Search by customer name…"
+              aria-label="Search sales by customer name"
+              className="min-w-0 sm:w-72"
+              inputClassName="w-full pr-9"
+            />
 
             <div className="flex items-center gap-2">
               <span className="whitespace-nowrap text-xs text-muted-foreground">
@@ -451,12 +442,12 @@ export function SalesClient() {
         }
       />
 
-      {paymentSale && (
+      {paymentSale && !paymentSaleValidating && (
         <CollectPaymentDialog
           sale={paymentSale}
           open
           onOpenChange={(open) => {
-            if (!open) setPaymentSale(null);
+            if (!open) setPaymentSaleId(undefined);
           }}
         />
       )}

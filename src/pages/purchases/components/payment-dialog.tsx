@@ -32,7 +32,11 @@ function fmtCurrency(n: number) {
 }
 
 function todayISO() {
-  return new Date().toISOString().split("T")[0];
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -180,7 +184,7 @@ export function PaymentDialog({ purchase, onSuccess }: PaymentDialogProps) {
                 setForm((f) => ({ ...f, amount: e.target.value }))
               }
             />
-            <p className="text-[11px] text-gray-400">
+            <p className="text-caption text-gray-400">
               Purchase total: {fmtCurrency(purchase.totalPrice)}
             </p>
           </div>

@@ -9,6 +9,7 @@ import { Form, FormLabel } from "@/components/ui/form";
 import { ArrowLeft, ArrowRight, Package, Plus, Warehouse } from "lucide-react";
 
 import { extractError } from "@/lib/error";
+import { createStockMutationMatcher } from "@/lib/stock-cache";
 import InventoryCombobox from "@/pages/purchases/components/inventory-combobox";
 import {
   createStockMovement,
@@ -20,6 +21,7 @@ import {
 } from "./stock-movement-form-schema";
 import { StockMovementItemRow } from "./stock-movement-item-row";
 import { useInventoryProductSearch } from "./use-inventory-product-search";
+import { useSWRConfig } from "swr";
 
 interface LocationState {
   sourceInventoryId?: string;
@@ -28,6 +30,7 @@ interface LocationState {
 export function NewStockMovementClient() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { mutate: mutateCache } = useSWRConfig();
   const prefill = (location.state as LocationState) ?? {};
 
   const form = useForm<StockMovementFormValues>({
@@ -88,6 +91,18 @@ export function NewStockMovementClient() {
       await updateStockMovement(
         { status: "Done" },
         response.stockMovementId,
+      );
+
+      await mutateCache(
+        createStockMutationMatcher({
+          inventoryIds: new Set([
+            values.sourceInventoryId,
+            values.destinationInventoryId,
+          ]),
+          productIds: new Set(values.items.map((item) => item.productId)),
+        }),
+        undefined,
+        { revalidate: true },
       );
 
       toast.success("Stock transfer created", {

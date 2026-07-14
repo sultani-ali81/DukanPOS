@@ -1,15 +1,19 @@
-import api from "@/lib/axios";
+import { extractError } from "@/lib/error";
+import { getEmployeeProfile } from "@/queries/employee";
 import type { EmployeeInfo } from "@/types/index";
 import useSWR from "swr";
-
-const fetcher = (url: string) => api.get(url).then((res) => res.data);
 
 export function useProfile() {
   const { data, isLoading, error, mutate } = useSWR<EmployeeInfo>(
     "/employees/me",
-    fetcher,
+    getEmployeeProfile,
     { revalidateOnFocus: false },
   );
 
-  return { profile: data, isLoading, fetchError: error, mutate };
+  return {
+    profile: data,
+    isLoading,
+    fetchError: error ? extractError(error, "Failed to load profile") : null,
+    mutate,
+  };
 }

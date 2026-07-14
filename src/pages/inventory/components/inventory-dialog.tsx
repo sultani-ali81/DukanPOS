@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button";
 import {
+  CompactDialogBody,
+  CompactDialogContent,
+  CompactDialogFooter,
+  CompactDialogHeader,
+} from "@/components/compact-dialog";
+import {
   Dialog,
-  DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -46,11 +50,13 @@ export function InventoryDialog({
   });
 
   useEffect(() => {
+    if (!open) return;
+
     reset({
       name: editingInventory?.name ?? "",
       address: editingInventory?.address ?? "",
     });
-  }, [editingInventory]);
+  }, [open, editingInventory, reset]);
 
   async function submit(values: InventoryFormValues) {
     await onSubmit(values, editingInventory?.id);
@@ -66,9 +72,9 @@ export function InventoryDialog({
         if (!o) reset();
       }}
     >
-      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0">
+      <CompactDialogContent>
         <form onSubmit={handleSubmit(submit)}>
-          <DialogHeader className="px-5 pt-5 pb-4 border-b border-gray-100">
+          <CompactDialogHeader>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <Warehouse className="w-4 h-4 text-primary" />
@@ -84,9 +90,9 @@ export function InventoryDialog({
                 </DialogDescription>
               </div>
             </div>
-          </DialogHeader>
+          </CompactDialogHeader>
 
-          <div className="px-5 py-4 space-y-4">
+          <CompactDialogBody>
             <div className="space-y-1.5">
               <Label className="text-sm font-medium text-gray-700">
                 Name <span className="text-destructive">*</span>
@@ -118,9 +124,9 @@ export function InventoryDialog({
                 </p>
               )}
             </div>
-          </div>
+          </CompactDialogBody>
 
-          <div className="px-5 pb-5 flex gap-2">
+          <CompactDialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -140,9 +146,9 @@ export function InventoryDialog({
               {isSubmitting && <Loader2 className="size-4 animate-spin mr-2" />}
               {isEdit ? "Save Changes" : "Create Inventory"}
             </Button>
-          </div>
+          </CompactDialogFooter>
         </form>
-      </DialogContent>
+      </CompactDialogContent>
     </Dialog>
   );
 }

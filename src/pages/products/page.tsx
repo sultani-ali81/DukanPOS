@@ -1,9 +1,9 @@
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
+import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,12 +13,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useProducts } from "@/hooks/use-products";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import { formatCurrency } from "@/lib/data";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
+import { getCategories } from "@/queries/category";
 import {
   createProduct,
   deleteProduct,
-  getCategories,
   updateProduct,
 } from "@/queries/products";
 import type {
@@ -31,13 +32,17 @@ import {
   Package,
   Pencil,
   Plus,
-  Search,
   Trash2,
-  X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import useSWR, { useSWRConfig } from "swr";
+
+const PRODUCT_CATEGORIES_KEY = [
+  "categories",
+  { page: 1, itemsPerPage: 12, search: "" },
+] as const;
 
 function TableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
@@ -73,6 +78,7 @@ function TableSkeleton({ rows = 8 }: { rows?: number }) {
 
 export default function ProductsPage() {
   const navigate = useNavigate();
+  const { mutate: mutateCache } = useSWRConfig();
 
   const {
     products,
@@ -82,24 +88,20 @@ export default function ProductsPage() {
     search,
     handleSearch,
     clearSearch,
-    mutate,
     isLoading,
+    error,
     PAGE_SIZE,
   } = useProducts();
 
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
-    [],
-  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    getCategories().then((res) => {
-      const cats: { data: { id: string; name: string }[] } = res.data;
-      setCategories(cats.data ?? []);
-    });
-  }, []);
+  const { data: categoriesData } = useSWR(
+    PRODUCT_CATEGORIES_KEY,
+    ([, params]) => getCategories(params),
+  );
+  const categories = categoriesData?.data ?? [];
 
   // ── CRUD ────────────────────────────────────────────────────────────────
 
@@ -118,7 +120,7 @@ export default function ProductsPage() {
           description: `"${values.name}" has been added to the catalog.`,
         });
       }
-      mutate();
+      await mutateCache(createCrudFamilyMatcher("products", id));
     } catch {
       toast.error("Something went wrong", { description: "Please try again." });
       throw new Error("submit failed");
@@ -132,7 +134,9 @@ export default function ProductsPage() {
       toast.success("Product deleted", {
         description: `"${product.name}" has been removed.`,
       });
-      mutate();
+      await mutateCache(
+        createCrudFamilyMatcher("products", product.id),
+      );
     } catch {
       toast.error("Could not delete product", {
         description: "Please try again.",
@@ -159,34 +163,29 @@ export default function ProductsPage() {
         description="Manage your product catalog, prices, and stock."
       >
         <div className="flex gap-2">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-              <Search className="size-4" />
-            </span>
-            <Input
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search by name or barcode..."
-              className="w-64 pl-9"
-            />
-            {search && (
-              <button
-                onClick={clearSearch}
-                className="pointer-events-auto absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
+          <SearchField
+            value={search}
+            onValueChange={handleSearch}
+            onClear={clearSearch}
+            placeholder="Search by name or barcode..."
+            aria-label="Search products by name or barcode"
+            inputClassName="w-64"
+          />
           <Button onClick={openCreate}>
             <Plus className="size-4" /> Add Product
           </Button>
         </div>
       </PageHeader>
 
+      {error && (
+        <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       <Card className="overflow-hidden border">
         <CardContent className="p-0">
-          <Table className="table-fixed min-w-[630-px]">
+          <Table className="table-fixed min-w-[630px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="py-3 pl-3 w-2/5">Product</TableHead>

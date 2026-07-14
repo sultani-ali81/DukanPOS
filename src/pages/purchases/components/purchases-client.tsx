@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +24,11 @@ import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
 import { usePurchases } from "@/hooks/use-purchases";
 import { extractError } from "@/lib/error";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
+import { cn } from "@/lib/utils";
 import { deletePurchase, updatePurchaseStatus } from "@/queries/purchase";
 import type { PurchaseListItem, PurchaseStatus } from "@/types/purchases";
+import { useSWRConfig } from "swr";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -74,9 +78,10 @@ const DATE_SORT_OPTIONS = [
 
 export function PurchasesClient() {
   const navigate = useNavigate();
+  const { mutate: mutateCache } = useSWRConfig();
   const [searchOpen, setSearchOpen] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
 
   const {
@@ -90,7 +95,7 @@ export function PurchasesClient() {
     handleSearch,
     clearSearch,
     isLoading,
-    mutate,
+    error: loadError,
   } = usePurchases();
 
   const from = totalItems === 0 ? 0 : (page - 1) * itemsPerPage + 1;
@@ -106,12 +111,12 @@ export function PurchasesClient() {
 
   const handleDelete = async (id: string) => {
     setLoadingId(id);
-    setError(null);
+    setActionError(null);
     try {
       await deletePurchase(id);
-      await mutate();
+      await mutateCache(createCrudFamilyMatcher("purchases", id));
     } catch (err: unknown) {
-      setError(extractError(err));
+      setActionError(extractError(err));
     } finally {
       setLoadingId(null);
     }
@@ -119,12 +124,12 @@ export function PurchasesClient() {
 
   const handleStatusChange = async (id: string, newStatus: PurchaseStatus) => {
     setLoadingId(id);
-    setError(null);
+    setActionError(null);
     try {
       await updatePurchaseStatus(id, { status: newStatus });
-      await mutate();
+      await mutateCache(createCrudFamilyMatcher("purchases", id));
     } catch (err: unknown) {
-      setError(extractError(err));
+      setActionError(extractError(err));
     } finally {
       setLoadingId(null);
     }
@@ -137,15 +142,17 @@ export function PurchasesClient() {
       <PageHeader title="Purchases" description="View and manage purchases" />
 
       <div>
-        {error && (
+        {(actionError ?? loadError) && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center justify-between">
-            <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-400 hover:text-red-600 ml-4 text-xs"
-            >
-              Dismiss
-            </button>
+            <span>{actionError ?? loadError}</span>
+            {actionError && (
+              <button
+                onClick={() => setActionError(null)}
+                className="text-red-400 hover:text-red-600 ml-4 text-xs"
+              >
+                Dismiss
+              </button>
+            )}
           </div>
         )}
 
@@ -153,7 +160,7 @@ export function PurchasesClient() {
           {/* Toolbar */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100">
             <div>
-              <h2 className="text-md font-semibold text-gray-900">
+              <h2 className="text-base font-semibold text-gray-900">
                 Purchase Records
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
@@ -283,18 +290,27 @@ export function PurchasesClient() {
                           {fmtDate(item.customDate)}
                         </p>
                         <div className="flex">
-                          <span
-                            className={`text-xs px-2.5 py-1 rounded-full font-medium ${PURCHASE_STATUS_STYLES[itemStatus] ?? "bg-gray-100 text-gray-600"}`}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "h-auto border-transparent px-2.5 py-1",
+                              PURCHASE_STATUS_STYLES[itemStatus] ??
+                                "bg-gray-100 text-gray-600",
+                            )}
                           >
                             {itemStatus}
-                          </span>
+                          </Badge>
                         </div>
                         <div className="flex">
-                          <span
-                            className={`text-xs px-2.5 py-1 rounded-full font-medium ${STOCK_IN_BADGE[stockInStatus]}`}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "h-auto border-transparent px-2.5 py-1",
+                              STOCK_IN_BADGE[stockInStatus],
+                            )}
                           >
                             {stockInStatus}
-                          </span>
+                          </Badge>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

@@ -109,6 +109,7 @@ export interface Suggestion {
   id: string;
   label: string;
   sub?: string;
+  price?: number;
 }
 
 // ── Update status payload (sent to PUT /purchase/:id) ─────────────────────

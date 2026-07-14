@@ -1,17 +1,26 @@
 // src/pages/users/components/user-dialog.tsx
+import {
+  CompactDialogBody,
+  CompactDialogContent,
+  CompactDialogFooter,
+  CompactDialogHeader,
+} from "@/components/compact-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneNumberInput } from "@/components/ui/phoneinput";
-import { Select, SelectItem, SelectTrigger } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { passwordSchema } from "@/lib/password";
 import type { CreateUserPayload, UpdateUserPayload, User } from "@/types/user";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,12 +33,14 @@ import { z } from "zod";
 // ─── Schemas ────────────────────────────────────────────────────────────────
 
 const editUserSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
   phone: z.string().optional(),
 });
 
 const createUserSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
   email: z
     .string()
     .min(1, "Email is required")
@@ -42,7 +53,8 @@ const createUserSchema = z.object({
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type UserFormValues = {
-  name: string;
+  firstName: string;
+  lastName: string;
   email?: string;
   password?: string;
   phone?: string;
@@ -85,7 +97,8 @@ export function UserDialog({
   } = useForm<UserFormValues>({
     resolver,
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       phone: "",
@@ -95,7 +108,8 @@ export function UserDialog({
 
   useEffect(() => {
     reset({
-      name: editingUser?.name ?? "",
+      firstName: editingUser?.firstName ?? "",
+      lastName: editingUser?.lastName ?? "",
       email: editingUser?.email ?? "",
       password: "",
       phone: editingUser?.phone ?? "",
@@ -105,9 +119,14 @@ export function UserDialog({
 
   async function submit(values: UserFormValues) {
     const payload = isEdit
-      ? ({ name: values.name, phone: values.phone } as UpdateUserPayload)
+      ? ({
+          firstName: values.firstName,
+          lastName: values.lastName,
+          phone: values.phone,
+        } as UpdateUserPayload)
       : ({
-          name: values.name,
+          firstName: values.firstName,
+          lastName: values.lastName,
           email: values.email,
           password: values.password,
           phone: values.phone,
@@ -116,7 +135,14 @@ export function UserDialog({
 
     await onSubmit(payload, editingUser?.id);
     onOpenChange(false);
-    reset({ name: "", email: "", password: "", phone: "", role: "Cashier" });
+    reset({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      phone: "",
+      role: "Cashier",
+    });
   }
 
   return (
@@ -127,9 +153,9 @@ export function UserDialog({
         if (!o) reset();
       }}
     >
-      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0">
+      <CompactDialogContent>
         <form onSubmit={handleSubmit(submit)}>
-          <DialogHeader className="px-5 pt-5 pb-4 border-b border-gray-100">
+          <CompactDialogHeader>
             <DialogTitle className="text-base font-semibold">
               {isEdit ? "Edit User" : "Add User"}
             </DialogTitle>
@@ -138,24 +164,43 @@ export function UserDialog({
                 ? `Update details for ${editingUser.name}.`
                 : "Create a staff account and assign a role."}
             </DialogDescription>
-          </DialogHeader>
+          </CompactDialogHeader>
 
-          <div className="px-5 py-4 space-y-4">
-            {/* Name */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium text-gray-700">
-                Full Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                placeholder="John Smith"
-                className="h-11 rounded-xl border-gray-200 text-sm"
-                {...register("name")}
-              />
-              {errors.name && (
-                <p className="text-xs text-destructive">
-                  {errors.name.message}
-                </p>
-              )}
+          <CompactDialogBody>
+            {/* Name fields */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  First Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  autoComplete="given-name"
+                  placeholder="John"
+                  className="h-11 rounded-xl border-gray-200 text-sm"
+                  {...register("firstName")}
+                />
+                {errors.firstName && (
+                  <p className="text-xs text-destructive">
+                    {errors.firstName.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Last Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  autoComplete="family-name"
+                  placeholder="Smith"
+                  className="h-11 rounded-xl border-gray-200 text-sm"
+                  {...register("lastName")}
+                />
+                {errors.lastName && (
+                  <p className="text-xs text-destructive">
+                    {errors.lastName.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Email — create only */}
@@ -220,16 +265,19 @@ export function UserDialog({
                 <Label className="text-sm font-medium text-gray-700">
                   Role
                 </Label>
-                <Select disabled>
+                <Select disabled value="cashier">
                   <SelectTrigger className="max-w-35">
-                    <SelectItem value="cashier">Cashier</SelectItem>
+                    <SelectValue />
                   </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cashier">Cashier</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             )}
-          </div>
+          </CompactDialogBody>
 
-          <DialogFooter className="px-5 pb-5 flex gap-2">
+          <CompactDialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -249,9 +297,9 @@ export function UserDialog({
               {isSubmitting && <Loader2 className="size-4 animate-spin mr-2" />}
               {isEdit ? "Save Changes" : "Create User"}
             </Button>
-          </DialogFooter>
+          </CompactDialogFooter>
         </form>
-      </DialogContent>
+      </CompactDialogContent>
     </Dialog>
   );
 }

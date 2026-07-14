@@ -1,5 +1,6 @@
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
+import { extractError } from "@/lib/error";
 import { getProducts } from "@/queries/products";
 import useSWR from "swr";
 
@@ -29,7 +30,7 @@ export function useProducts() {
     itemsPerPage: PAGE_SIZE,
   });
 
-  const { data, mutate, isLoading } = useSWR(swrKey, () =>
+  const { data, mutate, isLoading, error } = useSWR(swrKey, () =>
     getProducts({ search: debouncedSearch, page, itemsPerPage: PAGE_SIZE }),
   );
 
@@ -44,6 +45,7 @@ export function useProducts() {
     clearSearch,
     mutate,
     isLoading,
+    error: error ? extractError(error, "Failed to load products.") : null,
     PAGE_SIZE,
   };
 }

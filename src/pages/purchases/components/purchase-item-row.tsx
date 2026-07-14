@@ -27,7 +27,12 @@ interface PurchaseItemRowProps {
   productLoading: boolean;
   onProductFocus: () => void;
   onProductInputChange: (v: string) => void;
-  onProductSelect: (id: string, label: string, sub?: string) => void;
+  onProductSelect: (
+    id: string,
+    label: string,
+    sub?: string,
+    price?: number,
+  ) => void;
   onRemove: () => void;
 }
 
@@ -58,6 +63,7 @@ export function PurchaseItemRow({
           name={`items.${index}.productId`}
           render={({ field, fieldState }) => (
             <InlineCombobox
+              selectedId={field.value}
               displayValue={productDisplay}
               placeholder="Search product…"
               icon={<Package className="w-4 h-4" />}
@@ -68,10 +74,10 @@ export function PurchaseItemRow({
                 onProductInputChange(v);
                 field.onChange("");
               }}
-              onSelect={(id, label, sub) => {
+              onSelect={(id, label, sub, price) => {
                 field.onChange(id);
                 setValue(`items.${index}.productName`, label);
-                onProductSelect(id, label, sub);
+                onProductSelect(id, label, sub, price);
               }}
               error={fieldState.error?.message}
             />

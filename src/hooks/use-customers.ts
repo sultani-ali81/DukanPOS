@@ -1,5 +1,6 @@
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
+import { extractError } from "@/lib/error";
 import { customersKey, getCustomers } from "@/queries/customer";
 import useSWR from "swr";
 
@@ -21,7 +22,7 @@ export function useCustomers(options: { pageParam?: string } = {}) {
     itemsPerPage: PAGE_SIZE,
   });
 
-  const { data, mutate, isLoading } = useSWR(swrKey, () =>
+  const { data, mutate, isLoading, error } = useSWR(swrKey, () =>
     getCustomers({ search: debouncedSearch, page, itemsPerPage: PAGE_SIZE }),
   );
 
@@ -36,6 +37,7 @@ export function useCustomers(options: { pageParam?: string } = {}) {
     clearSearch,
     mutate,
     isLoading,
+    error: error ? extractError(error, "Failed to load contacts.") : null,
     PAGE_SIZE,
   };
 }

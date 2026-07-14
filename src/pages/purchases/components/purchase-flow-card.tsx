@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { PurchaseDetail } from "@/types/purchases";
 import {
   CheckCircle2,
@@ -127,33 +128,36 @@ export function PurchaseFlowCard({
               <React.Fragment key={step.label}>
                 <div className="flex flex-col items-center gap-1 w-16 shrink-0">
                   <div
-                    className={`flex size-9 items-center justify-center rounded-full border-2 transition-all ${
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-full border-2 transition-all",
                       step.state === "done"
                         ? "border-primary bg-primary text-white"
                         : step.state === "active"
                           ? "border-primary bg-primary text-primary-foreground"
-                          : "border-muted-foreground/30 text-muted-foreground/30"
-                    }`}
+                          : "border-muted-foreground/30 text-muted-foreground/30",
+                    )}
                   >
                     <Icon className="size-5" />
                   </div>
                   <p
-                    className={`text-xs font-semibold text-center leading-tight ${
+                    className={cn(
+                      "text-xs font-semibold text-center leading-tight",
                       step.state === "done" || step.state === "active"
                         ? "text-primary"
-                        : "text-muted-foreground"
-                    }`}
+                        : "text-muted-foreground",
+                    )}
                   >
                     {step.label}
                   </p>
                 </div>
                 {!isLast && (
                   <div
-                    className={`flex-1 h-0.5 mt-4 shrink-0 ${
+                    className={cn(
+                      "flex-1 h-0.5 mt-4 shrink-0",
                       step.state === "done"
                         ? "bg-primary"
-                        : "bg-muted-foreground/20"
-                    }`}
+                        : "bg-muted-foreground/20",
+                    )}
                   />
                 )}
               </React.Fragment>
@@ -224,7 +228,7 @@ export function PurchaseFlowCard({
                   <AlertDialogCancel>Go Back</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={onCancel}
-                    className="bg-red-500 hover:bg-red-600"
+                    variant="destructive"
                   >
                     Cancel Purchase
                   </AlertDialogAction>

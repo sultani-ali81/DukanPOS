@@ -2,31 +2,20 @@
 
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
+import { SearchField } from "@/components/search-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useCategories } from "@/hooks/use-categories";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
+import { cn } from "@/lib/utils";
 import {
-  Loader2,
-  Package,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+  CategoryDialog,
+  type CategoryFormValues,
+} from "@/pages/categories/components/category-dialog";
+import { Loader2, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -48,101 +37,6 @@ function categoryColor(name: string): { bg: string; text: string } {
   return palette[idx];
 }
 
-// ── Category dialog ───────────────────────────────────────────────────────────
-
-interface CategoryFormValues {
-  name: string;
-}
-
-interface CategoryDialogProps {
-  open: boolean;
-  editingCategory: { id: string; name: string } | null;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (values: CategoryFormValues, id?: string) => Promise<void>;
-}
-
-function CategoryDialog({
-  open,
-  editingCategory,
-  onOpenChange,
-  onSubmit,
-}: CategoryDialogProps) {
-  const isEdit = !!editingCategory;
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CategoryFormValues>({
-    defaultValues: { name: editingCategory?.name ?? "" },
-  });
-
-  async function submit(values: CategoryFormValues) {
-    await onSubmit(values, editingCategory?.id);
-    onOpenChange(false);
-    reset({ name: "" });
-  }
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o);
-        if (!o) reset();
-      }}
-    >
-      <DialogContent>
-        <form onSubmit={handleSubmit(submit)}>
-          <DialogHeader>
-            <DialogTitle>
-              {isEdit ? "Edit Category" : "Add Category"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEdit
-                ? `Update name for "${editingCategory.name}".`
-                : "Create a new category to organize your products."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="cat-name">
-                Category Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="cat-name"
-                placeholder="e.g. Dairy, Beverages"
-                {...register("name", { required: "Name is required" })}
-              />
-              {errors.name && (
-                <p className="text-xs text-destructive">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                reset();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-              {isEdit ? "Save Changes" : "Create Category"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ── Skeleton card ───────────────────────────────────────────────────────────
 
 function CategoryCardSkeleton() {
@@ -162,6 +56,7 @@ function CategoryCardSkeleton() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CategoriesPage() {
+  const { mutate: mutateCache } = useSWRConfig();
   const {
     categories,
     meta,
@@ -170,7 +65,6 @@ export default function CategoriesPage() {
     search,
     handleSearch,
     clearSearch,
-    mutate,
     page,
     goToPage,
     totalPages,
@@ -201,7 +95,7 @@ export default function CategoriesPage() {
           description: `"${values.name}" is ready to use.`,
         });
       }
-      mutate();
+      await mutateCache(createCrudFamilyMatcher("categories"));
     } catch {
       toast.error("Something went wrong", { description: "Please try again." });
       throw new Error("submit failed");
@@ -213,7 +107,7 @@ export default function CategoriesPage() {
     try {
       const { deleteCategory } = await import("@/queries/category");
       await deleteCategory(cat.id);
-      mutate();
+      await mutateCache(createCrudFamilyMatcher("categories"));
       toast.success("Category deleted", {
         description: `"${cat.name}" has been removed.`,
       });
@@ -257,25 +151,14 @@ export default function CategoriesPage() {
       )}
 
       {/* Search */}
-      <div className="mb-4 relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          <Search className="size-4" />
-        </span>
-        <Input
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search categories..."
-          className="pl-9 pr-8"
-        />
-        {search && (
-          <button
-            onClick={clearSearch}
-            className="pointer-events-auto absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        )}
-      </div>
+      <SearchField
+        value={search}
+        onValueChange={handleSearch}
+        onClear={clearSearch}
+        placeholder="Search categories..."
+        aria-label="Search categories"
+        className="mb-4"
+      />
 
       {/* Grid */}
       {loading ? (
@@ -311,9 +194,12 @@ export default function CategoriesPage() {
                 <CardContent className="flex items-center justify-between gap-3 p-5">
                   <div className="flex items-center gap-4 min-w-0">
                     <div
-                      className={`flex size-12 shrink-0 items-center justify-center rounded-xl ${colors.bg}`}
+                      className={cn(
+                        "flex size-12 shrink-0 items-center justify-center rounded-xl",
+                        colors.bg,
+                      )}
                     >
-                      <Package className={`size-6 ${colors.text}`} />
+                      <Package className={cn("size-6", colors.text)} />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold text-foreground">

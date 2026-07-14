@@ -21,7 +21,7 @@ export async function CloseSession(
   return res.data;
 }
 
-export async function hasSession(): Promise<Boolean> {
+export async function hasSession(): Promise<boolean> {
   const res = await api.get("/store-session/my-session");
   return res.data;
 }

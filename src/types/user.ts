@@ -23,8 +23,8 @@ export interface User {
 // confirmPassword is frontend-only validation — never sent to the API
 
 export interface CreateUserPayload {
-  name: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   phone?: string;
@@ -38,7 +38,7 @@ export interface CreateUserPayload {
 
 export interface UpdateUserPayload {
   id?: string;
-  name?: string;
+  firstName?: string;
   lastName?: string;
   phone?: string;
   email?: string;

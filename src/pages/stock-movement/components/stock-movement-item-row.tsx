@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { InlineCombobox } from "@/pages/purchases/components/inline-combobox";
 import type { Suggestion } from "@/types/purchases";
 import { Hash, Package, Trash2 } from "lucide-react";
@@ -57,6 +58,7 @@ export function StockMovementItemRow({
           name={`items.${index}.productId`}
           render={({ field, fieldState }) => (
             <InlineCombobox
+              selectedId={field.value}
               displayValue={productDisplay}
               placeholder="Search product in source inventory…"
               icon={<Package className="w-4 h-4" />}
@@ -101,9 +103,10 @@ export function StockMovementItemRow({
                   min={1}
                   max={availableQty || undefined}
                   placeholder="0"
-                  className={`h-11 pl-9 rounded-xl border-gray-200 text-sm ${
-                    exceedsStock ? "border-red-400" : ""
-                  }`}
+                  className={cn(
+                    "h-11 pl-9 rounded-xl border-gray-200 text-sm",
+                    exceedsStock && "border-red-400",
+                  )}
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.valueAsNumber)}
                 />

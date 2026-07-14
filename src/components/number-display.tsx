@@ -1,5 +1,6 @@
 // src/components/NumberDisplay.tsx
 import React from "react";
+import { cn } from "@/lib/utils";
 import { formatNumber } from "../utils/number-format";
 
 interface NumberDisplayProps {
@@ -14,7 +15,7 @@ export const NumberDisplay: React.FC<NumberDisplayProps> = ({
   className = "",
 }) => {
   return (
-    <span className={`font-mono tabular-nums tracking-tight ${className}`}>
+    <span className={cn("font-mono tabular-nums tracking-tight", className)}>
       {formatNumber(value, decimals)}
     </span>
   );

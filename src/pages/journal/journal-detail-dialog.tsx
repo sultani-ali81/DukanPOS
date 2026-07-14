@@ -1,5 +1,10 @@
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -17,8 +22,6 @@ import {
   getStatusVariant,
 } from "@/lib/status";
 import type { JournalEntry, JournalItem } from "@/types/journal";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Portal } from "@radix-ui/react-dialog";
 import {
   BookOpenCheck,
   Loader2,
@@ -267,40 +270,30 @@ function JournalDetailMobileDialog({
   loading: boolean;
 }) {
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={(v) => !v && onClose()}>
-      <Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-        <DialogPrimitive.Content
-          className="
-            fixed z-50
-            top-0 bottom-0 left-0 right-0
-            flex flex-col
-            bg-background
-            overflow-hidden"
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
-            margin: "16px",
-            borderRadius: "16px",
-          }}
-        >
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="top-4 right-4 bottom-4 left-4 flex h-auto w-auto max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-2xl bg-background p-0 sm:max-w-none"
+      >
           <div className="px-4 pt-5 pb-4 border-b shrink-0 flex items-start justify-between">
-            <DialogPrimitive.Title className="m-0">
+            <DialogTitle className="m-0">
               <JournalDetailHeader entry={entry} />
-            </DialogPrimitive.Title>
-            <DialogPrimitive.Close
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors shrink-0"
-            >
-              <X className="w-4 h-4" />
-            </DialogPrimitive.Close>
+            </DialogTitle>
+            <DialogClose asChild>
+              <button
+                type="button"
+                aria-label="Close journal details"
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </DialogClose>
           </div>
           <div className="overflow-y-auto flex-1 px-4 py-5">
             <JournalDetailContent entry={entry} loading={loading} />
           </div>
-        </DialogPrimitive.Content>
-      </Portal>
-    </DialogPrimitive.Root>
+      </DialogContent>
+    </Dialog>
   );
 }
 

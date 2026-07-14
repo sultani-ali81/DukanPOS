@@ -34,7 +34,9 @@ import {
 
 import { NumberDisplay } from "@/components/number-display";
 import { useCustomers } from "@/hooks/use-customers";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import { extractError } from "@/lib/error";
+import { cn } from "@/lib/utils";
 import { ContactDialog } from "@/pages/contacts/components/contact-dialog";
 import { InlineCombobox } from "@/pages/purchases/components/inline-combobox";
 import InventoryCombobox from "@/pages/purchases/components/inventory-combobox";
@@ -48,6 +50,8 @@ import { createCustomer } from "@/queries/customer";
 import { createPurchase } from "@/queries/purchase";
 import type { CreateCustomerPayload } from "@/types/customer";
 import type { Suggestion } from "@/types/purchases";
+import { useSWRConfig } from "swr";
+import { useShallow } from "zustand/react/shallow";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -113,13 +117,14 @@ function NewPurchaseFlowCard({
             <div key={step.label} className="flex gap-3">
               <div className="flex flex-col items-center">
                 <div
-                  className={`flex size-8 items-center justify-center rounded-full border-2 transition-all shrink-0 text-xs font-bold ${
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-full border-2 transition-all shrink-0 text-xs font-bold",
                     step.state === "done"
                       ? "border-primary bg-primary text-white"
                       : step.state === "active"
                         ? "border-primary bg-primary/10 text-primary"
-                        : "border-muted-foreground/30 text-muted-foreground/30"
-                  }`}
+                        : "border-muted-foreground/30 text-muted-foreground/30",
+                  )}
                 >
                   {step.state === "done" ? (
                     <CheckCircle2 className="size-4" />
@@ -129,21 +134,23 @@ function NewPurchaseFlowCard({
                 </div>
                 {!isLast && (
                   <div
-                    className={`mt-1 w-0.5 flex-1 min-h-5 ${
+                    className={cn(
+                      "mt-1 w-0.5 flex-1 min-h-5",
                       step.state === "done"
                         ? "bg-primary"
-                        : "bg-muted-foreground/20"
-                    }`}
+                        : "bg-muted-foreground/20",
+                    )}
                   />
                 )}
               </div>
               <div className="pb-4">
                 <p
-                  className={`text-sm font-semibold leading-tight ${
+                  className={cn(
+                    "text-sm font-semibold leading-tight",
                     step.state === "pending"
                       ? "text-muted-foreground"
-                      : "text-foreground"
-                  }`}
+                      : "text-foreground",
+                  )}
                 >
                   {step.label}
                 </p>
@@ -189,6 +196,7 @@ function NewPurchaseFlowCard({
 
 export function NewPurchaseClient() {
   const navigate = useNavigate();
+  const { mutate: mutateCache } = useSWRConfig();
   const product = useProductSearch();
 
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
@@ -243,7 +251,14 @@ export function NewPurchaseClient() {
   // starts counting once this component unmounts (i.e. once they actually
   // leave), not while they're sitting here filling out the form.
   const { getFreshDraft, setDraft, markLeft, clearDraft } =
-    useNewPurchaseDraftStore();
+    useNewPurchaseDraftStore(
+      useShallow((state) => ({
+        getFreshDraft: state.getFreshDraft,
+        setDraft: state.setDraft,
+        markLeft: state.markLeft,
+        clearDraft: state.clearDraft,
+      })),
+    );
   const hydratedRef = useRef(false);
 
   // Hydrate once on mount; mark "left" on unmount so the TTL clock starts then.
@@ -286,9 +301,16 @@ export function NewPurchaseClient() {
   ]);
 
   const handleCreateCustomer = async (values: CreateCustomerPayload) => {
-    await createCustomer(values);
-    setCustomerDisplay(values.name);
-    handleCustomerSearch(values.name);
+    const createdCustomer = await createCustomer(values);
+    form.setValue("customerId", createdCustomer.id, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setCustomerDisplay(createdCustomer.name);
+    handleCustomerSearch(createdCustomer.name);
+    await mutateCache(
+      createCrudFamilyMatcher("customers", createdCustomer.id),
+    );
   };
 
   const addItem = () => {
@@ -313,6 +335,10 @@ export function NewPurchaseClient() {
           unitPrice: Number(item.unitPrice),
         })),
       });
+
+      await mutateCache(
+        createCrudFamilyMatcher("purchases", result.purchaseId),
+      );
 
       toast.success("Purchase saved", {
         description: `Purchase created as draft.`,
@@ -377,6 +403,7 @@ export function NewPurchaseClient() {
                             <div className="flex-1">
                               <InlineCombobox
                                 id="supplier"
+                                selectedId={field.value}
                                 displayValue={customerDisplay}
                                 placeholder="Search supplier..."
                                 icon={<User className="w-4 h-4" />}
@@ -491,21 +518,15 @@ export function NewPurchaseClient() {
                       });
                       product.setActiveIndex(index);
                     }}
-                    onProductSelect={(_id, label, sub) => {
-                      if (sub) {
-                        const price = Number(sub.replace(/[^0-9]/g, ""));
-                        if (!isNaN(price))
-                          form.setValue(`items.${index}.unitPrice`, price);
+                    onProductSelect={(_id, label, _sub, price) => {
+                      if (price !== undefined && Number.isFinite(price)) {
+                        form.setValue(`items.${index}.unitPrice`, price);
                       }
                       product.setDisplays((prev) => {
                         const next = [...prev];
                         next[index] = label;
                         return next;
                       });
-                      product.setSuggestions((prev) => ({
-                        ...prev,
-                        [index]: [],
-                      }));
                       product.setActiveIndex(null);
                     }}
                     onRemove={() => removeItem(index)}

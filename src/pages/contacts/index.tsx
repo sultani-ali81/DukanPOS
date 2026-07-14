@@ -1,22 +1,25 @@
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
+import { SearchField } from "@/components/search-field";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useCustomers } from "@/hooks/use-customers";
+import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import {
   createCustomer,
   deleteCustomer,
   updateCustomer,
 } from "@/queries/customer";
-import type { Customer } from "@/types/customer";
-import { Plus, Search, X } from "lucide-react";
+import type { Customer, PaginatedCustomers } from "@/types/customer";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
 import type { ContactFormValues } from "./components/contact-dialog";
 import { ContactDialog } from "./components/contact-dialog";
 import { ContactTable } from "./components/contact-table";
 
 export default function ContactsPage() {
+  const { mutate: mutateCache } = useSWRConfig();
   const {
     customers,
     isLoading,
@@ -24,6 +27,7 @@ export default function ContactsPage() {
     handleSearch,
     clearSearch,
     mutate,
+    error,
     total,
     page,
     setPage,
@@ -49,14 +53,32 @@ export default function ContactsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function toggleAll() {
-    const allSelected = selected.size === customers.length;
-    setSelected(allSelected ? new Set() : new Set(customers.map((c) => c.id)));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allOnPageSelected = customers.every((customer) =>
+        prev.has(customer.id),
+      );
+
+      customers.forEach((customer) => {
+        if (allOnPageSelected) {
+          next.delete(customer.id);
+        } else {
+          next.add(customer.id);
+        }
+      });
+
+      return next;
+    });
   }
 
   function toggleOne(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -75,7 +97,7 @@ export default function ContactsPage() {
           description: `${values.name} has been added.`,
         });
       }
-      await mutate();
+      await mutateCache(createCrudFamilyMatcher("customers"));
     } catch {
       toast.error("Something went wrong", { description: "Please try again." });
       throw new Error("submit failed");
@@ -84,16 +106,39 @@ export default function ContactsPage() {
 
   async function onDelete(customer: Customer) {
     setDeletingId(customer.id);
+    const fallbackPage: PaginatedCustomers = {
+      data: customers,
+      meta: {
+        total,
+        page,
+        totalCount: total,
+        itemsPerpage: PAGE_SIZE,
+        totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+      },
+    };
+    const withoutDeletedCustomer = (
+      current: PaginatedCustomers | undefined,
+    ): PaginatedCustomers => {
+      const source = current ?? fallbackPage;
+      return {
+        ...source,
+        data: source.data.filter((item) => item.id !== customer.id),
+      };
+    };
+
     try {
-      mutate(
-        (prev) =>
-          prev
-            ? { ...prev, data: prev.data.filter((c) => c.id !== customer.id) }
-            : prev,
-        false,
+      await mutate(
+        async (current) => {
+          await deleteCustomer(customer.id);
+          return withoutDeletedCustomer(current);
+        },
+        {
+          optimisticData: withoutDeletedCustomer,
+          rollbackOnError: true,
+          revalidate: false,
+        },
       );
-      await deleteCustomer(customer.id);
-      await mutate();
+      await mutateCache(createCrudFamilyMatcher("customers"));
       setSelected((prev) => {
         const next = new Set(prev);
         next.delete(customer.id);
@@ -119,26 +164,21 @@ export default function ContactsPage() {
         </Button>
       </PageHeader>
 
+      {error && (
+        <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       {/* Search */}
-      <div className="mb-4 relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-          <Search className="size-4" />
-        </span>
-        <Input
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search contacts..."
-          className="pl-9 pr-8"
-        />
-        {search && (
-          <button
-            onClick={clearSearch}
-            className="pointer-events-auto absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        )}
-      </div>
+      <SearchField
+        value={search}
+        onValueChange={handleSearch}
+        onClear={clearSearch}
+        placeholder="Search contacts..."
+        aria-label="Search contacts"
+        className="mb-4"
+      />
 
       {/* Bulk selection bar */}
       {selected.size > 0 && (

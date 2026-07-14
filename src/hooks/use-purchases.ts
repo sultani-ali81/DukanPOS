@@ -1,5 +1,6 @@
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
+import { extractError } from "@/lib/error";
 import { getPurchases, purchasesKey } from "@/queries/purchase";
 import type { PurchaseListItem } from "@/types/purchases";
 import { useState } from "react";
@@ -22,6 +23,7 @@ export interface UsePurchasesReturn {
   setStatus: (status: string) => void;
   mutate: () => void;
   isLoading: boolean;
+  error: string | null;
   PAGE_SIZE: number;
 }
 
@@ -49,7 +51,7 @@ export function usePurchases(): UsePurchasesReturn {
     status: status !== "ALL" ? status : undefined,
   });
 
-  const { data, mutate, isLoading } = useSWR(swrKey, () =>
+  const { data, mutate, isLoading, error } = useSWR(swrKey, () =>
     getPurchases({
       search: debouncedSearch,
       page,
@@ -76,6 +78,7 @@ export function usePurchases(): UsePurchasesReturn {
     setStatus,
     mutate,
     isLoading,
+    error: error ? extractError(error, "Failed to load purchases.") : null,
     PAGE_SIZE,
   };
 }

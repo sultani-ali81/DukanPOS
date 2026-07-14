@@ -123,7 +123,10 @@ export const deleteProductImage = (
 ): Promise<{ message: string }> =>
   api.delete(`/products/images/${imageId}`).then((r) => r.data);
 
-export const getCategories = () => api.get("/categories?itemsPerPage=12");
+export const getCategories = (): Promise<unknown> =>
+  api
+    .get<unknown>("/categories?itemsPerPage=12")
+    .then((response) => response.data);
 
 export const orderFood = (payload: OrderFoodPayload) => {
   return { message: "Order placed successfully!", payload: payload };

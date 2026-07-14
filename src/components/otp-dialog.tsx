@@ -10,6 +10,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { extractError } from "@/lib/error";
 import { useState } from "react";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -40,11 +41,8 @@ export default function OtpDialog({
       await onVerify(code); // parent handles API — keeps this component generic
       setCode("");
       onClose();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setError(
-        Array.isArray(msg) ? msg[0] : msg || "Invalid code. Please try again.",
-      );
+    } catch (err: unknown) {
+      setError(extractError(err, "Invalid code. Please try again."));
     } finally {
       setLoading(false);
     }

@@ -1,13 +1,19 @@
+import {
+  CompactDialogBody,
+  CompactDialogContent,
+  CompactDialogFooter,
+  CompactDialogHeader,
+} from "@/components/compact-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { extractError } from "@/lib/error";
+import { cn } from "@/lib/utils";
 import { CloseSession, openSession } from "@/queries/session";
 import type {
   CloseSessionResponse,
@@ -52,10 +58,7 @@ export function OpenSessionDialog({
       setAmount("");
       setNote("");
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to open session";
-      toast.error(msg);
+      toast.error(extractError(err, "Failed to open session"));
     } finally {
       setSubmitting(false);
     }
@@ -63,9 +66,9 @@ export function OpenSessionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0">
+      <CompactDialogContent>
         {/* Header */}
-        <DialogHeader className="px-5 pt-5 pb-4 border-b border-gray-100">
+        <CompactDialogHeader>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
               <Unlock className="w-4 h-4 text-green-600" />
@@ -79,10 +82,10 @@ export function OpenSessionDialog({
               </p>
             </div>
           </div>
-        </DialogHeader>
+        </CompactDialogHeader>
 
         {/* Body */}
-        <div className="px-5 py-4 space-y-4">
+        <CompactDialogBody>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
               Opening Amount (AFN)
@@ -109,10 +112,10 @@ export function OpenSessionDialog({
               className="rounded-xl border-gray-200 text-sm resize-none h-20"
             />
           </div>
-        </div>
+        </CompactDialogBody>
 
         {/* Footer */}
-        <div className="px-5 pb-5 flex gap-2">
+        <CompactDialogFooter>
           <Button
             variant="outline"
             className="flex-1 h-11 rounded-xl border-gray-200 text-sm"
@@ -130,8 +133,8 @@ export function OpenSessionDialog({
             {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             Open Session
           </Button>
-        </div>
-      </DialogContent>
+        </CompactDialogFooter>
+      </CompactDialogContent>
     </Dialog>
   );
 }
@@ -169,10 +172,7 @@ export function CloseSessionDialog({
       setResult(res);
       onSuccess?.(res);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to close session";
-      toast.error(msg);
+      toast.error(extractError(err, "Failed to close session"));
     } finally {
       setSubmitting(false);
     }
@@ -194,8 +194,8 @@ export function CloseSessionDialog({
 
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0">
-          <DialogHeader className="px-5 pt-5 pb-4 border-b border-gray-100">
+        <CompactDialogContent>
+          <CompactDialogHeader>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
                 <Lock className="w-4 h-4 text-red-500" />
@@ -207,9 +207,9 @@ export function CloseSessionDialog({
                 <p className="text-xs text-gray-400 mt-0.5">{result.message}</p>
               </div>
             </div>
-          </DialogHeader>
+          </CompactDialogHeader>
 
-          <div className="px-5 py-4 space-y-3">
+          <CompactDialogBody className="space-y-3">
             <div className="rounded-xl bg-gray-50 divide-y divide-gray-100">
               <div className="flex justify-between items-center px-4 py-3 text-sm">
                 <span className="text-gray-500">Expected Amount</span>
@@ -225,13 +225,13 @@ export function CloseSessionDialog({
               </div>
               <div className="flex justify-between items-center px-4 py-3 text-sm">
                 <span className="text-gray-500">Difference</span>
-                <span className={`font-bold ${diffColor}`}>
+                <span className={cn("font-bold", diffColor)}>
                   {diff >= 0 ? "+" : ""}
                   {diff.toFixed(2)} AFN
                 </span>
               </div>
             </div>
-          </div>
+          </CompactDialogBody>
 
           <div className="px-5 pb-5">
             <Button
@@ -242,7 +242,7 @@ export function CloseSessionDialog({
               Done
             </Button>
           </div>
-        </DialogContent>
+        </CompactDialogContent>
       </Dialog>
     );
   }
@@ -250,8 +250,8 @@ export function CloseSessionDialog({
   // ── Input view ────────────────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden gap-0">
-        <DialogHeader className="px-5 pt-5 pb-4 border-b border-gray-100">
+      <CompactDialogContent>
+        <CompactDialogHeader>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
               <Lock className="w-4 h-4 text-red-500" />
@@ -265,9 +265,9 @@ export function CloseSessionDialog({
               </p>
             </div>
           </div>
-        </DialogHeader>
+        </CompactDialogHeader>
 
-        <div className="px-5 py-4 space-y-4">
+        <CompactDialogBody>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium text-gray-700">
               Closing Amount (AFN)
@@ -294,9 +294,9 @@ export function CloseSessionDialog({
               className="rounded-xl border-gray-200 text-sm resize-none h-20"
             />
           </div>
-        </div>
+        </CompactDialogBody>
 
-        <div className="px-5 pb-5 flex gap-2">
+        <CompactDialogFooter>
           <Button
             variant="outline"
             className="flex-1 h-11 rounded-xl border-gray-200 text-sm"
@@ -314,8 +314,8 @@ export function CloseSessionDialog({
             {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             Close Session
           </Button>
-        </div>
-      </DialogContent>
+        </CompactDialogFooter>
+      </CompactDialogContent>
     </Dialog>
   );
 }

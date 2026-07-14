@@ -1,5 +1,6 @@
 // src/components/ui/pagination.tsx
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
 interface PaginationProps {
@@ -15,6 +16,7 @@ export function Pagination({
   totalPages,
   onPageChange,
   siblingCount = 1,
+  className,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -53,8 +55,13 @@ export function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex items-center justify-center gap-1">
+    <nav
+      aria-label="Pagination"
+      className={cn("flex items-center justify-center gap-1", className)}
+    >
       <Button
+        type="button"
+        aria-label="Go to previous page"
         variant="outline"
         size="sm"
         onClick={() => onPageChange(currentPage - 1)}
@@ -68,6 +75,7 @@ export function Pagination({
         page === "..." ? (
           <span
             key={`ellipsis-${index}`}
+            aria-hidden="true"
             className="h-8 w-8 flex items-center justify-center text-gray-400"
           >
             <MoreHorizontal className="h-4 w-4" />
@@ -75,6 +83,9 @@ export function Pagination({
         ) : (
           <Button
             key={page}
+            type="button"
+            aria-label={`Go to page ${page}`}
+            aria-current={currentPage === page ? "page" : undefined}
             variant={currentPage === page ? "default" : "outline"}
             size="sm"
             onClick={() => onPageChange(page as number)}
@@ -86,6 +97,8 @@ export function Pagination({
       )}
 
       <Button
+        type="button"
+        aria-label="Go to next page"
         variant="outline"
         size="sm"
         onClick={() => onPageChange(currentPage + 1)}
@@ -94,6 +107,6 @@ export function Pagination({
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
-    </div>
+    </nav>
   );
 }

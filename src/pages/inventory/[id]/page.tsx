@@ -1,10 +1,10 @@
 // src/pages/inventory/[id]/page.tsx
 import LogsTable from "@/components/logs-table";
 import { PageHeader } from "@/components/page-header";
+import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/table";
 import { useInventoryDetail } from "@/hooks/use-inventory-detail";
 import { formatCurrency } from "@/lib/data";
+import { getStockStatus, type StockFilter } from "@/lib/stock-status";
+import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -24,18 +26,19 @@ import {
   Package,
   Search,
   Warehouse,
-  X,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 function StockBadge({ quantity }: { quantity: number }) {
-  if (quantity === 0)
+  const status = getStockStatus(quantity);
+
+  if (status === "Out of Stock")
     return (
       <Badge className="bg-red-50 text-red-600 border-red-200 hover:bg-red-50">
         Out of Stock
       </Badge>
     );
-  if (quantity <= 10)
+  if (status === "Low Stock")
     return (
       <Badge className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-50">
         Low Stock
@@ -67,7 +70,7 @@ function StatTile({
   };
 
   return (
-    <div className={`rounded-xl border p-4 ${colors[accent]}`}>
+    <div className={cn("rounded-xl border p-4", colors[accent])}>
       <p className="text-xs font-medium uppercase tracking-wide opacity-70">
         {label}
       </p>
@@ -93,7 +96,7 @@ function TableSkeleton() {
   );
 }
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS: { value: StockFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "in_stock", label: "In Stock" },
   { value: "low_stock", label: "Low Stock" },
@@ -204,23 +207,14 @@ export default function InventoryDetailPage() {
       {/* ── Toolbar ── */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search products…"
-            className="pl-9 pr-8"
-          />
-          {search && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
+        <SearchField
+          value={search}
+          onValueChange={handleSearch}
+          onClear={clearSearch}
+          placeholder="Search products…"
+          aria-label="Search inventory products"
+          className="w-full sm:w-72"
+        />
 
         {/* Status filter */}
         <div className="flex gap-1.5 flex-wrap">
@@ -228,11 +222,12 @@ export default function InventoryDetailPage() {
             <button
               key={opt.value}
               onClick={() => setStatus(opt.value)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                 status === opt.value
                   ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-accent"
-              }`}
+                  : "bg-secondary text-secondary-foreground hover:bg-accent",
+              )}
             >
               {opt.label}
             </button>
@@ -370,7 +365,7 @@ export default function InventoryDetailPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {(inventory?.products ?? [])
-              .filter((p) => p.quantity <= 10)
+              .filter((p) => getStockStatus(p.quantity) !== "In Stock")
               .sort((a, b) => a.quantity - b.quantity)
               .slice(0, 6)
               .map((p) => (

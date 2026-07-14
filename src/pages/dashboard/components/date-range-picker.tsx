@@ -5,6 +5,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { CalendarDays, X } from "lucide-react";
 import { useState } from "react";
 
@@ -15,7 +16,6 @@ export interface DateRange {
 
 interface DateRangePickerProps {
   value: DateRange;
-  onChange: (range: DateRange) => void;
   onApply: (range: DateRange) => void;
   disabled?: boolean;
 }
@@ -31,7 +31,6 @@ function formatDate(d: Date | undefined) {
 
 export function DateRangePicker({
   value,
-  onChange,
   onApply,
   disabled,
 }: DateRangePickerProps) {
@@ -46,7 +45,6 @@ export function DateRangePicker({
   const handleSelect = (range: { from?: Date; to?: Date } | undefined) => {
     const next: DateRange = { from: range?.from, to: range?.to };
     setLocal(next);
-    onChange(next);
   };
 
   const handleApply = () => {
@@ -58,7 +56,8 @@ export function DateRangePicker({
   const handleClear = () => {
     const empty: DateRange = { from: undefined, to: undefined };
     setLocal(empty);
-    onChange(empty);
+    onApply(empty);
+    setOpen(false);
   };
 
   const hasRange = value.from && value.to;
@@ -73,13 +72,13 @@ export function DateRangePicker({
       <PopoverTrigger asChild>
         <Button
           disabled={disabled}
-          className={[
+          className={cn(
             "flex items-center gap-2 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
             hasRange
               ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
               : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50",
-            disabled ? "opacity-50 cursor-not-allowed" : "",
-          ].join(" ")}
+            disabled && "opacity-50 cursor-not-allowed",
+          )}
         >
           <CalendarDays className="size-3.5 shrink-0" />
           <span className="max-w-[180px] truncate">{label}</span>

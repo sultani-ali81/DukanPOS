@@ -1,7 +1,7 @@
-import api from "@/lib/axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { AuthInput } from "@/components/layout/auth-input";
 import AuthLayout from "@/components/layout/auth-layout";
 import OtpDialog from "@/components/otp-dialog";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { PhoneNumberInput } from "@/components/ui/phoneinput";
 import { passwordSchema } from "@/lib/password";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,11 +22,9 @@ import { isValidPhoneNumber } from "react-phone-number-input";
 import { z } from "zod";
 
 import { useAuthStore } from "@/lib/store";
+import { extractError } from "@/lib/error";
 import { decodeToken } from "@/lib/utils";
-
-type ApiError = {
-  response?: { data?: { message?: string | string[] } };
-};
+import { register as registerUser, verifyRegister } from "@/queries/auth";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -58,7 +55,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterForm() {
   const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const formHook = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -85,7 +82,7 @@ export default function RegisterForm() {
       setLoading(true);
       setError("");
 
-      await api.post("/auth/register", {
+      await registerUser({
         firstName: values.firstName,
         lastName: values.lastName,
         storeName: values.storeName,
@@ -96,15 +93,12 @@ export default function RegisterForm() {
 
       setUserEmail(values.email);
       setShowOtpModal(true);
-    } catch (err) {
-      const msg = (err as ApiError)?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg[0] : msg || "Registration failed");
+    } catch (err: unknown) {
+      setError(extractError(err, "Registration failed"));
     } finally {
       setLoading(false);
     }
   };
-
-  const fieldClass = "h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400";
 
   return (
     <>
@@ -127,7 +121,7 @@ export default function RegisterForm() {
         }
       >
         <div className="w-full max-w-sm">
-          <h1 className="text-center text-3xl font-bold text-primary-600">
+          <h1 className="text-center text-3xl font-bold text-primary">
             Create Your Store
           </h1>
           <p className="mt-2 text-center text-sm text-slate-400">
@@ -147,15 +141,12 @@ export default function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <div className="relative">
-                          <User className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                          <Input
-                            autoComplete="given-name"
-                            placeholder="First Name"
-                            className={fieldClass}
-                            {...field}
-                          />
-                        </div>
+                        <AuthInput
+                          icon={User}
+                          autoComplete="given-name"
+                          placeholder="First Name"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage className="px-1 text-xs" />
                     </FormItem>
@@ -168,15 +159,12 @@ export default function RegisterForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <div className="relative">
-                          <User className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                          <Input
-                            autoComplete="family-name"
-                            placeholder="Last Name"
-                            className={fieldClass}
-                            {...field}
-                          />
-                        </div>
+                        <AuthInput
+                          icon={User}
+                          autoComplete="family-name"
+                          placeholder="Last Name"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage className="px-1 text-xs" />
                     </FormItem>
@@ -191,14 +179,11 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <div className="relative">
-                        <Store className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          placeholder="Store Name"
-                          className={fieldClass}
-                          {...field}
-                        />
-                      </div>
+                      <AuthInput
+                        icon={Store}
+                        placeholder="Store Name"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage className="text-xs px-1" />
                   </FormItem>
@@ -212,15 +197,12 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          type="email"
-                          placeholder="Email"
-                          className={fieldClass}
-                          {...field}
-                        />
-                      </div>
+                      <AuthInput
+                        icon={Mail}
+                        type="email"
+                        placeholder="Email"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage className="text-xs px-1" />
                   </FormItem>
@@ -252,28 +234,27 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Password"
-                          className={`${fieldClass} pr-12`}
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-                        >
-                          {showPassword ? (
-                            <EyeOff size={18} />
-                          ) : (
-                            <Eye size={18} />
-                          )}
-                        </Button>
-                      </div>
+                      <AuthInput
+                        icon={Lock}
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password"
+                        trailing={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                          >
+                            {showPassword ? (
+                              <EyeOff size={18} />
+                            ) : (
+                              <Eye size={18} />
+                            )}
+                          </Button>
+                        }
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage className="text-xs px-1" />
                   </FormItem>
@@ -287,28 +268,27 @@ export default function RegisterForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          type={showConfirm ? "text" : "password"}
-                          placeholder="Confirm Password"
-                          className={`${fieldClass} pr-12`}
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowConfirm((prev) => !prev)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-                        >
-                          {showConfirm ? (
-                            <EyeOff size={18} />
-                          ) : (
-                            <Eye size={18} />
-                          )}
-                        </Button>
-                      </div>
+                      <AuthInput
+                        icon={Lock}
+                        type={showConfirm ? "text" : "password"}
+                        placeholder="Confirm Password"
+                        trailing={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowConfirm((prev) => !prev)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                          >
+                            {showConfirm ? (
+                              <EyeOff size={18} />
+                            ) : (
+                              <Eye size={18} />
+                            )}
+                          </Button>
+                        }
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage className="text-xs px-1" />
                   </FormItem>
@@ -353,12 +333,9 @@ export default function RegisterForm() {
         title="Verify Email"
         description={`Enter the OTP sent to ${userEmail}`}
         onVerify={async (code: string) => {
-          const res = await api.post<{ message: string; token: string }>(
-            "/auth/verify-register",
-            { email: userEmail, code },
-          );
+          const res = await verifyRegister({ email: userEmail, code });
 
-          const token = res.data.token;
+          const token = res.token;
           if (!token) throw new Error("No token received");
 
           const decoded = decodeToken<{

@@ -19,7 +19,7 @@ export function useSearch({
     if (debouncedSearch === prevDebouncedRef.current) return;
     prevDebouncedRef.current = debouncedSearch;
     onSearch?.();
-  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, onSearch]);
 
   const handleSearch = (value: string) => {
     setSearch(value);

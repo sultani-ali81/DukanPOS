@@ -1,6 +1,5 @@
-import LoginPage from "@/pages/(auth)/login";
-import Register from "@/pages/(auth)/register";
 import type { RouteObject } from "react-router-dom";
+import { LoginPage, RegisterPage } from "./lazy-pages";
 
 export const authRoutes: RouteObject[] = [
   {
@@ -9,6 +8,6 @@ export const authRoutes: RouteObject[] = [
   },
   {
     path: "/register",
-    element: <Register />,
+    element: <RegisterPage />,
   },
 ];

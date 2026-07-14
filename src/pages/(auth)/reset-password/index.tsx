@@ -1,4 +1,5 @@
-import api from "@/lib/axios";
+import { resetPassword } from "@/queries/auth";
+import { extractError } from "@/lib/error";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -24,7 +25,7 @@ export default function ResetPassword() {
     try {
       setLoading(true);
 
-      await api.post("/auth/reset-password", {
+      await resetPassword({
         token,
         password,
       });
@@ -33,11 +34,7 @@ export default function ResetPassword() {
 
       setTimeout(() => navigate("/login"), 2000);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setMessage(err.message);
-      } else {
-        setMessage("Reset Failed");
-      }
+      setMessage(extractError(err, "Reset failed"));
     } finally {
       setLoading(false);
     }

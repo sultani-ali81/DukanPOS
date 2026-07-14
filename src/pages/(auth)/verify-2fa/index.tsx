@@ -1,5 +1,6 @@
-import api from "@/lib/axios";
 import { useAuthStore } from "@/lib/store";
+import { extractError } from "@/lib/error";
+import { verifyRegister } from "@/queries/auth";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -21,15 +22,15 @@ export default function Verify2FA() {
     try {
       setLoading(true);
 
-      const res = await api.post("/auth/verify-register", {
+      const res = await verifyRegister({
         email,
         code,
       });
 
-      setAuth(res.data.user, res.data.token);
+      setAuth(res.user, res.token);
       navigate("/dashboard");
     } catch (err: unknown) {
-      setError("Invalid code");
+      setError(extractError(err, "Invalid code"));
     } finally {
       setLoading(false);
     }

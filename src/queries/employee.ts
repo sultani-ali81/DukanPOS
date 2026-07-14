@@ -1,15 +1,24 @@
 import api from "@/lib/axios";
-import type { EditProfile, Verify } from "@/types";
+import type { EditProfile, EmployeeInfo, Verify } from "@/types";
 
-export const getEmployees = () => api.get("/employees");
-export const getEmployee = (id: string) => api.get(`/employees/${id}`);
-export const deleteEmployee = (id: string) => api.delete(`/employees/${id}`);
+export const getEmployees = (): Promise<unknown> =>
+  api.get<unknown>("/employees").then((response) => response.data);
+export const getEmployee = (id: string): Promise<unknown> =>
+  api.get<unknown>(`/employees/${id}`).then((response) => response.data);
+export const getEmployeeProfile = (): Promise<EmployeeInfo> =>
+  api.get<EmployeeInfo>("/employees/me").then((response) => response.data);
+export const deleteEmployee = (id: string): Promise<unknown> =>
+  api.delete<unknown>(`/employees/${id}`).then((response) => response.data);
 
 export const updateEmployeeInfo = (payload: Partial<EditProfile>) =>
-  api.put("/employees/info", payload);
+  api
+    .put<unknown>("/employees/info", payload)
+    .then((response) => response.data);
 
 export const verifyUpdatedEmail = (payload: Verify) =>
-  api.post("/employees/verify-updated-email", payload);
+  api
+    .post<unknown>("/employees/verify-updated-email", payload)
+    .then((response) => response.data);
 
 export const uploadEmployeeImage = (
   formData: FormData,
@@ -21,4 +30,7 @@ export const uploadEmployeeImage = (
     .then((r) => r.data);
 
 // ← add this
-export const removeEmployeeImage = () => api.delete("/employees/profile-pic");
+export const removeEmployeeImage = (): Promise<unknown> =>
+  api
+    .delete<unknown>("/employees/profile-pic")
+    .then((response) => response.data);

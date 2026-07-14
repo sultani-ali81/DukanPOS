@@ -1,8 +1,9 @@
 import OtpDialog from "@/components/otp-dialog";
-import api from "@/lib/axios";
 import { useAuthStore } from "@/lib/store";
 import { decodeToken } from "@/lib/utils";
+import { login } from "@/queries/auth";
 import { useNavigate } from "react-router-dom";
+import { useShallow } from "zustand/react/shallow";
 
 interface Props {
   open: boolean;
@@ -12,7 +13,12 @@ interface Props {
 }
 
 export default function TwoFADialog({ open, onClose, email, password }: Props) {
-  const { setAuth, setTwoFAEnabled } = useAuthStore();
+  const { setAuth, setTwoFAEnabled } = useAuthStore(
+    useShallow((state) => ({
+      setAuth: state.setAuth,
+      setTwoFAEnabled: state.setTwoFAEnabled,
+    })),
+  );
   const navigate = useNavigate();
 
   return (
@@ -22,31 +28,35 @@ export default function TwoFADialog({ open, onClose, email, password }: Props) {
       title="Two-Factor Authentication"
       description="Enter the 6-digit code from your authenticator app"
       onVerify={async (code) => {
-        const res = await api.post("/auth/login", { email, password, code });
+        const res = await login({ email, password, code });
 
-        const token = res.data.token;
+        const token = res.token;
+        if (!token) throw new Error("No token received");
+
         const decoded = decodeToken<{
           role: string;
           id: string;
           email: string;
         }>(token);
+        if (!decoded) throw new Error("Invalid token");
+
         console.log(
           "decoded role:",
-          decoded?.role,
+          decoded.role,
           "navigating to:",
-          decoded?.role === "Cashier" ? "/pos" : "/dashboard",
+          decoded.role === "Cashier" ? "/pos" : "/dashboard",
         );
         setAuth(
           {
-            id: decoded?.id || "",
-            email: decoded?.email || email,
-            role: decoded?.role as "Admin" | "Cashier",
+            id: decoded.id || "",
+            email: decoded.email || email,
+            role: decoded.role as "Admin" | "Cashier",
           },
           token,
         );
 
         setTwoFAEnabled(true);
-        navigate(decoded?.role === "Cashier" ? "/pos" : "/dashboard", {
+        navigate(decoded.role === "Cashier" ? "/pos" : "/dashboard", {
           replace: true,
         });
       }}

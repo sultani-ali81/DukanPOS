@@ -1,18 +1,29 @@
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui//popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { usePagination } from "@/hooks/use-pagination";
 import { useSearch } from "@/hooks/use-search";
 import type { Inventory } from "@/queries/inventory";
 import { getInventories } from "@/queries/inventory";
-import { ChevronDown, Search, Warehouse } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Warehouse } from "lucide-react";
+import { useState } from "react";
+import useSWR from "swr";
 
 const PAGE_SIZE = 8;
+const EMPTY_INVENTORIES: Inventory[] = [];
+
+interface InventoryOption {
+  value: string;
+  label: string;
+  address?: string;
+}
 
 interface PosInventoryComboboxProps {
   value: string;
@@ -26,100 +37,105 @@ export function PosInventoryCombobox({
   onChange,
 }: PosInventoryComboboxProps) {
   const [open, setOpen] = useState(false);
-  const [inventories, setInventories] = useState<Inventory[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(false);
 
   const { page, setPage, resetToPage1 } = usePagination({
     initialPage: 1,
     initialItemsPerPage: PAGE_SIZE,
     pageParam: "posInventoryPage",
   });
-  const { search, debouncedSearch, handleSearch } = useSearch({
+  const { debouncedSearch, handleSearch } = useSearch({
     onSearch: resetToPage1,
   });
 
-  useEffect(() => {
-    if (!open) return;
-    // The popover owns this short-lived request state.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    getInventories({ search: debouncedSearch, page, itemsPerPage: PAGE_SIZE })
-      .then(({ data, meta }) => {
-        setInventories(data);
-        setTotalPages(meta.totalPages);
-      })
-      .catch(() => setInventories([]))
-      .finally(() => setLoading(false));
-  }, [open, debouncedSearch, page]);
+  const { data, isLoading: loading } = useSWR(
+    open
+      ? ([
+          "inventories",
+          { search: debouncedSearch, page, itemsPerPage: PAGE_SIZE },
+        ] as const)
+      : null,
+    ([, params]) => getInventories(params),
+  );
+  const inventories = data?.data ?? EMPTY_INVENTORIES;
+  const totalPages = data?.meta.totalPages ?? 1;
+  const options: InventoryOption[] = inventories.map((inventory) => ({
+    value: inventory.id,
+    label: inventory.name,
+    address: inventory.address,
+  }));
+  const selectedOption: InventoryOption | null = value
+    ? {
+        value,
+        label:
+          inventories.find((inventory) => inventory.id === value)?.name ||
+          label ||
+          value,
+      }
+    : null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="w-full h-11 justify-between rounded-xl border-gray-200 text-sm font-normal px-3"
-        >
-          <span className="flex items-center gap-2 truncate">
-            <Warehouse className="w-4 h-4 text-gray-400 shrink-0" />
-            <span className={value ? "text-gray-900" : "text-gray-400"}>
-              {value ? label : "Select Inventory"}
-            </span>
-          </span>
-          <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
-        </Button>
-      </PopoverTrigger>
-
-      <PopoverContent
-        className="w-[280px] p-0 rounded-xl bg-white border border-gray-100"
-        align="start"
+    <Combobox
+      open={open}
+      onOpenChange={setOpen}
+      items={options}
+      value={selectedOption}
+      filter={() => true}
+      itemToStringLabel={(option: InventoryOption) => option.label}
+      itemToStringValue={(option: InventoryOption) => option.value}
+      isItemEqualToValue={(option, selected) =>
+        option.value === selected.value
+      }
+      onInputValueChange={(nextSearch, details) => {
+        if (
+          details.reason === "input-change" ||
+          details.reason === "input-clear"
+        ) {
+          handleSearch(nextSearch);
+        }
+      }}
+      onValueChange={(option: InventoryOption | null) => {
+        if (!option) return;
+        onChange(option.value, option.label);
+        setOpen(false);
+      }}
+    >
+      <ComboboxInput
+        placeholder="Select Inventory"
+        className="h-11 w-full rounded-xl border-gray-200 px-3 text-sm font-normal"
       >
-        {/* Search */}
-        <div className="p-2 border-b border-gray-100">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            <Input
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search inventory..."
-              className="h-8 pl-8 rounded-lg text-sm border-gray-200"
-            />
-          </div>
-        </div>
+        <InputGroupAddon align="inline-start">
+          <Warehouse className="size-4 text-gray-400" />
+        </InputGroupAddon>
+      </ComboboxInput>
 
-        {/* List */}
-        <div className="max-h-52 overflow-y-auto py-1">
+      <ComboboxContent className="w-[280px] overflow-hidden rounded-xl border border-gray-100 bg-white p-0">
+        <ComboboxList className="max-h-52 overflow-y-auto py-1">
           {loading ? (
             <p className="text-xs text-gray-400 text-center py-6">Loading…</p>
-          ) : inventories.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-6">
-              No inventories found
-            </p>
           ) : (
-            inventories.map((inv) => (
-              <button
-                key={inv.id}
-                onClick={() => {
-                  onChange(inv.id, inv.name);
-                  setOpen(false);
-                }}
-                className={[
-                  "w-full text-left px-3 py-2 text-sm transition-colors hover:bg-gray-50",
-                  value === inv.id
-                    ? "text-blue-600 font-medium bg-blue-50/50"
-                    : "text-gray-700",
-                ].join(" ")}
-              >
-                <span className="block font-medium truncate">{inv.name}</span>
-                {inv.address && (
+            <ComboboxEmpty className="py-6 text-xs text-gray-400">
+              No inventories found
+            </ComboboxEmpty>
+          )}
+          {options.map((option) => (
+            <ComboboxItem
+              key={option.value}
+              value={option}
+              className="px-3 py-2 text-sm text-gray-700 data-selected:bg-blue-50/50 data-selected:font-medium data-selected:text-blue-600"
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-medium">
+                  {option.label}
+                </span>
+                {option.address && (
                   <span className="block text-xs text-gray-400 truncate">
-                    {inv.address}
+                    {option.address}
                   </span>
                 )}
-              </button>
-            ))
-          )}
-        </div>
+              </span>
+            </ComboboxItem>
+          ))}
+        </ComboboxList>
 
         {/* Pagination */}
         {totalPages > 1 && (
@@ -147,7 +163,7 @@ export function PosInventoryCombobox({
             </Button>
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+      </ComboboxContent>
+    </Combobox>
   );
 }

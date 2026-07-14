@@ -1,4 +1,5 @@
 import api from "@/lib/axios";
+import { extractError } from "@/lib/error";
 import type { ReportResponse, ReportType } from "@/types/reports";
 import useSWR from "swr";
 
@@ -25,7 +26,7 @@ export function useReport<T>({ type, page, limit }: UseReportParams) {
     rows: data?.data ?? [],
     meta: data?.meta,
     isLoading,
-    error,
+    error: error ? extractError(error, "Failed to load report") : null,
     mutate,
   };
 }

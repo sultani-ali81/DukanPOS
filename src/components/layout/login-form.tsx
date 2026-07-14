@@ -1,6 +1,7 @@
+import { AuthInput } from "@/components/layout/auth-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/lib/store";
+import { extractError } from "@/lib/error";
 import { decodeToken } from "@/lib/utils";
 import TwoFADialog from "@/pages/(auth)/two-fa-dialog";
 import { login } from "@/queries/auth";
@@ -9,10 +10,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import AuthLayout from "@/components/layout/auth-layout";
-
-type ApiError = {
-  response?: { data?: { message?: string | string[] } };
-};
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -28,7 +25,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  const { setAuth } = useAuthStore();
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -57,12 +54,12 @@ export default function LoginForm() {
         password: form.password,
       });
 
-      if (res.data.twoFactorRequired) {
+      if (res.twoFactorRequired) {
         setTwoFAOpen(true);
         return;
       }
 
-      const token = res.data.token;
+      const token = res.token;
 
       if (!token) {
         setError("Login failed");
@@ -92,10 +89,8 @@ export default function LoginForm() {
       navigate(decoded.role === "Cashier" ? "/pos" : "/dashboard", {
         replace: true,
       });
-    } catch (err) {
-      const msg = (err as ApiError)?.response?.data?.message;
-
-      setError(Array.isArray(msg) ? msg[0] : msg || "Login failed");
+    } catch (err: unknown) {
+      setError(extractError(err, "Login failed"));
     } finally {
       setLoading(false);
     }
@@ -130,40 +125,36 @@ export default function LoginForm() {
 
           {/* Email */}
           <div className="mt-8 space-y-4">
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-              <Input
-                name="email"
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
-                className="h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400 "
-              />
-            </div>
+            <AuthInput
+              icon={Mail}
+              name="email"
+              type="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={handleChange}
+            />
 
             {/* Password */}
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-              <Input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Password"
-                autoComplete="new-password"
-                className="h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400 "
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </Button>
-            </div>
+            <AuthInput
+              icon={Lock}
+              name="password"
+              type={showPassword ? "text" : "password"}
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Password"
+              autoComplete="new-password"
+              trailing={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </Button>
+              }
+            />
           </div>
 
           {error && (

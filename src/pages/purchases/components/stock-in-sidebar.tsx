@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Clock, Package } from "lucide-react";
 
 import { extractError } from "@/lib/error";
+import { cn } from "@/lib/utils";
 import { updateStockIn } from "@/queries/stock-in";
 import type { PurchaseDetail, StockInResponse } from "@/types/purchases";
 
@@ -81,7 +82,7 @@ export function StockInSidebar({
   return (
     <div className="flex flex-col bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="bg-radial from-bg-dark2 to-bg-dark2/90 px-4 py-4">
+      <div className="bg-radial from-primary to-primary/90 px-4 py-4">
         <h2 className="text-sm font-semibold text-white">Stock In Status</h2>
         <p className="text-xs text-gray-400 mt-0.5">
           Track assignment and fulfilment
@@ -91,24 +92,27 @@ export function StockInSidebar({
       {/* Summary pills — Unassigned + Assigned only */}
       <div className="grid grid-cols-2 gap-2 px-4 pt-3 pb-2">
         <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium mb-0.5">
+          <p className="text-micro uppercase tracking-wide text-gray-400 font-medium mb-0.5">
             Unassigned
           </p>
           <p
-            className={`text-lg font-bold leading-none ${totalUnassigned > 0 ? "text-orange-500" : "text-green-600"}`}
+            className={cn(
+              "text-lg font-bold leading-none",
+              totalUnassigned > 0 ? "text-orange-500" : "text-green-600",
+            )}
           >
             {totalUnassigned}
           </p>
-          <p className="text-[10px] text-gray-400 mt-1">units</p>
+          <p className="text-micro text-gray-400 mt-1">units</p>
         </div>
         <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium mb-0.5">
+          <p className="text-micro uppercase tracking-wide text-gray-400 font-medium mb-0.5">
             Assigned
           </p>
           <p className="text-lg font-bold leading-none text-gray-800">
             {totalAssigned}
           </p>
-          <p className="text-[10px] text-gray-400 mt-1">of {totalOrdered}</p>
+          <p className="text-micro text-gray-400 mt-1">of {totalOrdered}</p>
         </div>
       </div>
 
@@ -144,7 +148,7 @@ export function StockInSidebar({
                       {stockIn.inventoryName}
                     </span>
                   </div>
-                  <span className="text-[10px] font-medium text-yellow-600 bg-yellow-50 border border-yellow-100 rounded-full px-2 py-0.5">
+                  <span className="text-micro font-medium text-yellow-600 bg-yellow-50 border border-yellow-100 rounded-full px-2 py-0.5">
                     {stockIn.sequenceId}
                   </span>
                 </div>
@@ -154,7 +158,7 @@ export function StockInSidebar({
                   {(stockIn.products ?? []).map((product) => (
                     <div
                       key={product.purchasedItemId}
-                      className="flex items-center justify-between text-[11px] text-gray-600"
+                      className="flex items-center justify-between text-caption text-gray-600"
                     >
                       <div className="flex items-center gap-1 min-w-0">
                         <Package className="w-2.5 h-2.5 text-gray-400 shrink-0" />
@@ -169,7 +173,7 @@ export function StockInSidebar({
 
                 {/* Errors */}
                 {(errors[doneKey] || errors[cancelKey]) && (
-                  <p className="text-[10px] text-red-500 mb-2">
+                  <p className="text-micro text-red-500 mb-2">
                     {errors[doneKey] || errors[cancelKey]}
                   </p>
                 )}
@@ -181,7 +185,7 @@ export function StockInSidebar({
                     variant="outline"
                     disabled={anyBusy || allConfirmed}
                     onClick={() => handleDone(stockIn)}
-                    className="flex-1 h-7 rounded-lg text-[11px] border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800 disabled:opacity-40"
+                    className="flex-1 h-7 rounded-lg text-caption border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800 disabled:opacity-40"
                   >
                     {doneBusy ? "Processing…" : "Mark as Done"}
                   </Button>
@@ -190,7 +194,7 @@ export function StockInSidebar({
                     variant="outline"
                     disabled={anyBusy}
                     onClick={() => handleCancel(stockIn)}
-                    className="flex-1 h-7 rounded-lg text-[11px] border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
+                    className="flex-1 h-7 rounded-lg text-caption border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
                   >
                     {cancelBusy ? "Processing…" : "Cancel"}
                   </Button>
