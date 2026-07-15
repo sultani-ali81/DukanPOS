@@ -1,7 +1,6 @@
 import { navItems } from "@/lib/nav";
 import { useAuthStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import { Store } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
@@ -48,8 +47,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full ">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
-        <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Store className="size-5" />
+        <div className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-primary">
+          <img
+            src="/logo.png"
+            alt="Dukan POS logo"
+            className="h-full w-full object-contain"
+          />
         </div>
         <div className="leading-tight">
           <p className="text-base font-bold text-sidebar-foreground">
