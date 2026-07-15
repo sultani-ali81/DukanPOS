@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SALES_PAGE_SIZES, useSale, useSales } from "@/hooks/use-sales";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import { extractError } from "@/lib/error";
 import type { SaleListItem } from "@/types/sale";
 import {

@@ -32,6 +32,7 @@ type PhoneNumberInputProps = Omit<
   Omit<RPNInput.Props<typeof RPNInput.default>, "onChange"> & {
     label?: string;
     error?: boolean;
+    controlClassName?: string;
     onChange?: (value: RPNInput.Value) => void;
   };
 
@@ -66,7 +67,7 @@ const InputWithPrefix = React.forwardRef<
       </span>
       <input
         className={cn(
-          "h-11 w-full bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground",
+          "h-full w-full bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground",
           className,
         )}
         value={stringValue}
@@ -84,7 +85,7 @@ export const PhoneNumberInput: React.ForwardRefExoticComponent<PhoneNumberInputP
   React.forwardRef<
     React.ElementRef<typeof RPNInput.default>,
     PhoneNumberInputProps
-  >(({ className, onChange, value, label, error, ...props }, ref) => {
+  >(({ className, controlClassName, onChange, value, label, error, ...props }, ref) => {
     const [selectedCountry, setSelectedCountry] =
       React.useState<RPNInput.Country>(DEFAULT_PHONE_COUNTRY);
 
@@ -121,6 +122,7 @@ export const PhoneNumberInput: React.ForwardRefExoticComponent<PhoneNumberInputP
             "h-12 w-full min-w-0 rounded-xl border border-input px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 md:text-sm dark:bg-input/30",
             error &&
               "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40",
+            controlClassName,
           )}
         >
           {/* CallingCodeContext passes the code into InputWithPrefix

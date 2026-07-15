@@ -1,5 +1,5 @@
 // src/pages/dashboard/components/sales-chart.tsx
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import type { DailyStats } from "@/types/dashboard";
 import {
   Bar,

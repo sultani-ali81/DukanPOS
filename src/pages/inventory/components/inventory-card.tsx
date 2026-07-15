@@ -103,7 +103,8 @@ export function InventoryCard({
 
         <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm mb-2">
           <span className="text-muted-foreground">
-            {(inventory.items ?? []).length} products
+            {inventory.productTypeCount}{" "}
+            {inventory.productTypeCount === 1 ? "product" : "products"}
           </span>
         </div>
 

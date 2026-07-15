@@ -374,7 +374,11 @@ export function EditProfileDialog({
                   <Label htmlFor="ep-firstName">
                     First Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="ep-firstName" {...register("firstName")} />
+                  <Input
+                    id="ep-firstName"
+                    className="h-11 rounded-lg"
+                    {...register("firstName")}
+                  />
                   {errors.firstName && (
                     <p className="text-xs text-destructive">
                       {errors.firstName.message}
@@ -385,7 +389,11 @@ export function EditProfileDialog({
                   <Label htmlFor="ep-lastName">
                     Last Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="ep-lastName" {...register("lastName")} />
+                  <Input
+                    id="ep-lastName"
+                    className="h-11 rounded-lg"
+                    {...register("lastName")}
+                  />
                   {errors.lastName && (
                     <p className="text-xs text-destructive">
                       {errors.lastName.message}
@@ -399,7 +407,12 @@ export function EditProfileDialog({
                 <Label htmlFor="ep-email">
                   Email <span className="text-destructive">*</span>
                 </Label>
-                <Input id="ep-email" type="email" {...register("email")} />
+                <Input
+                  id="ep-email"
+                  type="email"
+                  className="h-11 rounded-lg"
+                  {...register("email")}
+                />
                 {errors.email && (
                   <p className="text-xs text-destructive">
                     {errors.email.message}
@@ -423,6 +436,7 @@ export function EditProfileDialog({
                         placeholder="700 000 000"
                         onChange={field.onChange}
                         error={!!errors.phone}
+                        controlClassName="h-11 rounded-lg py-0"
                       />
                     )}
                   />
@@ -442,7 +456,7 @@ export function EditProfileDialog({
                         id="ep-dob"
                         value={field.value}
                         onChange={field.onChange}
-                        className="h-9 rounded-md border-input px-2.5 shadow-xs hover:bg-transparent"
+                        className="h-11 rounded-lg border-input px-2.5 shadow-xs hover:bg-transparent"
                       />
                     )}
                   />
@@ -461,7 +475,11 @@ export function EditProfileDialog({
                         value={field.value}
                         onValueChange={field.onChange}
                       >
-                        <SelectTrigger aria-label="Gender" className="w-full">
+                        <SelectTrigger
+                          aria-label="Gender"
+                          size="lg"
+                          className="w-full"
+                        >
                           <SelectValue>
                             {(value: ProfileFormValues["gender"]) =>
                               value ? genderLabels[value] : "Select gender"
@@ -486,7 +504,11 @@ export function EditProfileDialog({
                   <Label htmlFor="ep-storeName">
                     Store Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="ep-storeName" {...register("storeName")} />
+                  <Input
+                    id="ep-storeName"
+                    className="h-11 rounded-lg"
+                    {...register("storeName")}
+                  />
                   {errors.storeName && (
                     <p className="text-xs text-destructive">
                       {errors.storeName.message}
@@ -501,7 +523,7 @@ export function EditProfileDialog({
                 <Input
                   value={profile.role ?? "—"}
                   disabled
-                  className="bg-muted text-muted-foreground"
+                  className="h-11 rounded-lg bg-muted text-muted-foreground"
                 />
               </div>
 
@@ -514,6 +536,7 @@ export function EditProfileDialog({
                     <Input
                       id="ep-oldPassword"
                       type="password"
+                      className="h-11 rounded-lg"
                       {...register("oldPassword")}
                     />
                     {errors.oldPassword && (
@@ -527,6 +550,7 @@ export function EditProfileDialog({
                     <Input
                       id="ep-password"
                       type="password"
+                      className="h-11 rounded-lg"
                       {...register("password")}
                     />
                     {errors.password && (

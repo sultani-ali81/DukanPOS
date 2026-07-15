@@ -17,6 +17,7 @@ export interface Inventory {
   id: string;
   name: string;
   address: string;
+  productTypeCount: number;
   items: InventoryItem[];
 }
 
@@ -92,6 +93,7 @@ export interface RawInventory {
   id: string;
   name: string;
   address?: string;
+  productTypeCount?: number;
   items?: RawInventoryItem[];
   products?: RawInventoryItem[];
 }

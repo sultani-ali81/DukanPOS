@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useSale } from "@/hooks/use-sales";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import type { SalePaymentHistoryItem } from "@/types/sale";
 import {
   ArrowLeft,

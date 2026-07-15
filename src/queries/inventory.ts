@@ -30,6 +30,8 @@ function mapInventories(raw: unknown[]): Inventory[] {
       id: inv.id,
       name: inv.name,
       address: inv.address ?? "",
+      productTypeCount:
+        inv.productTypeCount ?? (inv.items ?? inv.products ?? []).length,
       items: (inv.items ?? inv.products ?? []).map(
         (item: RawInventoryItem): InventoryItem => ({
           id: item.id,

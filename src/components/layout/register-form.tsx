@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 
 import { AuthInput } from "@/components/layout/auth-input";
 import AuthLayout from "@/components/layout/auth-layout";
-import OtpDialog from "@/components/otp-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -21,10 +20,9 @@ import type { Value } from "react-phone-number-input";
 import { isValidPhoneNumber } from "react-phone-number-input";
 import { z } from "zod";
 
-import { useAuthStore } from "@/lib/store";
 import { extractError } from "@/lib/error";
-import { decodeToken } from "@/lib/utils";
-import { register as registerUser, verifyRegister } from "@/queries/auth";
+import { setPendingRegistrationEmail } from "@/lib/pending-registration";
+import { register as registerUser } from "@/queries/auth";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -55,7 +53,6 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterForm() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
 
   const formHook = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -74,8 +71,6 @@ export default function RegisterForm() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
 
   const handleSubmit = async (values: RegisterFormValues) => {
     try {
@@ -91,8 +86,10 @@ export default function RegisterForm() {
         password: values.password,
       });
 
-      setUserEmail(values.email);
-      setShowOtpModal(true);
+      setPendingRegistrationEmail(values.email);
+      navigate("/verify-email", {
+        state: { email: values.email },
+      });
     } catch (err: unknown) {
       setError(extractError(err, "Registration failed"));
     } finally {
@@ -101,7 +98,6 @@ export default function RegisterForm() {
   };
 
   return (
-    <>
       <AuthLayout
         reverse
         panel={
@@ -326,37 +322,5 @@ export default function RegisterForm() {
           </div>
         </div>
       </AuthLayout>
-
-      <OtpDialog
-        open={showOtpModal}
-        onClose={() => setShowOtpModal(false)}
-        title="Verify Email"
-        description={`Enter the OTP sent to ${userEmail}`}
-        onVerify={async (code: string) => {
-          const res = await verifyRegister({ email: userEmail, code });
-
-          const token = res.token;
-          if (!token) throw new Error("No token received");
-
-          const decoded = decodeToken<{
-            id: string;
-            email: string;
-            role: string;
-          }>(token);
-          if (!decoded) throw new Error("Invalid token");
-
-          setAuth(
-            {
-              id: decoded.id,
-              email: decoded.email,
-              role: decoded.role as "Admin" | "Cashier",
-            },
-            token,
-          );
-
-          navigate(decoded.role === "Cashier" ? "/pos" : "/dashboard");
-        }}
-      />
-    </>
   );
 }
