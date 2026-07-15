@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { UiChatMessage } from "../ai-assistant.utils";
 import {
   BarChart3,
   Bot,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { UiChatMessage } from "../ai-assistant.utils";
 
 const promptStarters = [
   {
@@ -68,7 +68,10 @@ export function MessageBubble({
       if (copiedTimeoutRef.current !== null) {
         window.clearTimeout(copiedTimeoutRef.current);
       }
-      copiedTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500);
+      copiedTimeoutRef.current = window.setTimeout(
+        () => setCopied(false),
+        1500,
+      );
     } catch {
       toast.error("Could not copy message");
     }
@@ -89,58 +92,70 @@ export function MessageBubble({
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          "group/message relative max-w-[min(720px,85%)] rounded-lg px-4 py-3 text-sm leading-6 shadow-xs",
-          message.content && "pb-9",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "border border-border bg-muted/40 text-foreground",
-          isError && "border-destructive/30 bg-destructive/10 text-destructive",
-        )}
-      >
+      <div className="group/message relative max-w-[min(720px,85%)]">
+        <div
+          className={cn(
+            "rounded-lg px-4 py-3 text-sm leading-6 shadow-xs",
+            isUser
+              ? "bg-primary text-primary-foreground"
+              : "border border-border bg-muted/40 text-foreground",
+            isError &&
+              "border-destructive/30 bg-destructive/10 text-destructive",
+          )}
+        >
+          {message.content ? (
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          ) : isStreaming ? (
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Preparing answer...
+            </span>
+          ) : null}
+
+          {isStopped ? (
+            <p className="mt-2 text-xs font-medium text-muted-foreground">
+              Stopped
+            </p>
+          ) : null}
+
+          {isError ? (
+            <div className="mt-2 flex items-center gap-2">
+              <p className="text-xs font-medium text-destructive">Failed</p>
+              {onRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={onRetry}
+                >
+                  Retry
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
         {message.content ? (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
-        ) : isStreaming ? (
-          <span className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            Preparing answer...
-          </span>
-        ) : null}
-
-        {isStopped ? (
-          <p className="mt-2 text-xs font-medium text-muted-foreground">Stopped</p>
-        ) : null}
-
-        {isError ? (
-          <div className="mt-2 flex items-center gap-2">
-            <p className="text-xs font-medium text-destructive">Failed</p>
-            {onRetry ? (
-              <Button type="button" variant="outline" size="xs" onClick={onRetry}>
-                Retry
-              </Button>
-            ) : null}
+          <div className="flex justify-end pt-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={copyMessage}
+              aria-label={copied ? "Message copied" : "Copy message"}
+              title={copied ? "Copied" : "Copy message"}
+              className={cn(
+                "text-muted-foreground opacity-0 transition-opacity group-hover/message:opacity-100 focus-visible:opacity-100",
+                copied && "opacity-100",
+              )}
+            >
+              {copied ? (
+                <Check className="size-4" />
+              ) : (
+                <Copy className="size-4" />
+              )}
+            </Button>
           </div>
-        ) : null}
-
-        {message.content ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={copyMessage}
-            aria-label={copied ? "Message copied" : "Copy message"}
-            title={copied ? "Copied" : "Copy message"}
-            className={cn(
-              "absolute right-2 bottom-2 opacity-0 transition-opacity group-hover/message:opacity-100 focus-visible:opacity-100",
-              isUser
-                ? "text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground"
-                : "text-muted-foreground",
-              copied && "opacity-100",
-            )}
-          >
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-          </Button>
         ) : null}
       </div>
     </div>
@@ -159,7 +174,9 @@ export function EmptyChat({
       <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
         <Sparkles className="size-5" />
       </div>
-      <h2 className="text-lg font-semibold text-foreground">Ask about your store</h2>
+      <h2 className="text-lg font-semibold text-foreground">
+        Ask about your store
+      </h2>
       <p className="mt-1 max-w-md text-sm text-muted-foreground">
         Start a saved assistant chat for sales, profit, stock, and cashier
         performance.
