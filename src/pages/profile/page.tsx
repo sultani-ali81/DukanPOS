@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEditProfile } from "@/hooks/use-editprofile";
 import { useProfile } from "@/hooks/use-profile";
-import { verifyUpdatedEmail } from "@/queries/employee";
+import { verifyEmployeeEmail } from "@/queries/employee";
 import {
   display,
   formatDate,
@@ -34,7 +34,7 @@ export default function ProfileClient() {
   } = useEditProfile(profile);
 
   async function handleVerifyOtp(code: string) {
-    await verifyUpdatedEmail({ email: pendingEmail, code });
+    await verifyEmployeeEmail({ email: pendingEmail, code });
     await mutate();
     toast.success("Email updated", {
       description: "Your email has been verified and updated.",

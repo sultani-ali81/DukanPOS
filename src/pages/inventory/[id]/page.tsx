@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useInventoryDetail } from "@/hooks/use-inventory-detail";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import { getStockStatus, type StockFilter } from "@/lib/stock-status";
 import { cn } from "@/lib/utils";
 import {

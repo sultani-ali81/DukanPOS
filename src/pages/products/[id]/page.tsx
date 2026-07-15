@@ -1,5 +1,13 @@
 import LogsTable from "@/components/logs-table";
 import { PageHeader } from "@/components/page-header";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { createAuditLogsMatcher } from "@/lib/audit-logs-cache";
 import { createCrudFamilyMatcher } from "@/lib/crud-cache";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import { extractError } from "@/lib/error";
 import { getStockStatus } from "@/lib/stock-status";
 import { cn } from "@/lib/utils";
@@ -48,6 +56,7 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
   const { mutate: mutateCache } = useSWRConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
 
@@ -92,6 +101,7 @@ export default function ProductDetailPage() {
       toast.success("Product deleted", {
         description: `"${product.name}" has been removed.`,
       });
+      setDeleteDialogOpen(false);
       navigate("/products");
     } catch {
       toast.error("Could not delete product", {
@@ -150,7 +160,7 @@ export default function ProductDetailPage() {
           </Button>
           <Button
             variant="destructive"
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             disabled={deleting}
           >
             {deleting ? (
@@ -330,6 +340,40 @@ export default function ProductDetailPage() {
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
       />
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!deleting) setDeleteDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent className="max-w-sm rounded-2xl">
+          <AlertDialogTitle>Delete product?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{product.name}"? This action
+            cannot be undone.
+          </AlertDialogDescription>
+          <div className="flex gap-2 pt-1">
+            <AlertDialogCancel className="flex-1" disabled={deleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="flex-1"
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDelete();
+              }}
+            >
+              {deleting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

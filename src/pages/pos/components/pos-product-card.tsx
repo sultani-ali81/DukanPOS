@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { PosProduct } from "@/queries/pos-inventory";
 import { ChevronLeft, ChevronRight } from "lucide-react";

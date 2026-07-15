@@ -1,6 +1,14 @@
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
 import { SearchField } from "@/components/search-field";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useProducts } from "@/hooks/use-products";
 import { createCrudFamilyMatcher } from "@/lib/crud-cache";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
 import { getCategories } from "@/queries/category";
 import {
@@ -95,6 +103,7 @@ export default function ProductsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: categoriesData } = useSWR(
@@ -134,6 +143,7 @@ export default function ProductsPage() {
       toast.success("Product deleted", {
         description: `"${product.name}" has been removed.`,
       });
+      setProductToDelete(null);
       await mutateCache(
         createCrudFamilyMatcher("products", product.id),
       );
@@ -276,7 +286,7 @@ export default function ProductsPage() {
                             size="icon"
                             className="size-8 text-destructive hover:text-destructive"
                             disabled={isDeleting}
-                            onClick={() => handleDelete(p)}
+                            onClick={() => setProductToDelete(p)}
                             aria-label={`Delete ${p.name}`}
                           >
                             {isDeleting ? (
@@ -309,6 +319,41 @@ export default function ProductsPage() {
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
       />
+
+      <AlertDialog
+        open={productToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) setProductToDelete(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-sm rounded-2xl">
+          <AlertDialogTitle>Delete product?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {productToDelete
+              ? `Are you sure you want to delete "${productToDelete.name}"? This action cannot be undone.`
+              : "This action cannot be undone."}
+          </AlertDialogDescription>
+          <div className="flex gap-2 pt-1">
+            <AlertDialogCancel className="flex-1" disabled={!!deletingId}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="flex-1"
+              disabled={!!deletingId}
+              onClick={(event) => {
+                event.preventDefault();
+                if (productToDelete) void handleDelete(productToDelete);
+              }}
+            >
+              {deletingId ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              {deletingId ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

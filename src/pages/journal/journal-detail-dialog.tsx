@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { useJournals } from "@/hooks/use-journal";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import {
   getStatusClassName,
   getStatusLabel,

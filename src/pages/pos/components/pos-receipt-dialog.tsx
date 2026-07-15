@@ -1,6 +1,6 @@
 import { CompactDialogContent } from "@/components/compact-dialog";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 
 import {
   Dialog,

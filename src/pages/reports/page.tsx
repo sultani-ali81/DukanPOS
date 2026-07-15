@@ -17,7 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import {
   getStatusClassName,

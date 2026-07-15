@@ -2,6 +2,9 @@ import { lazy } from "react";
 
 export const LoginPage = lazy(() => import("@/pages/(auth)/login"));
 export const RegisterPage = lazy(() => import("@/pages/(auth)/register"));
+export const VerifyEmailPage = lazy(
+  () => import("@/pages/(auth)/verify-email"),
+);
 export const AiAssistantPage = lazy(
   () => import("@/pages/ai-assistant/page"),
 );

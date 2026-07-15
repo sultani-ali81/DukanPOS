@@ -15,9 +15,9 @@ export const updateEmployeeInfo = (payload: Partial<EditProfile>) =>
     .put<unknown>("/employees/info", payload)
     .then((response) => response.data);
 
-export const verifyUpdatedEmail = (payload: Verify) =>
+export const verifyEmployeeEmail = (payload: Verify) =>
   api
-    .post<unknown>("/employees/verify-updated-email", payload)
+    .put<{ message: string }>("/employees/verify-employee-email", payload)
     .then((response) => response.data);
 
 export const uploadEmployeeImage = (

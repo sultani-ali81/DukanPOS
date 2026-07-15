@@ -1,5 +1,5 @@
 import type { RouteObject } from "react-router-dom";
-import { LoginPage, RegisterPage } from "./lazy-pages";
+import { LoginPage, RegisterPage, VerifyEmailPage } from "./lazy-pages";
 
 export const authRoutes: RouteObject[] = [
   {
@@ -9,5 +9,9 @@ export const authRoutes: RouteObject[] = [
   {
     path: "/register",
     element: <RegisterPage />,
+  },
+  {
+    path: "/verify-email",
+    element: <VerifyEmailPage />,
   },
 ];

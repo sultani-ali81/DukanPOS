@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/lib/store";
 import { extractError } from "@/lib/error";
+import { decodeToken } from "@/lib/utils";
 import { verifyRegister } from "@/queries/auth";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -27,8 +28,15 @@ export default function Verify2FA() {
         code,
       });
 
-      setAuth(res.user, res.token);
-      navigate("/dashboard");
+      const decoded = decodeToken<{
+        id: string;
+        email: string;
+        role: "Admin" | "Cashier";
+      }>(res.token);
+      if (!decoded) throw new Error("Invalid token");
+
+      setAuth(decoded, res.token);
+      navigate(decoded.role === "Cashier" ? "/pos" : "/dashboard");
     } catch (err: unknown) {
       setError(extractError(err, "Invalid code"));
     } finally {

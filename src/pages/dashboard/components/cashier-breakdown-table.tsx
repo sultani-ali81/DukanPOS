@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/currency";
 import type { CashierBreakdown } from "@/types/dashboard";
 import { Users } from "lucide-react";
 

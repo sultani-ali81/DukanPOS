@@ -20,11 +20,6 @@ export const login = (payload: Login) =>
 interface VerifyRegisterResponse {
   message: string;
   token: string;
-  user: {
-    id: string;
-    email: string;
-    role: "Admin" | "Cashier";
-  };
 }
 
 export const verifyRegister = (payload: Verify) =>
