@@ -1,10 +1,7 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useAuthStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import {
   askAssistantSseStream,
   deleteAiChatThread,
@@ -13,7 +10,6 @@ import {
   renameAiChatThread,
 } from "@/queries/ai-assistant";
 import type { AiChatThreadSummary } from "@/types/ai-assistant";
-import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -68,9 +64,7 @@ export default function AiAssistantPage() {
   const threads = threadData ?? EMPTY_THREADS;
 
   const { isLoading: threadLoading, isValidating: threadValidating } = useSWR(
-    selectedThreadId
-      ? (["ai-chat-thread", selectedThreadId] as const)
-      : null,
+    selectedThreadId ? (["ai-chat-thread", selectedThreadId] as const) : null,
     ([, threadId]) => getAiChatThread(threadId),
     {
       revalidateOnFocus: false,
@@ -184,8 +178,7 @@ export default function AiAssistantPage() {
     try {
       await deleteAiChatThread(threadId);
       await mutateThreads(
-        (current) =>
-          current?.filter((thread) => thread.id !== threadId),
+        (current) => current?.filter((thread) => thread.id !== threadId),
         { revalidate: false },
       );
       if (selectedThreadId === threadId) handleNewChat();
@@ -340,8 +333,8 @@ export default function AiAssistantPage() {
     : undefined;
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden rounded-xl bg-border p-px shadow-sm">
-      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[calc(var(--radius-xl)-1px)] bg-background">
+    <div className="flex h-full min-h-0 overflow-hidden rounded-xl bg-border p-px">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[calc(var(--radius-xl)-1px)] bg-white">
         <aside
           className={cn(
             "hidden min-h-0 shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 motion-reduce:transition-none lg:block",

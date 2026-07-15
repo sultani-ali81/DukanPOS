@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { AiChatThreadSummary } from "@/types/ai-assistant";
 import {
   Bot,
@@ -14,7 +15,6 @@ import {
   Square,
 } from "lucide-react";
 import type { RefObject } from "react";
-import { cn } from "@/lib/utils";
 import { getThreadTitle, type UiChatMessage } from "../ai-assistant.utils";
 import { EmptyChat, MessageBubble } from "./conversation-content";
 
@@ -64,7 +64,7 @@ export function ConversationPanel({
   return (
     <section
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
+        "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white",
         className,
       )}
     >
@@ -180,7 +180,7 @@ export function ConversationPanel({
           event.preventDefault();
           onSend();
         }}
-        className="shrink-0 overflow-hidden rounded-b-[inherit] border-t border-border bg-background px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-4"
+        className="shrink-0 overflow-hidden rounded-b-[inherit] border-t border-border bg-white px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-4"
       >
         <div className="mx-auto w-full max-w-4xl">
           {inlineError ? (
@@ -207,7 +207,7 @@ export function ConversationPanel({
               aria-label="Ask the AI assistant"
               placeholder="Ask about sales, profit, stock, or cashier performance..."
               disabled={isStreaming || threadLoading}
-              className="max-h-32 min-h-12 resize-none rounded-xl bg-background"
+              className="max-h-32 min-h-12 resize-none rounded-xl bg-white"
             />
             {isStreaming ? (
               <Button

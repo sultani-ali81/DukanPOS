@@ -113,7 +113,7 @@ export function ChatHistoryPanel({
                 className={cn(
                   "group flex items-center rounded-lg transition-colors",
                   active
-                    ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                    ? "bg-gray-100 text-foreground shadow-sm ring-1 ring-border"
                     : "text-foreground hover:bg-muted/80",
                   disabled && "cursor-not-allowed opacity-60",
                 )}
@@ -132,8 +132,10 @@ export function ChatHistoryPanel({
                       maxLength={120}
                       disabled={renameLoading}
                       aria-label="Conversation title"
-                      className="h-8 bg-background text-foreground"
-                      onChange={(event) => onRenameValueChange(event.target.value)}
+                      className="h-8 bg-gray-100 text-foreground"
+                      onChange={(event) =>
+                        onRenameValueChange(event.target.value)
+                      }
                       onKeyDown={(event) => {
                         if (event.key === "Escape") onCancelRename();
                       }}
@@ -181,7 +183,9 @@ export function ChatHistoryPanel({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => onStartRename(thread)}>
+                        <DropdownMenuItem
+                          onSelect={() => onStartRename(thread)}
+                        >
                           <Pencil /> Rename
                         </DropdownMenuItem>
                         <DropdownMenuItem

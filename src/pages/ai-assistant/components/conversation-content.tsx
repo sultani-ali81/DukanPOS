@@ -5,11 +5,15 @@ import {
   BarChart3,
   Bot,
   Boxes,
+  Check,
+  Copy,
   Loader2,
   Sparkles,
   TrendingUp,
   UserRoundCheck,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 const promptStarters = [
   {
@@ -41,10 +45,34 @@ export function MessageBubble({
   message: UiChatMessage;
   onRetry?: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
+  const copiedTimeoutRef = useRef<number | null>(null);
   const isUser = message.role === "user";
   const isError = message.status === "failed";
   const isStopped = message.status === "stopped";
   const isStreaming = message.status === "streaming";
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current !== null) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const copyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+
+      if (copiedTimeoutRef.current !== null) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+      copiedTimeoutRef.current = window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Could not copy message");
+    }
+  };
 
   return (
     <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
@@ -63,7 +91,8 @@ export function MessageBubble({
 
       <div
         className={cn(
-          "max-w-[min(720px,85%)] rounded-lg px-4 py-3 text-sm leading-6 shadow-xs",
+          "group/message relative max-w-[min(720px,85%)] rounded-lg px-4 py-3 text-sm leading-6 shadow-xs",
+          message.content && "pb-9",
           isUser
             ? "bg-primary text-primary-foreground"
             : "border border-border bg-muted/40 text-foreground",
@@ -92,6 +121,26 @@ export function MessageBubble({
               </Button>
             ) : null}
           </div>
+        ) : null}
+
+        {message.content ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={copyMessage}
+            aria-label={copied ? "Message copied" : "Copy message"}
+            title={copied ? "Copied" : "Copy message"}
+            className={cn(
+              "absolute right-2 bottom-2 opacity-0 transition-opacity group-hover/message:opacity-100 focus-visible:opacity-100",
+              isUser
+                ? "text-primary-foreground/80 hover:bg-primary-foreground/15 hover:text-primary-foreground"
+                : "text-muted-foreground",
+              copied && "opacity-100",
+            )}
+          >
+            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+          </Button>
         ) : null}
       </div>
     </div>
