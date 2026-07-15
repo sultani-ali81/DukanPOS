@@ -170,7 +170,7 @@ export function EmptyChat({
   onSelectPrompt: (question: string) => void;
 }) {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-4 py-10 text-center">
+    <div className="flex min-h-full flex-col items-center justify-center px-4 py-6 text-center">
       <div className="mb-4 flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
         <Sparkles className="size-5" />
       </div>

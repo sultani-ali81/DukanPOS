@@ -141,7 +141,7 @@ export function ConversationPanel({
         aria-label="Conversation messages"
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-5"
       >
-        <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-5">
+        <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-3">
           {threadLoading ? (
             <div
               role="status"
