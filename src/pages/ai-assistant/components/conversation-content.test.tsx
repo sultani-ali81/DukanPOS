@@ -1,7 +1,34 @@
+import type { AiAssistantGraph } from "@/types/ai-assistant";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UiChatMessage } from "../ai-assistant.utils";
 import { MessageBubble } from "./conversation-content";
+
+vi.mock("./ai-assistant-chart", () => ({
+  AiAssistantChart: ({ graph }: { graph: AiAssistantGraph }) => (
+    <div data-testid="message-chart">{graph.title}</div>
+  ),
+}));
+
+const salesGraph: AiAssistantGraph = {
+  type: "bar",
+  title: "Sales Today",
+  xAxisLabel: "Period",
+  yAxisLabel: "Sales",
+  valueFormat: "currency",
+  labels: ["Today"],
+  datasets: [{ label: "Sales", data: [2038] }],
+};
+
+const profitGraph: AiAssistantGraph = {
+  type: "bar",
+  title: "Profit Today",
+  xAxisLabel: "Period",
+  yAxisLabel: "Profit",
+  valueFormat: "currency",
+  labels: ["Today"],
+  datasets: [{ label: "Profit", data: [382.29] }],
+};
 
 function assistantMessage(
   overrides: Partial<UiChatMessage> = {},
@@ -50,5 +77,22 @@ describe("MessageBubble", () => {
 
     expect(screen.getByText("I found today's sales, but")).toBeTruthy();
     expect(screen.getByText("AI provider became unavailable")).toBeTruthy();
+  });
+
+  it("renders every graph attached to the same assistant message", () => {
+    render(
+      <MessageBubble
+        message={assistantMessage({
+          content: "Today's charts",
+          graphs: [salesGraph, profitGraph],
+        })}
+      />,
+    );
+
+    expect(
+      screen
+        .getAllByTestId("message-chart")
+        .map((chart) => chart.textContent),
+    ).toEqual(["Sales Today", "Profit Today"]);
   });
 });

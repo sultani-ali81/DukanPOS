@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/lib/store";
 import type {
+  AiAssistantGraph,
   AiChatMessage,
   AiChatThreadDetail,
   AiChatThreadSummary,
@@ -46,11 +47,13 @@ type ConversationHarnessProps = {
   messages: UiChatMessage[];
   question: string;
   inlineError: string | null;
+  canRetry: boolean;
   isStreaming: boolean;
   toolActivity: string | null;
   selectedThread?: AiChatThreadSummary;
   onQuestionChange: (question: string) => void;
   onSend: () => void;
+  onRetry: () => void;
   onStop: () => void;
   onNewChat: () => void;
 };
@@ -60,11 +63,13 @@ vi.mock("./components/conversation-panel", () => ({
     messages,
     question,
     inlineError,
+    canRetry,
     isStreaming,
     toolActivity,
     selectedThread,
     onQuestionChange,
     onSend,
+    onRetry,
     onStop,
     onNewChat,
   }: ConversationHarnessProps) => (
@@ -94,6 +99,11 @@ vi.mock("./components/conversation-panel", () => ({
       <button type="button" onClick={onStop}>
         Stop response
       </button>
+      {canRetry ? (
+        <button type="button" onClick={onRetry}>
+          Retry
+        </button>
+      ) : null}
       <button type="button" onClick={onNewChat}>
         New conversation
       </button>
@@ -108,6 +118,11 @@ vi.mock("./components/conversation-panel", () => ({
             data-status={message.status}
           >
             {message.content}
+            {message.graphs?.map((graph, index) => (
+              <span key={`${graph.title}-${index}`} data-testid="message-graph">
+                {graph.title}
+              </span>
+            ))}
             {message.errorMessage ? (
               <span data-testid="message-error">{message.errorMessage}</span>
             ) : null}
@@ -211,9 +226,47 @@ function lastMessage(role: "user" | "assistant") {
   return messages[messages.length - 1];
 }
 
+function renderedGraphTitles() {
+  return screen
+    .getAllByTestId("message-graph")
+    .map((graph) => graph.textContent);
+}
+
 const existingThread: AiChatThreadSummary = {
   id: "thread-existing",
   title: "Existing conversation",
+};
+
+const sampleGraph: AiAssistantGraph = {
+  type: "bar",
+  title: "Profit Today",
+  xAxisLabel: "Period",
+  yAxisLabel: "Profit",
+  valueFormat: "currency",
+  labels: ["Today"],
+  datasets: [
+    {
+      label: "Profit",
+      data: [118],
+      color: "#16a34a",
+    },
+  ],
+};
+
+const sampleSalesGraph: AiAssistantGraph = {
+  type: "bar",
+  title: "Sales Today",
+  xAxisLabel: "Period",
+  yAxisLabel: "Sales",
+  valueFormat: "currency",
+  labels: ["Today"],
+  datasets: [
+    {
+      label: "Sales",
+      data: [2038],
+      color: "#2563eb",
+    },
+  ],
 };
 
 describe("AI assistant page streaming flow", () => {
@@ -221,6 +274,9 @@ describe("AI assistant page streaming flow", () => {
     localStorage.clear();
     useAuthStore.setState({ token: "test-token" });
     Object.values(queryMocks).forEach((mock) => mock.mockReset());
+    queryMocks.getAiChatThread.mockImplementation((threadId: string) =>
+      Promise.resolve(threadDetail(threadId)),
+    );
     queryMocks.deleteAiChatThread.mockResolvedValue({
       id: "thread-existing",
       message: "Deleted",
@@ -233,8 +289,9 @@ describe("AI assistant page streaming flow", () => {
     useAuthStore.setState({ token: null });
   });
 
-  it("starts a new chat without threadId and applies authoritative done data", async () => {
+  it("renders and preserves every live graph after done revalidates text-only thread history", async () => {
     const stream = deferred<void>();
+    const historyRefresh = deferred<AiChatThreadDetail>();
     const savedMessages: AiChatMessage[] = [
       {
         id: "saved-user-id",
@@ -255,9 +312,7 @@ describe("AI assistant page streaming flow", () => {
       .mockResolvedValue([
         { id: "thread-new", title: "Sales conversation" },
       ]);
-    queryMocks.getAiChatThread.mockResolvedValue(
-      threadDetail("thread-new", savedMessages),
-    );
+    queryMocks.getAiChatThread.mockImplementation(() => historyRefresh.promise);
     queryMocks.askAssistantSseStream.mockImplementation(
       () => stream.promise,
     );
@@ -277,9 +332,16 @@ describe("AI assistant page streaming flow", () => {
     expect(streamOptions.threadId).toBeUndefined();
 
     await act(async () => {
+      streamOptions.onGraph?.({ graph: sampleSalesGraph });
+      streamOptions.onGraph?.({ graph: sampleGraph });
+    });
+    expect(renderedGraphTitles()).toEqual(["Sales Today", "Profit Today"]);
+
+    await act(async () => {
       streamOptions.onChunk("Draft response");
     });
     expect(lastMessage("assistant").textContent).toContain("Draft response");
+    expect(renderedGraphTitles()).toEqual(["Sales Today", "Profit Today"]);
 
     await act(async () => {
       streamOptions.onDone({
@@ -312,11 +374,144 @@ describe("AI assistant page streaming flow", () => {
       expect(queryMocks.getAiChatThreads.mock.calls.length).toBeGreaterThan(1);
       expect(queryMocks.getAiChatThread).toHaveBeenCalledWith("thread-new");
     });
+    await act(async () => {
+      historyRefresh.resolve(threadDetail("thread-new", savedMessages));
+      await historyRefresh.promise;
+    });
     await waitFor(() =>
       expect(screen.getByTestId("selected-thread").textContent).toBe(
         "thread-new",
       ),
     );
+    await waitFor(() => {
+      expect(lastMessage("assistant").textContent).toContain(
+        "Authoritative answer",
+      );
+      expect(renderedGraphTitles()).toEqual(["Sales Today", "Profit Today"]);
+    });
+  });
+
+  it("never renders streamed or final think content", async () => {
+    const stream = deferred<void>();
+    queryMocks.getAiChatThreads.mockResolvedValue([]);
+    queryMocks.askAssistantSseStream.mockImplementation(
+      () => stream.promise,
+    );
+
+    renderPage();
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByLabelText("Ask the AI assistant"),
+      "Show today's sales",
+    );
+    await user.click(screen.getByText("Send question"));
+
+    const streamOptions = latestStreamOptions();
+    await act(async () => {
+      streamOptions.onChunk("Visible intro ");
+      streamOptions.onChunk("<thi");
+    });
+    expect(lastMessage("assistant").textContent).toBe("Visible intro ");
+
+    await act(async () => {
+      streamOptions.onChunk("nk>private streamed reasoning");
+      streamOptions.onChunk("</th");
+      streamOptions.onChunk("ink>\nVisible streamed response");
+    });
+    expect(lastMessage("assistant").textContent).toBe(
+      "Visible intro \nVisible streamed response",
+    );
+    expect(lastMessage("assistant").textContent).not.toContain("think");
+    expect(lastMessage("assistant").textContent).not.toContain(
+      "private streamed reasoning",
+    );
+
+    await act(async () => {
+      streamOptions.onDone({
+        content:
+          "<think>private final reasoning</think>\nFinal customer-facing response",
+        threadId: "thread-think",
+        userMessageId: "saved-think-user",
+        assistantMessageId: "saved-think-assistant",
+      });
+    });
+    expect(lastMessage("assistant").textContent).toBe(
+      "\nFinal customer-facing response",
+    );
+    expect(lastMessage("assistant").textContent).not.toContain("think");
+    expect(lastMessage("assistant").textContent).not.toContain(
+      "private final reasoning",
+    );
+
+    await act(async () => {
+      stream.resolve();
+      await stream.promise;
+    });
+  });
+
+  it("hydrates persisted history graphs but never carries them into a new chat", async () => {
+    const freshStream = deferred<void>();
+    queryMocks.getAiChatThreads.mockResolvedValue([existingThread]);
+    queryMocks.getAiChatThread.mockResolvedValue(
+      threadDetail("thread-existing", [
+        {
+          id: "historical-user",
+          role: "user",
+          content: "Show today's business performance",
+        },
+        {
+          id: "historical-profit",
+          role: "assistant",
+          content: "Today's profit",
+          metadata: { graph: sampleGraph },
+        },
+        {
+          id: "historical-sales",
+          role: "assistant",
+          content: "Today's sales",
+          metadata: { graphs: [sampleSalesGraph] },
+        },
+      ]),
+    );
+    queryMocks.askAssistantSseStream.mockImplementation(
+      () => freshStream.promise,
+    );
+
+    renderPage();
+    const user = userEvent.setup();
+    await user.click(await screen.findByText("Open thread-existing"));
+
+    await waitFor(() => {
+      expect(renderedGraphTitles()).toEqual(["Profit Today", "Sales Today"]);
+    });
+
+    await user.click(screen.getByText("New conversation"));
+
+    expect(screen.getByTestId("selected-thread").textContent).toBe(
+      "new-chat",
+    );
+    expect(screen.queryAllByTestId("message-graph")).toHaveLength(0);
+    expect(screen.queryAllByTestId("assistant-message")).toHaveLength(0);
+
+    await user.type(
+      screen.getByLabelText("Ask the AI assistant"),
+      "Start a separate conversation",
+    );
+    await user.click(screen.getByText("Send question"));
+
+    expect(latestStreamOptions().threadId).toBeUndefined();
+    expect(screen.queryAllByTestId("message-graph")).toHaveLength(0);
+
+    await act(async () => {
+      latestStreamOptions().onDone({
+        content: "Fresh response",
+        threadId: "fresh-thread",
+        userMessageId: "fresh-user",
+        assistantMessageId: "fresh-assistant",
+      });
+      freshStream.resolve();
+      await freshStream.promise;
+    });
   });
 
   it("includes the selected threadId when continuing a conversation", async () => {
@@ -489,5 +684,99 @@ describe("AI assistant page streaming flow", () => {
     await act(async () => Promise.resolve());
     expect(queryMocks.askAssistantSseStream).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("streaming-state").textContent).toBe("idle");
+    expect(screen.queryByText("Retry")).toBeNull();
+  });
+
+  it("shows a generic tool failure state while the stream continues", async () => {
+    const stream = deferred<void>();
+    queryMocks.getAiChatThreads.mockResolvedValue([]);
+    queryMocks.askAssistantSseStream.mockImplementation(
+      () => stream.promise,
+    );
+
+    renderPage();
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByLabelText("Ask the AI assistant"),
+      "Make a chart",
+    );
+    await user.click(screen.getByText("Send question"));
+
+    await act(async () => {
+      latestStreamOptions().onToolCall({
+        toolCallId: "graph-tool",
+        toolName: "createBusinessGraph",
+        status: "started",
+      });
+    });
+    expect(screen.getByText("Analyzing store data…")).toBeTruthy();
+
+    await act(async () => {
+      latestStreamOptions().onToolResult({
+        toolCallId: "graph-tool",
+        toolName: "createBusinessGraph",
+        status: "failed",
+      });
+    });
+    expect(
+      screen.getByText("A store data check failed. Continuing…"),
+    ).toBeTruthy();
+
+    await act(async () => {
+      latestStreamOptions().onDone({
+        content: "Here is the text answer",
+        threadId: "thread-new",
+        userMessageId: "tool-user",
+        assistantMessageId: "tool-assistant",
+      });
+      stream.resolve();
+      await stream.promise;
+    });
+  });
+
+  it("offers a retry after a terminal stream error and resends the same thread", async () => {
+    const firstStream = deferred<void>();
+    const retryStream = deferred<void>();
+    queryMocks.getAiChatThreads.mockResolvedValue([existingThread]);
+    queryMocks.getAiChatThread.mockResolvedValue(threadDetail("thread-existing"));
+    queryMocks.askAssistantSseStream
+      .mockImplementationOnce(() => firstStream.promise)
+      .mockImplementationOnce(() => retryStream.promise);
+
+    renderPage();
+    const user = userEvent.setup();
+    await user.click(await screen.findByText("Open thread-existing"));
+    await user.type(
+      screen.getByLabelText("Ask the AI assistant"),
+      "Compare profits",
+    );
+    await user.click(screen.getByText("Send question"));
+
+    await act(async () => {
+      latestStreamOptions().onError({
+        message: "Provider interrupted the response",
+        threadId: "thread-existing",
+        userMessageId: "saved-error-user",
+      });
+      firstStream.resolve();
+      await firstStream.promise;
+    });
+
+    await user.click(screen.getByText("Retry"));
+
+    expect(queryMocks.askAssistantSseStream).toHaveBeenCalledTimes(2);
+    expect(latestStreamOptions().question).toBe("Compare profits");
+    expect(latestStreamOptions().threadId).toBe("thread-existing");
+
+    await act(async () => {
+      latestStreamOptions().onDone({
+        content: "Retry worked",
+        threadId: "thread-existing",
+        userMessageId: "retry-user",
+        assistantMessageId: "retry-assistant",
+      });
+      retryStream.resolve();
+      await retryStream.promise;
+    });
   });
 });

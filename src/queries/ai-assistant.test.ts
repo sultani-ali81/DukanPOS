@@ -40,6 +40,7 @@ function doneEvent(content = "Finished") {
 function handlers() {
   return {
     onChunk: vi.fn(),
+    onGraph: vi.fn(),
     onToolCall: vi.fn(),
     onToolResult: vi.fn(),
     onDone: vi.fn(),
@@ -153,6 +154,7 @@ describe("AI assistant streaming API", () => {
     });
 
     expect(callbacks.onChunk.mock.calls).toEqual([["Hello"], [" world"]]);
+    expect(callbacks.onGraph).not.toHaveBeenCalled();
     expect(callbacks.onDone).toHaveBeenCalledOnce();
     expect(callbacks.onDone).toHaveBeenCalledWith({
       content: "Authoritative response",
@@ -252,6 +254,54 @@ describe("AI assistant streaming API", () => {
 
     expect(callbacks.onChunk.mock.calls).toEqual([["Draft "], ["answer"]]);
     expect(renderedContent).toBe("Complete authoritative answer");
+  });
+
+  it("accepts direct colorless graph payloads from the backend", async () => {
+    const graph = {
+      type: "line",
+      title: "Sales Monthly",
+      xAxisLabel: "Date",
+      yAxisLabel: "Sales",
+      valueFormat: "currency",
+      labels: ["2026-07-01", "2026-07-02"],
+      datasets: [
+        {
+          label: "Sales",
+          data: [1250, 980],
+        },
+      ],
+    };
+    const response = [
+      "event: graph",
+      `data: ${JSON.stringify(graph)}`,
+      "",
+      "event: chunk",
+      'data: {"content":"Chart summary"}',
+      "",
+      doneEvent("Chart complete"),
+    ].join("\n");
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([response]));
+    vi.stubGlobal("fetch", fetchMock);
+    const callbacks = handlers();
+    const receivedEvents: string[] = [];
+    callbacks.onGraph.mockImplementation(() => receivedEvents.push("graph"));
+    callbacks.onChunk.mockImplementation(() => receivedEvents.push("chunk"));
+
+    await askAssistantSseStream({
+      question: "Show profit",
+      ...callbacks,
+    });
+
+    expect(callbacks.onGraph).toHaveBeenCalledOnce();
+    expect(callbacks.onGraph).toHaveBeenCalledWith({ graph });
+    expect(callbacks.onChunk).toHaveBeenCalledWith("Chart summary");
+    expect(receivedEvents).toEqual(["graph", "chunk"]);
+    expect(callbacks.onDone).toHaveBeenCalledWith({
+      content: "Chart complete",
+      threadId: "thread-1",
+      userMessageId: "user-message-1",
+      assistantMessageId: "assistant-message-1",
+    });
   });
 
   it("preserves partial content and reports a terminal SSE error", async () => {

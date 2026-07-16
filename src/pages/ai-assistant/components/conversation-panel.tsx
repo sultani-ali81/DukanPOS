@@ -10,6 +10,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  RotateCcw,
   Send,
   Sparkles,
   Square,
@@ -23,6 +24,7 @@ type ConversationPanelProps = {
   messages: UiChatMessage[];
   question: string;
   inlineError: string | null;
+  canRetry: boolean;
   isStreaming: boolean;
   toolActivity: string | null;
   threadLoading: boolean;
@@ -32,6 +34,7 @@ type ConversationPanelProps = {
   onQuestionChange: (question: string) => void;
   onSelectPrompt: (question: string) => void;
   onSend: () => void;
+  onRetry: () => void;
   onStop: () => void;
   onMessagesScroll: () => void;
   onOpenHistory: () => void;
@@ -46,6 +49,7 @@ export function ConversationPanel({
   messages,
   question,
   inlineError,
+  canRetry,
   isStreaming,
   toolActivity,
   threadLoading,
@@ -55,6 +59,7 @@ export function ConversationPanel({
   onQuestionChange,
   onSelectPrompt,
   onSend,
+  onRetry,
   onStop,
   onMessagesScroll,
   onOpenHistory,
@@ -178,9 +183,24 @@ export function ConversationPanel({
       >
         <div className="mx-auto w-full max-w-4xl">
           {inlineError ? (
-            <p role="alert" className="mb-2 text-sm text-destructive">
-              {inlineError}
-            </p>
+            <div
+              role="alert"
+              className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm text-destructive"
+            >
+              <span>{inlineError}</span>
+              {canRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onRetry}
+                  className="h-8 border-destructive/30 text-destructive hover:text-destructive"
+                >
+                  <RotateCcw className="size-3.5" />
+                  Retry
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
           <div className="flex items-end gap-2">

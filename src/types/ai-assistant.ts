@@ -3,6 +3,31 @@ export interface AskAiAssistantPayload {
   threadId?: string;
 }
 
+export type AiAssistantGraphType = "line" | "bar" | "pie" | "doughnut";
+
+export type AiAssistantGraphValueFormat = "currency" | "number";
+
+export interface AiAssistantGraphDataset {
+  label: string;
+  data: number[];
+  /**
+   * Optional because the current AI Assistant SSE graph payload does not
+   * include presentation colors. The chart renderer supplies a stable
+   * frontend palette when it is absent.
+   */
+  color?: string;
+}
+
+export interface AiAssistantGraph {
+  type: AiAssistantGraphType;
+  title: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
+  valueFormat: AiAssistantGraphValueFormat;
+  labels: string[];
+  datasets: AiAssistantGraphDataset[];
+}
+
 export type AiAssistantToolStatus = "started" | "completed" | "failed";
 
 export interface AiAssistantToolEventData {
@@ -10,6 +35,45 @@ export interface AiAssistantToolEventData {
   toolName: string;
   status: AiAssistantToolStatus;
 }
+
+export interface AiAssistantToolCallEventData
+  extends AiAssistantToolEventData {
+  status: "started";
+}
+
+export interface AiAssistantToolResultEventData
+  extends AiAssistantToolEventData {
+  status: "completed" | "failed";
+}
+
+export interface AiAssistantChunkEventData {
+  content: string;
+}
+
+export interface AiAssistantGraphEventData {
+  graph: AiAssistantGraph;
+}
+
+export interface AiAssistantDoneEventData {
+  content: string;
+  threadId: string;
+  userMessageId: string;
+  assistantMessageId: string;
+}
+
+export interface AiAssistantErrorEventData {
+  threadId: string;
+  userMessageId: string;
+  message: string;
+}
+
+export type AiAssistantSseEvent =
+  | { event: "tool-call"; data: AiAssistantToolCallEventData }
+  | { event: "tool-result"; data: AiAssistantToolResultEventData }
+  | { event: "chunk"; data: AiAssistantChunkEventData }
+  | { event: "graph"; data: AiAssistantGraphEventData }
+  | { event: "done"; data: AiAssistantDoneEventData }
+  | { event: "error"; data: AiAssistantErrorEventData };
 
 export interface RenameAiChatThreadPayload {
   name: string;

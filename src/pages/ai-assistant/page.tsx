@@ -10,6 +10,7 @@ import {
   renameAiChatThread,
 } from "@/queries/ai-assistant";
 import type {
+  AiAssistantGraph,
   AiAssistantToolEventData,
   AiChatThreadSummary,
 } from "@/types/ai-assistant";
@@ -18,9 +19,11 @@ import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
 import {
   createLocalMessage,
+  createAssistantChunkSanitizer,
   getActiveToolActivityLabel,
   getAssistantErrorMessage,
   getThreadTitle,
+  mergeThreadMessagesWithLiveGraphs,
   type UiChatMessage,
 } from "./ai-assistant.utils";
 import { ChatHistoryPanel } from "./components/chat-history-panel";
@@ -29,6 +32,11 @@ import { DeleteThreadDialog } from "./components/delete-thread-dialog";
 
 const AI_THREADS_KEY = ["ai-chat-threads"] as const;
 const EMPTY_THREADS: AiChatThreadSummary[] = [];
+
+type RetryRequest = {
+  question: string;
+  threadId?: string;
+};
 
 function createLocalConversationId() {
   return `local-thread-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -45,6 +53,7 @@ export default function AiAssistantPage() {
     Record<string, AiAssistantToolEventData>
   >({});
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [retryRequest, setRetryRequest] = useState<RetryRequest | null>(null);
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameLoading, setRenameLoading] = useState(false);
@@ -66,6 +75,7 @@ export default function AiAssistantPage() {
     controller: AbortController;
     conversationId: string;
   } | null>(null);
+  const hydrateHistoryGraphsRef = useRef(false);
   const { mutate: mutateCache } = useSWRConfig();
 
   const {
@@ -84,7 +94,13 @@ export default function AiAssistantPage() {
       revalidateOnFocus: false,
       onSuccess: (thread) => {
         if (activeRequestRef.current) return;
-        setMessages(thread.messages);
+        setMessages((current) =>
+          mergeThreadMessagesWithLiveGraphs(
+            current,
+            thread.messages,
+            hydrateHistoryGraphsRef.current,
+          ),
+        );
       },
       onError: (error) => {
         if (activeRequestRef.current) return;
@@ -133,12 +149,24 @@ export default function AiAssistantPage() {
     );
   };
 
+  const appendMessageGraph = (id: string, graph: AiAssistantGraph) => {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === id
+          ? { ...message, graphs: [...(message.graphs ?? []), graph] }
+          : message,
+      ),
+    );
+  };
+
   const resetConversation = () => {
     setMobileHistoryOpen(false);
     setSelectedThreadId(null);
+    hydrateHistoryGraphsRef.current = false;
     setMessages([]);
     setToolActivities({});
     setInlineError(null);
+    setRetryRequest(null);
     setQuestion("");
     shouldAutoScrollRef.current = true;
     window.setTimeout(() => textareaRef.current?.focus(), 100);
@@ -154,9 +182,11 @@ export default function AiAssistantPage() {
 
     setMobileHistoryOpen(false);
     setSelectedThreadId(threadId);
+    hydrateHistoryGraphsRef.current = true;
     setMessages([]);
     setToolActivities({});
     setInlineError(null);
+    setRetryRequest(null);
     shouldAutoScrollRef.current = true;
   };
 
@@ -216,10 +246,10 @@ export default function AiAssistantPage() {
     }
   };
 
-  const sendQuestion = async () => {
+  const sendQuestion = async (retry?: RetryRequest) => {
     if (activeRequestRef.current) return;
 
-    const trimmedQuestion = question.trim();
+    const trimmedQuestion = (retry?.question ?? question).trim();
     if (!trimmedQuestion) {
       setInlineError("Please enter a question.");
       textareaRef.current?.focus();
@@ -232,6 +262,7 @@ export default function AiAssistantPage() {
     }
 
     setInlineError(null);
+    setRetryRequest(null);
     setQuestion("");
 
     const userMessage = createLocalMessage("user", trimmedQuestion);
@@ -239,7 +270,7 @@ export default function AiAssistantPage() {
     const assistantMessageId = assistantMessage.id;
     const userMessageId = userMessage.id;
     const controller = new AbortController();
-    const streamThreadId = selectedThreadId;
+    const streamThreadId = retry?.threadId ?? selectedThreadId;
     const conversationId = streamThreadId ?? createLocalConversationId();
     activeRequestRef.current = {
       controller,
@@ -249,7 +280,8 @@ export default function AiAssistantPage() {
     let activeUserMessageId = userMessageId;
     let activeAssistantMessageId = assistantMessageId;
     let threadIdToRefresh = streamThreadId;
-    let rawStreamText = "";
+    const chunkSanitizer = createAssistantChunkSanitizer();
+    let visibleStreamText = "";
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setToolActivities({});
@@ -262,8 +294,14 @@ export default function AiAssistantPage() {
         threadId: streamThreadId ?? undefined,
         onChunk: (chunk) => {
           if (!chunk) return;
-          rawStreamText += chunk;
-          setMessageContent(activeAssistantMessageId, rawStreamText);
+          const visibleChunk = chunkSanitizer.push(chunk);
+          if (!visibleChunk) return;
+
+          visibleStreamText += visibleChunk;
+          setMessageContent(activeAssistantMessageId, visibleStreamText);
+        },
+        onGraph: ({ graph }) => {
+          appendMessageGraph(activeAssistantMessageId, graph);
         },
         onToolCall: (activity) => {
           setToolActivities((current) => ({
@@ -284,6 +322,7 @@ export default function AiAssistantPage() {
           assistantMessageId: savedAssistantMessageId,
         }) => {
           threadIdToRefresh = threadId ?? streamThreadId;
+          if (!streamThreadId) hydrateHistoryGraphsRef.current = false;
           if (threadId) setSelectedThreadId(threadId);
 
           updateMessage(activeUserMessageId, {
@@ -293,11 +332,13 @@ export default function AiAssistantPage() {
           });
           updateMessage(activeAssistantMessageId, {
             id: savedAssistantMessageId ?? activeAssistantMessageId,
-            content,
+            content: chunkSanitizer.sanitizeFinal(content),
             status: "completed",
             local: false,
           });
           setToolActivities({});
+          setRetryRequest(null);
+          setIsStreaming(false);
           activeUserMessageId = savedUserMessageId ?? activeUserMessageId;
           activeAssistantMessageId =
             savedAssistantMessageId ?? activeAssistantMessageId;
@@ -305,6 +346,10 @@ export default function AiAssistantPage() {
         onError: ({ message, threadId, userMessageId: savedUserMessageId }) => {
           threadIdToRefresh = threadId ?? streamThreadId;
           setInlineError(message);
+          setRetryRequest({
+            question: trimmedQuestion,
+            threadId: threadId ?? streamThreadId ?? undefined,
+          });
           if (threadId) setSelectedThreadId(threadId);
 
           updateMessage(activeUserMessageId, {
@@ -317,6 +362,7 @@ export default function AiAssistantPage() {
             errorMessage: message,
           });
           setToolActivities({});
+          setIsStreaming(false);
           activeUserMessageId = savedUserMessageId ?? activeUserMessageId;
         },
         signal: controller.signal,
@@ -329,6 +375,10 @@ export default function AiAssistantPage() {
 
       const message = getAssistantErrorMessage(error);
       setInlineError(message);
+      setRetryRequest({
+        question: trimmedQuestion,
+        threadId: threadIdToRefresh ?? streamThreadId ?? undefined,
+      });
       updateMessage(activeAssistantMessageId, {
         status: "failed",
         errorMessage: message,
@@ -404,6 +454,7 @@ export default function AiAssistantPage() {
           messages={messages}
           question={question}
           inlineError={inlineError}
+          canRetry={Boolean(retryRequest) && !isStreaming && !isThreadLoading}
           isStreaming={isStreaming}
           toolActivity={getActiveToolActivityLabel(toolActivities)}
           threadLoading={isThreadLoading}
@@ -418,9 +469,13 @@ export default function AiAssistantPage() {
           onSelectPrompt={(nextQuestion) => {
             setQuestion(nextQuestion);
             setInlineError(null);
+            setRetryRequest(null);
             textareaRef.current?.focus();
           }}
           onSend={() => void sendQuestion()}
+          onRetry={() => {
+            if (retryRequest) void sendQuestion(retryRequest);
+          }}
           onStop={stopStreaming}
           onMessagesScroll={handleMessagesScroll}
         />

@@ -1,7 +1,13 @@
 import api from "@/lib/axios";
+import { parseAiAssistantGraph } from "@/lib/ai-assistant-graph";
 import { useAuthStore } from "@/lib/store";
 import type {
-  AiAssistantToolEventData,
+  AiAssistantDoneEventData,
+  AiAssistantErrorEventData,
+  AiAssistantGraphEventData,
+  AiAssistantSseEvent,
+  AiAssistantToolCallEventData,
+  AiAssistantToolResultEventData,
   AiChatThreadDetail,
   AiChatThreadSummary,
   DeleteAiChatThreadResponse,
@@ -18,34 +24,15 @@ export class AiAssistantStreamError extends Error {
   }
 }
 
-type AssistantSseEventData = {
-  content?: string;
-  message?: string;
-  threadId?: string;
-  userMessageId?: string;
-  assistantMessageId?: string;
-  toolCallId?: string;
-  toolName?: string;
-  status?: "started" | "completed" | "failed";
-};
-
 type AskAssistantSseStreamOptions = {
   question: string;
   threadId?: string;
   onChunk: (content: string) => void;
-  onDone: (data: {
-    content: string;
-    threadId?: string;
-    userMessageId?: string;
-    assistantMessageId?: string;
-  }) => void;
-  onError: (data: {
-    message: string;
-    threadId?: string;
-    userMessageId?: string;
-  }) => void;
-  onToolCall: (data: AiAssistantToolEventData) => void;
-  onToolResult: (data: AiAssistantToolEventData) => void;
+  onGraph?: (data: AiAssistantGraphEventData) => void;
+  onDone: (data: AiAssistantDoneEventData) => void;
+  onError: (data: AiAssistantErrorEventData) => void;
+  onToolCall: (data: AiAssistantToolCallEventData) => void;
+  onToolResult: (data: AiAssistantToolResultEventData) => void;
   signal?: AbortSignal;
 };
 
@@ -96,9 +83,9 @@ function getStreamStatusMessage(status: number) {
 
 function getBackendErrorMessage(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value.trim();
-  if (!value || typeof value !== "object") return null;
+  if (!isRecord(value)) return null;
 
-  const message = (value as Record<string, unknown>).message;
+  const message = value.message;
   if (typeof message === "string" && message.trim()) return message.trim();
   if (Array.isArray(message)) {
     const messages = message.filter(
@@ -127,7 +114,117 @@ async function getHttpErrorMessage(response: Response) {
   }
 }
 
-export function parseAssistantSseEvent(rawEvent: string) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function invalidStreamEvent(): AiAssistantSseEvent {
+  return {
+    event: "error",
+    data: {
+      threadId: "",
+      userMessageId: "",
+      message: "Failed to stream assistant response.",
+    },
+  };
+}
+
+function parseEventData(
+  eventName: string,
+  value: unknown,
+): AiAssistantSseEvent | null {
+  if (!isRecord(value)) return invalidStreamEvent();
+
+  if (eventName === "chunk") {
+    return typeof value.content === "string"
+      ? { event: "chunk", data: { content: value.content } }
+      : invalidStreamEvent();
+  }
+
+  if (eventName === "graph") {
+    // The backend currently sends graph fields at the top level. Retain
+    // support for the documented wrapper too so in-flight backend versions
+    // do not break an already deployed frontend.
+    const graph = parseAiAssistantGraph(
+      "graph" in value ? value.graph : value,
+    );
+    return graph
+      ? { event: "graph", data: { graph } }
+      : invalidStreamEvent();
+  }
+
+  if (eventName === "tool-call") {
+    return typeof value.toolCallId === "string" &&
+      Boolean(value.toolCallId) &&
+      typeof value.toolName === "string" &&
+      Boolean(value.toolName) &&
+      value.status === "started"
+      ? {
+          event: "tool-call",
+          data: {
+            toolCallId: value.toolCallId,
+            toolName: value.toolName,
+            status: value.status,
+          },
+        }
+      : invalidStreamEvent();
+  }
+
+  if (eventName === "tool-result") {
+    return typeof value.toolCallId === "string" &&
+      Boolean(value.toolCallId) &&
+      typeof value.toolName === "string" &&
+      Boolean(value.toolName) &&
+      (value.status === "completed" || value.status === "failed")
+      ? {
+          event: "tool-result",
+          data: {
+            toolCallId: value.toolCallId,
+            toolName: value.toolName,
+            status: value.status,
+          },
+        }
+      : invalidStreamEvent();
+  }
+
+  if (eventName === "done") {
+    return typeof value.content === "string" &&
+      typeof value.threadId === "string" &&
+      typeof value.userMessageId === "string" &&
+      typeof value.assistantMessageId === "string"
+      ? {
+          event: "done",
+          data: {
+            content: value.content,
+            threadId: value.threadId,
+            userMessageId: value.userMessageId,
+            assistantMessageId: value.assistantMessageId,
+          },
+        }
+      : invalidStreamEvent();
+  }
+
+  if (eventName === "error") {
+    return typeof value.message === "string" &&
+      typeof value.threadId === "string" &&
+      typeof value.userMessageId === "string"
+      ? {
+          event: "error",
+          data: {
+            message: value.message,
+            threadId: value.threadId,
+            userMessageId: value.userMessageId,
+          },
+        }
+      : invalidStreamEvent();
+  }
+
+  return null;
+}
+
+export function parseAssistantSseEvent(
+  rawEvent: string,
+): AiAssistantSseEvent | null {
   const lines = rawEvent.split(/\r\n|\r|\n/);
   let eventName = "";
   const dataLines: string[] = [];
@@ -150,19 +247,9 @@ export function parseAssistantSseEvent(rawEvent: string) {
 
   try {
     const data: unknown = JSON.parse(dataText);
-    if (!data || typeof data !== "object" || Array.isArray(data)) {
-      throw new Error("Invalid SSE data");
-    }
-
-    return {
-      eventName,
-      data: data as AssistantSseEventData,
-    };
+    return parseEventData(eventName, data);
   } catch {
-    return {
-      eventName: "error",
-      data: { message: "Failed to stream assistant response." },
-    };
+    return invalidStreamEvent();
   }
 }
 
@@ -221,24 +308,11 @@ function createSseEventBuffer() {
   };
 }
 
-function isToolEventData(
-  data: AssistantSseEventData,
-): data is AiAssistantToolEventData {
-  return (
-    typeof data.toolCallId === "string" &&
-    Boolean(data.toolCallId) &&
-    typeof data.toolName === "string" &&
-    Boolean(data.toolName) &&
-    (data.status === "started" ||
-      data.status === "completed" ||
-      data.status === "failed")
-  );
-}
-
 export async function askAssistantSseStream({
   question,
   threadId,
   onChunk,
+  onGraph,
   onDone,
   onError,
   onToolCall,
@@ -290,39 +364,35 @@ export async function askAssistantSseStream({
     const parsedEvent = parseAssistantSseEvent(rawEvent.trim());
     if (!parsedEvent) return false;
 
-    const { eventName, data } = parsedEvent;
+    const { event, data } = parsedEvent;
 
-    if (eventName === "chunk") {
-      onChunk(data.content ?? "");
+    if (event === "chunk") {
+      onChunk(data.content);
       return false;
     }
 
-    if (eventName === "tool-call" && isToolEventData(data)) {
+    if (event === "graph") {
+      onGraph?.(data);
+      return false;
+    }
+
+    if (event === "tool-call") {
       onToolCall(data);
       return false;
     }
 
-    if (eventName === "tool-result" && isToolEventData(data)) {
+    if (event === "tool-result") {
       onToolResult(data);
       return false;
     }
 
-    if (eventName === "done") {
-      onDone({
-        content: data.content ?? "",
-        threadId: data.threadId,
-        userMessageId: data.userMessageId,
-        assistantMessageId: data.assistantMessageId,
-      });
+    if (event === "done") {
+      onDone(data);
       return true;
     }
 
-    if (eventName === "error") {
-      onError({
-        message: data.message ?? "Failed to stream assistant response.",
-        threadId: data.threadId,
-        userMessageId: data.userMessageId,
-      });
+    if (event === "error") {
+      onError(data);
       return true;
     }
 
