@@ -40,10 +40,10 @@ const promptStarters = [
 
 export function MessageBubble({
   message,
-  onRetry,
+  toolActivity,
 }: {
   message: UiChatMessage;
-  onRetry?: () => void;
+  toolActivity?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
   const copiedTimeoutRef = useRef<number | null>(null);
@@ -105,10 +105,20 @@ export function MessageBubble({
         >
           {message.content ? (
             <p className="whitespace-pre-wrap break-words">{message.content}</p>
-          ) : isStreaming ? (
-            <span className="flex items-center gap-2 text-muted-foreground">
+          ) : null}
+
+          {isStreaming ? (
+            <span
+              role="status"
+              aria-live="polite"
+              className={cn(
+                "flex items-center gap-2 text-muted-foreground",
+                message.content && "mt-2",
+              )}
+            >
               <Loader2 className="size-4 animate-spin" />
-              Preparing answer...
+              {toolActivity ??
+                (message.content ? "Writing response…" : "Preparing answer…")}
             </span>
           ) : null}
 
@@ -119,19 +129,9 @@ export function MessageBubble({
           ) : null}
 
           {isError ? (
-            <div className="mt-2 flex items-center gap-2">
-              <p className="text-xs font-medium text-destructive">Failed</p>
-              {onRetry ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={onRetry}
-                >
-                  Retry
-                </Button>
-              ) : null}
-            </div>
+            <p className="mt-2 text-xs font-medium text-destructive">
+              {message.errorMessage || "Failed to get assistant response."}
+            </p>
           ) : null}
         </div>
 

@@ -1,5 +1,7 @@
+import { extractError } from "@/lib/error";
 import { AiAssistantStreamError } from "@/queries/ai-assistant";
 import type {
+  AiAssistantToolEventData,
   AiChatMessage,
   AiChatRole,
   AiChatThreadSummary,
@@ -37,67 +39,74 @@ export function createLocalMessage(
   };
 }
 
-function removeTrailingPartialThinkTag(text: string) {
-  const tagPrefixes = ["<think>", "</think>"]
-    .flatMap((tag) =>
-      Array.from({ length: tag.length - 1 }, (_, index) =>
-        tag.slice(0, index + 1),
-      ),
-    )
-    .sort((a, b) => b.length - a.length);
-
-  const lowerText = text.toLowerCase();
-  const partialTag = tagPrefixes.find((prefix) =>
-    lowerText.endsWith(prefix),
-  );
-
-  return partialTag ? text.slice(0, -partialTag.length) : text;
-}
-
-export function getVisibleAssistantText(rawText: string) {
-  const lowerText = rawText.toLowerCase();
-  let visibleText = "";
-  let cursor = 0;
-
-  while (cursor < rawText.length) {
-    const thinkStart = lowerText.indexOf("<think>", cursor);
-
-    if (thinkStart === -1) {
-      visibleText += rawText.slice(cursor);
-      break;
-    }
-
-    visibleText += rawText.slice(cursor, thinkStart);
-
-    const thinkEnd = lowerText.indexOf("</think>", thinkStart + 7);
-    if (thinkEnd === -1) break;
-
-    cursor = thinkEnd + 8;
-  }
-
-  return removeTrailingPartialThinkTag(visibleText).replace(/^\s+/, "");
-}
-
 export function getAssistantErrorMessage(error: unknown) {
   if (error instanceof AiAssistantStreamError) {
     return error.message || "Failed to get assistant response.";
   }
 
   if (isAxiosError(error)) {
+    let fallback = "Failed to get assistant response.";
+
     switch (error.response?.status) {
       case 400:
-        return "Question is required.";
+        fallback = "Question is required.";
+        break;
       case 401:
       case 403:
-        return "You are not authorized.";
+        fallback = "You are not authorized.";
+        break;
+      case 404:
+        fallback = "The requested assistant conversation was not found.";
+        break;
       case 503:
-        return "AI assistant is currently unavailable.";
-      default:
-        return "Failed to get assistant response.";
+        fallback = "AI assistant is currently unavailable.";
+        break;
+    }
+
+    return extractError(error, fallback);
+  }
+
+  return extractError(error, "Failed to get assistant response.");
+}
+
+export function getToolActivityLabel(toolName: string) {
+  const normalizedName = toolName.toLowerCase();
+
+  if (normalizedName.includes("dashboard")) return "Checking dashboard…";
+  if (
+    normalizedName.includes("product") ||
+    normalizedName.includes("inventory") ||
+    normalizedName.includes("stock")
+  ) {
+    return "Searching products…";
+  }
+  if (
+    normalizedName.includes("sale") ||
+    normalizedName.includes("profit") ||
+    normalizedName.includes("revenue") ||
+    normalizedName.includes("cashier") ||
+    normalizedName.includes("payment") ||
+    normalizedName.includes("order")
+  ) {
+    return "Analyzing sales…";
+  }
+
+  return "Analyzing store data…";
+}
+
+export function getActiveToolActivityLabel(
+  activities: Record<string, AiAssistantToolEventData>,
+) {
+  const toolActivities = Object.values(activities);
+
+  for (let index = toolActivities.length - 1; index >= 0; index -= 1) {
+    const activity = toolActivities[index];
+    if (activity.status === "started") {
+      return getToolActivityLabel(activity.toolName);
     }
   }
 
-  return "Failed to get assistant response.";
+  return null;
 }
 
 export function formatThreadTime(value?: string) {

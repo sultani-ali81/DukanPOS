@@ -23,11 +23,13 @@ import {
 import { useProducts } from "@/hooks/use-products";
 import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import { formatCurrency } from "@/lib/currency";
+import { extractError } from "@/lib/error";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
 import { getCategories } from "@/queries/category";
 import {
   createProduct,
   deleteProduct,
+  getProductById,
   updateProduct,
 } from "@/queries/products";
 import type {
@@ -42,7 +44,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
@@ -103,8 +105,10 @@ export default function ProductsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingLoadingId, setEditingLoadingId] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const failedSignedUrlsRef = useRef(new Set<string>());
 
   const { data: categoriesData } = useSWR(
     PRODUCT_CATEGORIES_KEY,
@@ -115,25 +119,13 @@ export default function ProductsPage() {
   // ── CRUD ────────────────────────────────────────────────────────────────
 
   async function handleSubmit(values: ProductFormSubmitValues, id?: string) {
-    try {
-      if (id) {
-        await updateProduct(id, values);
-        toast.success("Product updated", {
-          description: `"${values.name ?? editingProduct?.name}" has been updated.`,
-        });
-      } else {
-        // Cast is safe: the dialog only omits keys for partial edits, never
-        // for creates — create always sends the full ProductFormValues.
-        await createProduct(values as CreateProductPayload);
-        toast.success("Product created", {
-          description: `"${values.name}" has been added to the catalog.`,
-        });
-      }
-      await mutateCache(createCrudFamilyMatcher("products", id));
-    } catch {
-      toast.error("Something went wrong", { description: "Please try again." });
-      throw new Error("submit failed");
+    if (id) {
+      await updateProduct(id, values);
+      return;
     }
+
+    // Create always sends the complete required product fields.
+    return createProduct(values as CreateProductPayload);
   }
 
   async function handleDelete(product: Product) {
@@ -156,14 +148,35 @@ export default function ProductsPage() {
     }
   }
 
+  async function refreshExpiredProductImage(productId: string, url: string) {
+    if (failedSignedUrlsRef.current.has(url)) return;
+    failedSignedUrlsRef.current.add(url);
+    try {
+      await mutateCache(createCrudFamilyMatcher("products", productId));
+    } catch {
+      // Keep the failed image hidden; a later page revalidation can retry it.
+    }
+  }
+
   function openCreate() {
     setEditingProduct(null);
     setDialogOpen(true);
   }
 
-  function openEdit(product: Product) {
-    setEditingProduct(product);
-    setDialogOpen(true);
+  async function openEdit(product: Product) {
+    setEditingLoadingId(product.id);
+    try {
+      const authoritativeProduct = await getProductById(product.id);
+      if (!authoritativeProduct) throw new Error("Product not found");
+      setEditingProduct(authoritativeProduct);
+      setDialogOpen(true);
+    } catch (error: unknown) {
+      toast.error("Could not open product", {
+        description: extractError(error, "Please try again."),
+      });
+    } finally {
+      setEditingLoadingId(null);
+    }
   }
 
   return (
@@ -233,6 +246,7 @@ export default function ProductsPage() {
               ) : (
                 products.map((p) => {
                   const isDeleting = deletingId === p.id;
+                  const isOpeningEditor = editingLoadingId === p.id;
                   return (
                     <TableRow
                       key={p.id}
@@ -246,6 +260,12 @@ export default function ProductsPage() {
                               <img
                                 src={p.primaryImage}
                                 alt={p.name}
+                                onError={() =>
+                                  void refreshExpiredProductImage(
+                                    p.id,
+                                    p.primaryImage ?? "",
+                                  )
+                                }
                                 className="size-full object-cover"
                               />
                             ) : (
@@ -276,10 +296,15 @@ export default function ProductsPage() {
                             variant="ghost"
                             size="icon"
                             className="size-8"
-                            onClick={() => openEdit(p)}
+                            disabled={isOpeningEditor}
+                            onClick={() => void openEdit(p)}
                             aria-label={`Edit ${p.name}`}
                           >
-                            <Pencil className="size-4" />
+                            {isOpeningEditor ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Pencil className="size-4" />
+                            )}
                           </Button>
                           <Button
                             variant="ghost"

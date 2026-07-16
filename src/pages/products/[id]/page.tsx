@@ -41,7 +41,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import useSWR, { useSWRConfig } from "swr";
@@ -59,6 +59,7 @@ export default function ProductDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const failedSignedUrlsRef = useRef(new Set<string>());
 
   const {
     data: product,
@@ -82,14 +83,6 @@ export default function ProductDetailPage() {
   async function handleSubmit(values: ProductFormSubmitValues) {
     if (!product) return;
     await updateProduct(product.id, values);
-    await mutateCache(createCrudFamilyMatcher("products", product.id));
-    setActiveImage(0);
-    await mutateCache(createAuditLogsMatcher(product.id), undefined, {
-      revalidate: true,
-    });
-    toast.success("Product updated", {
-      description: `"${values.name ?? product.name}" has been updated.`,
-    });
   }
 
   async function handleDelete() {
@@ -109,6 +102,16 @@ export default function ProductDetailPage() {
       });
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function refreshExpiredSignedUrl(url: string) {
+    if (!product || failedSignedUrlsRef.current.has(url)) return;
+    failedSignedUrlsRef.current.add(url);
+    try {
+      await mutateCache(createCrudFamilyMatcher("products", product.id));
+    } catch {
+      // Keep the failed image hidden; a later page revalidation can retry it.
     }
   }
 
@@ -183,14 +186,22 @@ export default function ProductDetailPage() {
             {images.length > 0 ? (
               <div className="space-y-3">
                 <div className="aspect-square w-full overflow-hidden rounded-lg border bg-muted">
-                  <img
-                    src={
-                      images[activeImage]?.imageUrlSigned ??
-                      images[activeImage]?.imageUrl
-                    }
-                    alt={product.name}
-                    className="size-full object-cover"
-                  />
+                  {images[activeImage]?.imageUrlSigned ? (
+                    <img
+                      src={images[activeImage].imageUrlSigned}
+                      alt={product.name}
+                      onError={() =>
+                        void refreshExpiredSignedUrl(
+                          images[activeImage].imageUrlSigned!,
+                        )
+                      }
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center text-muted-foreground">
+                      <Package className="size-8 text-muted-foreground/40" />
+                    </div>
+                  )}
                 </div>
                 {images.length > 1 && (
                   <div className="flex gap-2">
@@ -206,11 +217,20 @@ export default function ProductDetailPage() {
                             : "border-transparent hover:border-muted-foreground/30",
                         )}
                       >
-                        <img
-                          src={img.imageUrlSigned ?? img.imageUrl}
-                          alt=""
-                          className="size-full object-cover"
-                        />
+                        {img.imageUrlSigned ? (
+                          <img
+                            src={img.imageUrlSigned}
+                            alt=""
+                            onError={() =>
+                              void refreshExpiredSignedUrl(img.imageUrlSigned!)
+                            }
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center bg-muted">
+                            <Package className="size-4 text-muted-foreground/40" />
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -339,6 +359,12 @@ export default function ProductDetailPage() {
         editingProduct={product}
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmit}
+        onSaved={async () => {
+          setActiveImage(0);
+          await mutateCache(createAuditLogsMatcher(product.id), undefined, {
+            revalidate: true,
+          });
+        }}
       />
 
       <AlertDialog

@@ -1,10 +1,14 @@
-export interface AiAssistantResponse {
-  answer: string;
-}
-
 export interface AskAiAssistantPayload {
   question: string;
   threadId?: string;
+}
+
+export type AiAssistantToolStatus = "started" | "completed" | "failed";
+
+export interface AiAssistantToolEventData {
+  toolCallId: string;
+  toolName: string;
+  status: AiAssistantToolStatus;
 }
 
 export interface RenameAiChatThreadPayload {

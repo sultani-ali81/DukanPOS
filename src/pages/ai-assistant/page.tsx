@@ -9,15 +9,18 @@ import {
   getAiChatThreads,
   renameAiChatThread,
 } from "@/queries/ai-assistant";
-import type { AiChatThreadSummary } from "@/types/ai-assistant";
+import type {
+  AiAssistantToolEventData,
+  AiChatThreadSummary,
+} from "@/types/ai-assistant";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import {
   createLocalMessage,
+  getActiveToolActivityLabel,
   getAssistantErrorMessage,
   getThreadTitle,
-  getVisibleAssistantText,
   type UiChatMessage,
 } from "./ai-assistant.utils";
 import { ChatHistoryPanel } from "./components/chat-history-panel";
@@ -27,6 +30,10 @@ import { DeleteThreadDialog } from "./components/delete-thread-dialog";
 const AI_THREADS_KEY = ["ai-chat-threads"] as const;
 const EMPTY_THREADS: AiChatThreadSummary[] = [];
 
+function createLocalConversationId() {
+  return `local-thread-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export default function AiAssistantPage() {
   const token = useAuthStore((state) => state.token);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -34,6 +41,9 @@ export default function AiAssistantPage() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<UiChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [toolActivities, setToolActivities] = useState<
+    Record<string, AiAssistantToolEventData>
+  >({});
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [renamingThreadId, setRenamingThreadId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -52,7 +62,11 @@ export default function AiAssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const activeRequestRef = useRef<{
+    controller: AbortController;
+    conversationId: string;
+  } | null>(null);
+  const { mutate: mutateCache } = useSWRConfig();
 
   const {
     data: threadData,
@@ -69,14 +83,14 @@ export default function AiAssistantPage() {
     {
       revalidateOnFocus: false,
       onSuccess: (thread) => {
-        if (isStreaming) return;
-        setMessages(
-          [...thread.messages].sort((a, b) =>
-            (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
-          ),
-        );
+        if (activeRequestRef.current) return;
+        setMessages(thread.messages);
       },
-      onError: (error) => setInlineError(getAssistantErrorMessage(error)),
+      onError: (error) => {
+        if (activeRequestRef.current) return;
+        setMessages([]);
+        setInlineError(getAssistantErrorMessage(error));
+      },
     },
   );
   const isThreadLoading = threadLoading || threadValidating;
@@ -92,7 +106,7 @@ export default function AiAssistantPage() {
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      activeRequestRef.current?.controller.abort();
     };
   }, []);
 
@@ -119,23 +133,29 @@ export default function AiAssistantPage() {
     );
   };
 
-  const handleNewChat = () => {
-    if (isStreaming) return;
-
+  const resetConversation = () => {
     setMobileHistoryOpen(false);
     setSelectedThreadId(null);
     setMessages([]);
+    setToolActivities({});
     setInlineError(null);
     setQuestion("");
     shouldAutoScrollRef.current = true;
     window.setTimeout(() => textareaRef.current?.focus(), 100);
   };
 
+  const handleNewChat = () => {
+    if (activeRequestRef.current) return;
+    resetConversation();
+  };
+
   const loadThread = (threadId: string) => {
-    if (isStreaming) return;
+    if (activeRequestRef.current) return;
 
     setMobileHistoryOpen(false);
     setSelectedThreadId(threadId);
+    setMessages([]);
+    setToolActivities({});
     setInlineError(null);
     shouldAutoScrollRef.current = true;
   };
@@ -151,11 +171,11 @@ export default function AiAssistantPage() {
 
     setRenameLoading(true);
     try {
-      await renameAiChatThread(threadId, { name });
+      const renamedThread = await renameAiChatThread(threadId, { name });
       await mutateThreads(
         (current) =>
           current?.map((thread) =>
-            thread.id === threadId ? { ...thread, title: name } : thread,
+            thread.id === threadId ? renamedThread : thread,
           ),
         { revalidate: false },
       );
@@ -181,7 +201,10 @@ export default function AiAssistantPage() {
         (current) => current?.filter((thread) => thread.id !== threadId),
         { revalidate: false },
       );
-      if (selectedThreadId === threadId) handleNewChat();
+      await mutateCache(["ai-chat-thread", threadId], undefined, {
+        revalidate: false,
+      });
+      if (selectedThreadId === threadId) resetConversation();
       setDeletingThread(null);
       toast.success("Conversation deleted");
     } catch (error) {
@@ -193,10 +216,10 @@ export default function AiAssistantPage() {
     }
   };
 
-  const sendQuestion = async (retryQuestion?: string) => {
-    if (isStreaming) return;
+  const sendQuestion = async () => {
+    if (activeRequestRef.current) return;
 
-    const trimmedQuestion = (retryQuestion ?? question).trim();
+    const trimmedQuestion = question.trim();
     if (!trimmedQuestion) {
       setInlineError("Please enter a question.");
       textareaRef.current?.focus();
@@ -217,15 +240,19 @@ export default function AiAssistantPage() {
     const userMessageId = userMessage.id;
     const controller = new AbortController();
     const streamThreadId = selectedThreadId;
-    abortControllerRef.current = controller;
+    const conversationId = streamThreadId ?? createLocalConversationId();
+    activeRequestRef.current = {
+      controller,
+      conversationId,
+    };
 
     let activeUserMessageId = userMessageId;
     let activeAssistantMessageId = assistantMessageId;
-    let receivedStreamText = false;
+    let threadIdToRefresh = streamThreadId;
     let rawStreamText = "";
-    let streamEventFailed = false;
 
     setMessages((current) => [...current, userMessage, assistantMessage]);
+    setToolActivities({});
     shouldAutoScrollRef.current = true;
     setIsStreaming(true);
 
@@ -236,9 +263,19 @@ export default function AiAssistantPage() {
         onChunk: (chunk) => {
           if (!chunk) return;
           rawStreamText += chunk;
-          const visibleText = getVisibleAssistantText(rawStreamText);
-          receivedStreamText = visibleText.length > 0;
-          setMessageContent(activeAssistantMessageId, visibleText);
+          setMessageContent(activeAssistantMessageId, rawStreamText);
+        },
+        onToolCall: (activity) => {
+          setToolActivities((current) => ({
+            ...current,
+            [activity.toolCallId]: activity,
+          }));
+        },
+        onToolResult: (activity) => {
+          setToolActivities((current) => ({
+            ...current,
+            [activity.toolCallId]: activity,
+          }));
         },
         onDone: ({
           content,
@@ -246,9 +283,7 @@ export default function AiAssistantPage() {
           userMessageId: savedUserMessageId,
           assistantMessageId: savedAssistantMessageId,
         }) => {
-          const visibleText = getVisibleAssistantText(content);
-          receivedStreamText = visibleText.length > 0;
-
+          threadIdToRefresh = threadId ?? streamThreadId;
           if (threadId) setSelectedThreadId(threadId);
 
           updateMessage(activeUserMessageId, {
@@ -258,16 +293,17 @@ export default function AiAssistantPage() {
           });
           updateMessage(activeAssistantMessageId, {
             id: savedAssistantMessageId ?? activeAssistantMessageId,
-            content: visibleText,
+            content,
             status: "completed",
             local: false,
           });
+          setToolActivities({});
           activeUserMessageId = savedUserMessageId ?? activeUserMessageId;
           activeAssistantMessageId =
             savedAssistantMessageId ?? activeAssistantMessageId;
         },
         onError: ({ message, threadId, userMessageId: savedUserMessageId }) => {
-          streamEventFailed = true;
+          threadIdToRefresh = threadId ?? streamThreadId;
           setInlineError(message);
           if (threadId) setSelectedThreadId(threadId);
 
@@ -277,47 +313,41 @@ export default function AiAssistantPage() {
             local: false,
           });
           updateMessage(activeAssistantMessageId, {
-            ...(!receivedStreamText ? { content: message } : {}),
             status: "failed",
             errorMessage: message,
           });
+          setToolActivities({});
           activeUserMessageId = savedUserMessageId ?? activeUserMessageId;
         },
         signal: controller.signal,
       });
-
-      if (!streamEventFailed && !receivedStreamText) {
-        updateMessage(activeAssistantMessageId, {
-          content: "I did not receive an answer for that question.",
-          status: "completed",
-        });
-      }
-
-      void mutateThreads();
     } catch (error) {
       if (controller.signal.aborted) {
         updateMessage(activeAssistantMessageId, { status: "stopped" });
-        void mutateThreads();
         return;
       }
 
       const message = getAssistantErrorMessage(error);
       setInlineError(message);
       updateMessage(activeAssistantMessageId, {
-        ...(!receivedStreamText ? { content: message } : {}),
         status: "failed",
         errorMessage: message,
       });
     } finally {
-      if (abortControllerRef.current === controller) {
-        abortControllerRef.current = null;
+      if (activeRequestRef.current?.conversationId === conversationId) {
+        activeRequestRef.current = null;
       }
+      setToolActivities({});
       setIsStreaming(false);
+      void mutateThreads();
+      if (threadIdToRefresh) {
+        void mutateCache(["ai-chat-thread", threadIdToRefresh]);
+      }
     }
   };
 
   const stopStreaming = () => {
-    abortControllerRef.current?.abort();
+    activeRequestRef.current?.controller.abort();
   };
 
   const handleMessagesScroll = () => {
@@ -375,6 +405,7 @@ export default function AiAssistantPage() {
           question={question}
           inlineError={inlineError}
           isStreaming={isStreaming}
+          toolActivity={getActiveToolActivityLabel(toolActivities)}
           threadLoading={isThreadLoading}
           textareaRef={textareaRef}
           messagesContainerRef={messagesContainerRef}
@@ -389,7 +420,7 @@ export default function AiAssistantPage() {
             setInlineError(null);
             textareaRef.current?.focus();
           }}
-          onSend={(retryQuestion) => void sendQuestion(retryQuestion)}
+          onSend={() => void sendQuestion()}
           onStop={stopStreaming}
           onMessagesScroll={handleMessagesScroll}
         />

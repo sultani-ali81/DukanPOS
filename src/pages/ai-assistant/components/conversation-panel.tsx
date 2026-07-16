@@ -24,13 +24,14 @@ type ConversationPanelProps = {
   question: string;
   inlineError: string | null;
   isStreaming: boolean;
+  toolActivity: string | null;
   threadLoading: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   messagesContainerRef: RefObject<HTMLDivElement | null>;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   onQuestionChange: (question: string) => void;
   onSelectPrompt: (question: string) => void;
-  onSend: (question?: string) => void;
+  onSend: () => void;
   onStop: () => void;
   onMessagesScroll: () => void;
   onOpenHistory: () => void;
@@ -46,6 +47,7 @@ export function ConversationPanel({
   question,
   inlineError,
   isStreaming,
+  toolActivity,
   threadLoading,
   textareaRef,
   messagesContainerRef,
@@ -153,23 +155,15 @@ export function ConversationPanel({
           ) : messages.length === 0 ? (
             <EmptyChat disabled={isStreaming} onSelectPrompt={onSelectPrompt} />
           ) : (
-            messages.map((message, index) => {
-              const previousMessage = messages[index - 1];
-              const retryQuestion =
-                message.status === "failed" && previousMessage?.role === "user"
-                  ? previousMessage.content
-                  : undefined;
-
-              return (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  onRetry={
-                    retryQuestion ? () => onSend(retryQuestion) : undefined
-                  }
-                />
-              );
-            })
+            messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                toolActivity={
+                  message.status === "streaming" ? toolActivity : null
+                }
+              />
+            ))
           )}
           <div ref={messagesEndRef} />
         </div>

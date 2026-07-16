@@ -44,7 +44,7 @@ function mapProduct(raw: Record<string, unknown>): Product {
     category: categories[0]?.name,
     categoryId: categories[0]?.id,
     images,
-    primaryImage: images[0]?.imageUrlSigned ?? images[0]?.imageUrl ?? "",
+    primaryImage: images[0]?.imageUrlSigned ?? "",
     inventories,
     totalStock,
   };
@@ -98,11 +98,14 @@ export const uploadProductImages = (
   const formData = new FormData();
   files.forEach((file) => formData.append("images", file));
   formData.append("entityType", "product");
-  return api
-    .post("/attachments/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    })
-    .then((r) => r.data);
+  return api.post("/attachments/upload", formData).then((r) => r.data);
+};
+
+export const uploadProductImage = (file: File): Promise<{ id: string }> => {
+  const formData = new FormData();
+  formData.append("image", file);
+  formData.append("entityType", "product");
+  return api.post("/attachments/upload/single", formData).then((r) => r.data);
 };
 
 export const createProduct = (
