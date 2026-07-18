@@ -3,10 +3,9 @@ import { useSearch } from "@/hooks/use-search";
 import { extractError } from "@/lib/error";
 import { getPurchases, purchasesKey } from "@/queries/purchase";
 import type { PurchaseListItem } from "@/types/purchases";
-import { useState } from "react";
 import useSWR from "swr";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 20;
 
 export interface UsePurchasesReturn {
   purchases: PurchaseListItem[];
@@ -19,8 +18,6 @@ export interface UsePurchasesReturn {
   search: string;
   handleSearch: (value: string) => void;
   clearSearch: () => void;
-  status: string;
-  setStatus: (status: string) => void;
   mutate: () => void;
   isLoading: boolean;
   error: string | null;
@@ -37,18 +34,10 @@ export function usePurchases(): UsePurchasesReturn {
     onSearch: resetToPage1,
   });
 
-  const [status, setStatusRaw] = useState<string>("ALL");
-
-  const setStatus = (value: string) => {
-    setStatusRaw(value);
-    resetToPage1();
-  };
-
   const swrKey = purchasesKey({
     search: debouncedSearch,
     page,
     itemsPerPage: PAGE_SIZE,
-    status: status !== "ALL" ? status : undefined,
   });
 
   const { data, mutate, isLoading, error } = useSWR(swrKey, () =>
@@ -56,7 +45,6 @@ export function usePurchases(): UsePurchasesReturn {
       search: debouncedSearch,
       page,
       itemsPerPage: PAGE_SIZE,
-      status: status !== "ALL" ? status : undefined,
     }),
   );
 
@@ -74,8 +62,6 @@ export function usePurchases(): UsePurchasesReturn {
     search,
     handleSearch,
     clearSearch,
-    status,
-    setStatus,
     mutate,
     isLoading,
     error: error ? extractError(error, "Failed to load purchases.") : null,

@@ -1,89 +1,83 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { MoreHorizontal, Plus, Search, XIcon } from "lucide-react";
-
-import { NumberDisplay } from "@/components/number-display";
 import { PageHeader } from "@/components/page-header";
 import { PaginationFooter } from "@/components/pagination-footer";
+import { SearchField } from "@/components/search-field";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { usePurchases } from "@/hooks/use-purchases";
+import { formatCurrency } from "@/lib/currency";
 import { extractError } from "@/lib/error";
-import { createCrudFamilyMatcher } from "@/lib/crud-cache";
-import { cn } from "@/lib/utils";
-import { deletePurchase, updatePurchaseStatus } from "@/queries/purchase";
+import { formatPurchaseDate } from "@/pages/purchases/purchase-utils";
+import { updatePurchaseStatus } from "@/queries/purchase";
 import type { PurchaseListItem, PurchaseStatus } from "@/types/purchases";
-import { useSWRConfig } from "swr";
+import {
+  CheckCircle2,
+  Eye,
+  Loader2,
+  PackageSearch,
+  Plus,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
+import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { PurchasePaymentStatusBadge, PurchaseStatusBadge } from "./purchase-badges";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmtDate(iso: string | undefined | null): string {
-  if (!iso) return "—";
-  const normalized = iso.includes("T") ? iso : `${iso}T12:00:00Z`;
-  return new Date(normalized).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+function TableSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, row) => (
+        <TableRow key={row}>
+          {Array.from({ length: 7 }).map((__, column) => (
+            <TableCell key={column}>
+              <div className="h-4 max-w-28 animate-pulse rounded bg-muted" />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
 }
 
-const PURCHASE_STATUS_STYLES: Record<PurchaseStatus, string> = {
-  Draft: "bg-gray-100 text-gray-600",
-  Done: "bg-green-100 text-green-700",
-  Cancelled: "bg-red-100 text-red-500",
-  Pending: "bg-yellow-100 text-yellow-700",
-};
-
-type StockInCompletion = "Complete" | "Incomplete" | "None";
-
-const STOCK_IN_BADGE: Record<StockInCompletion, string> = {
-  Complete: "bg-green-50 text-green-700 border border-green-200",
-  Incomplete: "bg-orange-50 text-orange-600 border border-orange-200",
-  None: "bg-gray-50 text-gray-400 border border-gray-200",
-};
-
-function deriveStockInCompletion(
-  purchase: PurchaseListItem,
-): StockInCompletion {
-  const items = purchase.items ?? [];
-  if (items.length === 0) return "None";
-  return items.every((i) => (i.received ?? 0) >= i.quantity)
-    ? "Complete"
-    : "Incomplete";
+function EmptyPurchases({
+  search,
+  onClear,
+}: {
+  search: string;
+  onClear: () => void;
+}) {
+  return (
+    <div className="py-14 text-center">
+      <PackageSearch className="mx-auto mb-3 size-9 text-muted-foreground/40" />
+      <p className="font-medium">
+        {search ? "No matching purchases" : "No purchases yet"}
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {search
+          ? `No suppliers or purchase numbers match “${search}”.`
+          : "Create a purchase to record stock from a supplier."}
+      </p>
+      {search && (
+        <Button type="button" variant="link" size="sm" onClick={onClear}>
+          Clear search
+        </Button>
+      )}
+    </div>
+  );
 }
-
-// ── Date sort select ──────────────────────────────────────────────────────────
-
-const DATE_SORT_OPTIONS = [
-  { label: "Newest", value: "newest" },
-  { label: "Oldest", value: "oldest" },
-];
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export function PurchasesClient() {
   const navigate = useNavigate();
-  const { mutate: mutateCache } = useSWRConfig();
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
-
+  const [updatingId, setUpdatingId] = useState<string>();
+  const statusActionRef = useRef(false);
   const {
     purchases,
     totalItems,
@@ -94,306 +88,294 @@ export function PurchasesClient() {
     search,
     handleSearch,
     clearSearch,
+    mutate: refresh,
     isLoading,
-    error: loadError,
+    error,
   } = usePurchases();
-
   const from = totalItems === 0 ? 0 : (page - 1) * itemsPerPage + 1;
   const to = Math.min(page * itemsPerPage, totalItems);
 
-  const sortedPurchases = [...purchases].sort((a, b) => {
-    const ta = a.customDate ? new Date(a.customDate).getTime() : 0;
-    const tb = b.customDate ? new Date(b.customDate).getTime() : 0;
-    return dateSort === "newest" ? tb - ta : ta - tb;
-  });
+  const openPurchase = (purchase: PurchaseListItem) =>
+    navigate(`/purchases/${purchase.id}`);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  const updateStatus = async (
+    purchase: PurchaseListItem,
+    status: Exclude<PurchaseStatus, "Draft">,
+  ) => {
+    if (statusActionRef.current || purchase.status !== "Draft") return;
 
-  const handleDelete = async (id: string) => {
-    setLoadingId(id);
-    setActionError(null);
+    statusActionRef.current = true;
+    setUpdatingId(purchase.id);
     try {
-      await deletePurchase(id);
-      await mutateCache(createCrudFamilyMatcher("purchases", id));
-    } catch (err: unknown) {
-      setActionError(extractError(err));
+      const result = await updatePurchaseStatus(purchase.id, { status });
+      await refresh();
+      toast.success(
+        status === "Done" ? "Purchase marked as done" : "Purchase cancelled",
+        { description: result.message },
+      );
+    } catch (requestError: unknown) {
+      toast.error(
+        status === "Done" ? "Could not complete purchase" : "Could not cancel purchase",
+        { description: extractError(requestError) },
+      );
     } finally {
-      setLoadingId(null);
+      statusActionRef.current = false;
+      setUpdatingId(undefined);
     }
   };
-
-  const handleStatusChange = async (id: string, newStatus: PurchaseStatus) => {
-    setLoadingId(id);
-    setActionError(null);
-    try {
-      await updatePurchaseStatus(id, { status: newStatus });
-      await mutateCache(createCrudFamilyMatcher("purchases", id));
-    } catch (err: unknown) {
-      setActionError(extractError(err));
-    } finally {
-      setLoadingId(null);
-    }
-  };
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div>
-      <PageHeader title="Purchases" description="View and manage purchases" />
+      <PageHeader
+        title="Purchases"
+        description="Review supplier purchases, balances, and payment status."
+      >
+        <Button onClick={() => navigate("/purchases/new")}>
+          <Plus className="size-4" /> New purchase
+        </Button>
+      </PageHeader>
 
-      <div>
-        {(actionError ?? loadError) && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center justify-between">
-            <span>{actionError ?? loadError}</span>
-            {actionError && (
-              <button
-                onClick={() => setActionError(null)}
-                className="text-red-400 hover:text-red-600 ml-4 text-xs"
-              >
-                Dismiss
-              </button>
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span>{error}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start bg-white sm:self-auto"
+            onClick={() => void refresh()}
+          >
+            <RefreshCw className="size-3.5" /> Retry
+          </Button>
+        </div>
+      )}
+
+      <Card className="overflow-hidden">
+        <div className="flex flex-col gap-4 border-b px-4 py-4 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="font-semibold text-foreground">Purchase records</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {totalItems} {totalItems === 1 ? "purchase" : "purchases"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <SearchField
+              value={search}
+              onValueChange={handleSearch}
+              onClear={clearSearch}
+              placeholder="Search purchases…"
+              aria-label="Search purchases"
+              className="min-w-0 sm:w-72"
+              inputClassName="w-full pr-9"
+            />
+            {isLoading && purchases.length > 0 && (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
             )}
-          </div>
-        )}
-
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Toolbar */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">
-                Purchase Records
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {totalItems} record{totalItems !== 1 ? "s" : ""} found
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
-              {!searchOpen ? (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-10 w-10 p-0 rounded-md"
-                  onClick={() => setSearchOpen(true)}
-                >
-                  <Search size={15} className="text-white" />
-                </Button>
-              ) : (
-                <div className="relative sm:w-56">
-                  <Search
-                    size={15}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
-                  <Input
-                    autoFocus
-                    value={search}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    placeholder="Search purchases..."
-                    className="h-10 pl-9 pr-8 rounded-xl border-gray-200 text-sm bg-white"
-                  />
-                  <XIcon
-                    size={14}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hover:text-gray-600"
-                    onClick={() => {
-                      clearSearch();
-                      setSearchOpen(false);
-                    }}
-                  />
-                </div>
-              )}
-              <Button
-                onClick={() => navigate("/purchases/new")}
-                className="h-10 text-sm gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                Add Purchase
-              </Button>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <div className="min-w-[640px]">
-              {/* Header */}
-              <div className="grid grid-cols-7 justify-items-center items-center bg-gray-50 py-3 px-4 border-b border-gray-100">
-                {["Purchase #", "Supplier", "Total Price"].map((h) => (
-                  <span
-                    key={h}
-                    className="text-xs font-semibold text-gray-700 uppercase tracking-wide"
-                  >
-                    {h}
-                  </span>
-                ))}
-                {/* Date sort */}
-                <Select
-                  value={dateSort}
-                  onValueChange={(v) => setDateSort(v as "newest" | "oldest")}
-                >
-                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 shadow-none text-xs font-semibold text-gray-700 uppercase tracking-wide gap-1 focus:ring-0">
-                    <span className="w-10">Date</span>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    {DATE_SORT_OPTIONS.map((opt) => (
-                      <SelectItem
-                        key={opt.value}
-                        value={opt.value}
-                        className="text-sm"
-                      >
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {["Status", "Stock In", "Actions"].map((h) => (
-                  <span
-                    key={h}
-                    className="text-xs font-semibold text-gray-700 uppercase tracking-wide"
-                  >
-                    {h}
-                  </span>
-                ))}
-              </div>
-
-              {/* Rows */}
-              <div className="divide-y divide-gray-100">
-                {isLoading ? (
-                  <p className="px-5 py-12 text-center text-gray-400 text-sm">
-                    Loading purchases…
-                  </p>
-                ) : sortedPurchases.length === 0 ? (
-                  <p className="px-5 py-12 text-center text-gray-400 text-sm">
-                    {search
-                      ? `No purchases matching "${search}"`
-                      : "No purchases found"}
-                  </p>
-                ) : (
-                  sortedPurchases.map((item) => {
-                    const itemStatus = item.status;
-                    const stockInStatus = deriveStockInCompletion(item);
-
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => navigate(`/purchases/${item.id}`)}
-                        className="grid grid-cols-7 justify-items-center items-center text-center py-4 px-2 hover:bg-gray-50/80 transition-colors cursor-pointer"
-                      >
-                        <p className="text-xs font-mono text-gray-700">
-                          #{item.sequenceId}
-                        </p>
-                        <p className="text-xs font-medium text-gray-800 truncate max-w-[120px]">
-                          {item.customer?.name}
-                        </p>
-                        <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">
-                          <NumberDisplay value={item.totalPrice} decimals={0} />{" "}
-                          AFN
-                        </p>
-                        <p className="text-xs text-gray-800 whitespace-nowrap">
-                          {fmtDate(item.customDate)}
-                        </p>
-                        <div className="flex">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "h-auto border-transparent px-2.5 py-1",
-                              PURCHASE_STATUS_STYLES[itemStatus] ??
-                                "bg-gray-100 text-gray-600",
-                            )}
-                          >
-                            {itemStatus}
-                          </Badge>
-                        </div>
-                        <div className="flex">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "h-auto border-transparent px-2.5 py-1",
-                              STOCK_IN_BADGE[stockInStatus],
-                            )}
-                          >
-                            {stockInStatus}
-                          </Badge>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={loadingId === item.id}
-                              className="h-8 w-8 p-0 rounded-lg cursor-pointer hover:bg-primary/20"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal
-                                size={16}
-                                className="text-gray-700"
-                              />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="rounded-xl w-44"
-                          >
-                            <DropdownMenuItem
-                              className="text-xs cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/purchases/${item.id}`);
-                              }}
-                            >
-                              View
-                            </DropdownMenuItem>
-                            {itemStatus !== "Cancelled" &&
-                              itemStatus !== "Done" && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-xs cursor-pointer"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleStatusChange(item.id, "Cancelled");
-                                    }}
-                                  >
-                                    Cancel Purchase
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            {itemStatus === "Draft" && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-xs cursor-pointer text-red-500 focus:text-red-500"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(item.id);
-                                  }}
-                                >
-                                  Delete
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Pagination */}
-        <PaginationFooter
-          currentPage={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          summary={
-            <>
-              {totalItems === 0
-                ? "No records"
-                : `Showing ${from}–${to} of ${totalItems} records`}
-            </>
-          }
-        />
-      </div>
+        <CardContent className="p-0">
+          <div className="hidden overflow-x-auto md:block">
+            <Table className="min-w-[900px]">
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="pl-5">Purchase number</TableHead>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Purchase status</TableHead>
+                  <TableHead>Payment</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="pr-5 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableSkeleton />
+                ) : purchases.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <EmptyPurchases search={search} onClear={clearSearch} />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  purchases.map((purchase) => (
+                    <TableRow
+                      key={purchase.id}
+                      className="cursor-pointer"
+                      onClick={() => openPurchase(purchase)}
+                    >
+                      <TableCell className="pl-5 font-mono font-medium">
+                        {purchase.sequenceId}
+                      </TableCell>
+                      <TableCell className="max-w-48 truncate font-medium">
+                        {purchase.customer?.name ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatPurchaseDate(purchase.customDate)}
+                      </TableCell>
+                      <TableCell>
+                        <PurchaseStatusBadge status={purchase.status} />
+                      </TableCell>
+                      <TableCell>
+                        <PurchasePaymentStatusBadge status={purchase.paymentStatus} />
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {formatCurrency(purchase.totalPrice)}
+                      </TableCell>
+                      <TableCell className="pr-5">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`View purchase ${purchase.sequenceId}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openPurchase(purchase);
+                            }}
+                          >
+                            <Eye />
+                          </Button>
+                          {purchase.status === "Draft" && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={Boolean(updatingId)}
+                                aria-label={`Complete purchase ${purchase.sequenceId}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void updateStatus(purchase, "Done");
+                                }}
+                              >
+                                {updatingId === purchase.id ? (
+                                  <Loader2 className="animate-spin" />
+                                ) : (
+                                  <CheckCircle2 />
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-destructive hover:text-destructive"
+                                disabled={Boolean(updatingId)}
+                                aria-label={`Cancel purchase ${purchase.sequenceId}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void updateStatus(purchase, "Cancelled");
+                                }}
+                              >
+                                <XCircle />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="p-3 md:hidden">
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="h-32 animate-pulse rounded-lg bg-muted" />
+                ))}
+              </div>
+            ) : purchases.length === 0 ? (
+              <EmptyPurchases search={search} onClear={clearSearch} />
+            ) : (
+              <div className="space-y-3">
+                {purchases.map((purchase) => (
+                  <div
+                    key={purchase.id}
+                    role="link"
+                    tabIndex={0}
+                    className="cursor-pointer rounded-lg border bg-white p-4 outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => openPurchase(purchase)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") openPurchase(purchase);
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono text-sm font-semibold">
+                          {purchase.sequenceId}
+                        </p>
+                        <p className="mt-1 truncate text-sm text-muted-foreground">
+                          {purchase.customer?.name ?? "—"}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums">
+                        {formatCurrency(purchase.totalPrice)}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {formatPurchaseDate(purchase.customDate)}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <PurchaseStatusBadge status={purchase.status} />
+                      <PurchasePaymentStatusBadge status={purchase.paymentStatus} />
+                    </div>
+                    <div className="mt-4 flex gap-2 border-t pt-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openPurchase(purchase);
+                        }}
+                      >
+                        <Eye /> View
+                      </Button>
+                      {purchase.status === "Draft" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="flex-1"
+                          disabled={Boolean(updatingId)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void updateStatus(purchase, "Done");
+                          }}
+                        >
+                          {updatingId === purchase.id ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 />
+                          )}
+                          Done
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <PaginationFooter
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        summary={
+          totalItems === 0
+            ? "No purchases"
+            : `Showing ${from}–${to} of ${totalItems} purchases`
+        }
+      />
     </div>
   );
 }

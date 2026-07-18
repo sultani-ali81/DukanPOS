@@ -1,10 +1,14 @@
 import { useNewPurchaseDraftStore } from "@/lib/newPurchaseDraftStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useRef, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import useSWR, { useSWRConfig } from "swr";
+import { useDebounce } from "use-debounce";
+import { useShallow } from "zustand/react/shallow";
 
+import { NumberDisplay } from "@/components/number-display";
 import DateInput from "@/components/ui/DateInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,43 +21,58 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Package,
-  Plus,
-  User,
-  UserPlus,
-  Warehouse,
-} from "lucide-react";
-
-import { NumberDisplay } from "@/components/number-display";
-import { useCustomers } from "@/hooks/use-customers";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import { extractError } from "@/lib/error";
 import { cn } from "@/lib/utils";
-import { ContactDialog } from "@/pages/contacts/components/contact-dialog";
 import { InlineCombobox } from "@/pages/purchases/components/inline-combobox";
 import InventoryCombobox from "@/pages/purchases/components/inventory-combobox";
 import {
+  moneyEquals,
+  purchaseItemsTotal,
+  roundMoney,
+} from "@/pages/purchases/purchase-utils";
+import { getCustomers } from "@/queries/customer";
+import { createPurchase } from "@/queries/purchase";
+import { hasSession } from "@/queries/session";
+import type { PurchasePaymentStatus, Suggestion } from "@/types/purchases";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  CreditCard,
+  Package,
+  Plus,
+  User,
+  Warehouse,
+} from "lucide-react";
+import { PurchaseItemRow } from "./purchase-item-row";
+import {
   purchaseFormSchema,
   type FormValues,
-} from "@/pages/purchases/components/purchase-form-schema";
-import { PurchaseItemRow } from "@/pages/purchases/components/purchase-item-row";
-import { useProductSearch } from "@/pages/purchases/components/use-product-search";
-import { createCustomer } from "@/queries/customer";
-import { createPurchase } from "@/queries/purchase";
-import type { CreateCustomerPayload } from "@/types/customer";
-import type { Suggestion } from "@/types/purchases";
-import { useSWRConfig } from "swr";
-import { useShallow } from "zustand/react/shallow";
+} from "./purchase-form-schema";
+import { useProductSearch } from "./use-product-search";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+const DEFAULT_VALUES: FormValues = {
+  customerId: "",
+  purchaseDate: "",
+  paymentStatus: "unpaid",
+  amount: 0,
+  items: [{ productId: "", productName: "", quantity: 1, unitPrice: 0 }],
+};
+
+const PAYMENT_OPTIONS: Array<{
+  value: PurchasePaymentStatus;
+  label: string;
+}> = [
+  { value: "unpaid", label: "Unpaid" },
+  { value: "partially_paid", label: "Partially paid" },
+  { value: "fully_paid", label: "Fully paid" },
+];
 
 type StepState = "done" | "active" | "pending";
 
@@ -62,8 +81,6 @@ interface FlowStep {
   description: string;
   state: StepState;
 }
-
-// ── Flow stepper sidebar ──────────────────────────────────────────────────────
 
 function NewPurchaseFlowCard({
   hasSupplier,
@@ -80,96 +97,67 @@ function NewPurchaseFlowCard({
   total: number;
   isSubmitting: boolean;
 }) {
-  const step1Done = hasSupplier && hasDate;
-
+  const supplierAndDateReady = hasSupplier && hasDate;
   const steps: FlowStep[] = [
     {
-      label: "Supplier & Date",
-      description: "Select a supplier and purchase date",
-      state: step1Done ? "done" : "active",
+      label: "Supplier & date",
+      description: "Choose the supplier and purchase date",
+      state: supplierAndDateReady ? "done" : "active",
     },
     {
-      label: "Select Inventory",
-      description: "Choose where items will be stocked in",
-      state: !step1Done ? "pending" : hasInventory ? "done" : "active",
+      label: "Inventory",
+      description: "Choose where this purchase belongs",
+      state: !supplierAndDateReady ? "pending" : hasInventory ? "done" : "active",
     },
     {
-      label: "Add Items",
-      description: "Add products with quantities and prices",
-      state: !step1Done ? "pending" : hasItems ? "done" : "active",
-    },
-    {
-      label: "Ready to Save",
-      description: "Review and save the purchase",
-      state: step1Done && hasInventory && hasItems ? "active" : "pending",
+      label: "Items & payment",
+      description: "Add products and choose the initial payment",
+      state: !supplierAndDateReady ? "pending" : hasItems ? "done" : "active",
     },
   ];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Purchase Flow</CardTitle>
+        <CardTitle>Purchase summary</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {steps.map((step, idx, arr) => {
-          const isLast = idx === arr.length - 1;
-          return (
-            <div key={step.label} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <div
-                  className={cn(
-                    "flex size-8 items-center justify-center rounded-full border-2 transition-all shrink-0 text-xs font-bold",
-                    step.state === "done"
-                      ? "border-primary bg-primary text-white"
-                      : step.state === "active"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-muted-foreground/30 text-muted-foreground/30",
-                  )}
-                >
-                  {step.state === "done" ? (
-                    <CheckCircle2 className="size-4" />
-                  ) : (
-                    idx + 1
-                  )}
-                </div>
-                {!isLast && (
-                  <div
-                    className={cn(
-                      "mt-1 w-0.5 flex-1 min-h-5",
-                      step.state === "done"
-                        ? "bg-primary"
-                        : "bg-muted-foreground/20",
-                    )}
-                  />
-                )}
-              </div>
-              <div className="pb-4">
-                <p
-                  className={cn(
-                    "text-sm font-semibold leading-tight",
-                    step.state === "pending"
-                      ? "text-muted-foreground"
-                      : "text-foreground",
-                  )}
-                >
-                  {step.label}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {step.description}
-                </p>
-              </div>
+        {steps.map((step, index) => (
+          <div key={step.label} className="flex gap-3">
+            <div
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold",
+                step.state === "done"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : step.state === "active"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-muted-foreground/30 text-muted-foreground/40",
+              )}
+            >
+              {step.state === "done" ? <CheckCircle2 className="size-4" /> : index + 1}
             </div>
-          );
-        })}
-
-        {total > 0 && (
-          <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Estimated Total</p>
-            <p className="text-lg font-bold text-foreground">
-              AFN <NumberDisplay value={total} decimals={2} />
-            </p>
+            <div>
+              <p
+                className={cn(
+                  "text-sm font-semibold",
+                  step.state === "pending" && "text-muted-foreground",
+                )}
+              >
+                {step.label}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {step.description}
+              </p>
+            </div>
           </div>
-        )}
+        ))}
+
+        <div className="rounded-lg border bg-muted/30 px-4 py-3">
+          <p className="text-xs text-muted-foreground">Purchase total</p>
+          <p className="mt-1 text-lg font-bold tabular-nums text-foreground">
+            AFN <NumberDisplay value={total} decimals={2} />
+          </p>
+        </div>
 
         <Button
           type="submit"
@@ -178,78 +166,23 @@ function NewPurchaseFlowCard({
             isSubmitting ||
             !hasSupplier ||
             !hasDate ||
-            !hasItems ||
-            !hasInventory
+            !hasInventory ||
+            !hasItems
           }
           size="lg"
           className="h-12 w-full gap-1.5"
         >
           <Package className="size-4" />
-          {isSubmitting ? "Saving..." : "Save Purchase"}
+          {isSubmitting ? "Saving…" : "Create purchase"}
         </Button>
       </CardContent>
     </Card>
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
 export function NewPurchaseClient() {
   const navigate = useNavigate();
   const { mutate: mutateCache } = useSWRConfig();
-  const product = useProductSearch();
-
-  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
-  const [customerDisplay, setCustomerDisplay] = useState("");
-  const [inventoryId, setInventoryId] = useState("");
-
-  const {
-    customers,
-    isLoading: customersLoading,
-    handleSearch: handleCustomerSearch,
-  } = useCustomers();
-
-  const customerSuggestions: Suggestion[] = customers.map((c) => ({
-    id: c.id,
-    label: c.name,
-    sub: c.phone,
-  }));
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(purchaseFormSchema),
-    defaultValues: {
-      customerId: "",
-      purchaseDate: "",
-      items: [{ productId: "", productName: "", quantity: 1, unitPrice: 0 }],
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
-  });
-
-  const watchedItems = form.watch("items");
-  const watchedCustomerId = form.watch("customerId");
-  const watchedDate = form.watch("purchaseDate");
-
-  const total = watchedItems.reduce(
-    (sum, i) => sum + Number(i.quantity || 0) * Number(i.unitPrice || 0),
-    0,
-  );
-
-  const hasSupplier = !!watchedCustomerId;
-  const hasDate = !!watchedDate;
-  const hasItems = watchedItems.some(
-    (i) => i.productId && Number(i.quantity) > 0 && Number(i.unitPrice) > 0,
-  );
-  const hasInventory = !!inventoryId;
-
-  // ── Draft persistence ───────────────────────────────────────────────────
-  // Keeps the form alive in sessionStorage while the user pops over to
-  // "Add Product" / "Add Inventory" on another route. The 1-minute TTL only
-  // starts counting once this component unmounts (i.e. once they actually
-  // leave), not while they're sitting here filling out the form.
   const { getFreshDraft, setDraft, markLeft, clearDraft } =
     useNewPurchaseDraftStore(
       useShallow((state) => ({
@@ -259,59 +192,132 @@ export function NewPurchaseClient() {
         clearDraft: state.clearDraft,
       })),
     );
-  const hydratedRef = useRef(false);
-
-  // Hydrate once on mount; mark "left" on unmount so the TTL clock starts then.
-  useEffect(() => {
-    const draft = getFreshDraft();
-    if (draft) {
-      form.reset(draft.values);
-      setCustomerDisplay(draft.customerDisplay);
-      setInventoryId(draft.inventoryId);
-      product.setDisplays(draft.productDisplays);
-    }
-    hydratedRef.current = true;
-
-    return () => {
-      markLeft();
+  const [initialDraft] = useState(() => getFreshDraft());
+  const [initialValues] = useState<FormValues>(() => {
+    const persisted = initialDraft?.values as Partial<FormValues> | undefined;
+    return {
+      ...DEFAULT_VALUES,
+      ...persisted,
+      items: persisted?.items?.length ? persisted.items : DEFAULT_VALUES.items,
+      paymentStatus: persisted?.paymentStatus ?? "unpaid",
+      amount:
+        typeof persisted?.amount === "number" && Number.isFinite(persisted.amount)
+          ? persisted.amount
+          : 0,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  const product = useProductSearch(initialDraft?.productDisplays ?? [""]);
+  const [supplierDisplay, setSupplierDisplay] = useState(
+    () => initialDraft?.customerDisplay ?? "",
+  );
+  const [supplierSearch, setSupplierSearch] = useState(
+    () => initialDraft?.customerDisplay ?? "",
+  );
+  const [inventoryId, setInventoryId] = useState(
+    () => initialDraft?.inventoryId ?? "",
+  );
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [debouncedSupplierSearch] = useDebounce(supplierSearch.trim(), 300);
 
-  // Persist on change, debounced, skipped until initial hydration has run.
+  const { data: suppliersData, isLoading: suppliersLoading } = useSWR(
+    [
+      "purchase-suppliers",
+      {
+        page: 1,
+        itemsPerPage: 100,
+        search: debouncedSupplierSearch || undefined,
+      },
+    ] as const,
+    ([, params]) => getCustomers(params),
+  );
+  const customerSuggestions: Suggestion[] = (suppliersData?.data ?? []).map(
+    (customer) => ({
+      id: customer.id,
+      label: customer.name,
+      sub: customer.phone,
+    }),
+  );
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(purchaseFormSchema),
+    defaultValues: initialValues,
+  });
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+
+  const watchedItems = useWatch({
+    control: form.control,
+    name: "items",
+  }) ?? DEFAULT_VALUES.items;
+  const watchedCustomerId = useWatch({
+    control: form.control,
+    name: "customerId",
+  });
+  const watchedDate = useWatch({
+    control: form.control,
+    name: "purchaseDate",
+  });
+  const watchedPaymentStatus = useWatch({
+    control: form.control,
+    name: "paymentStatus",
+  });
+  const watchedPaymentAmount = useWatch({
+    control: form.control,
+    name: "amount",
+  });
+  const total = purchaseItemsTotal(watchedItems);
+  const hasSupplier = Boolean(watchedCustomerId);
+  const hasDate = Boolean(watchedDate);
+  const hasInventory = Boolean(inventoryId);
+  const hasItems =
+    watchedItems.length > 0 &&
+    watchedItems.every(
+      (item) =>
+        Boolean(item.productId) &&
+        Number.isFinite(Number(item.quantity)) &&
+        Number(item.quantity) > 0 &&
+        Number.isFinite(Number(item.unitPrice)) &&
+        Number(item.unitPrice) >= 0,
+    ) &&
+    new Set(watchedItems.map((item) => item.productId)).size ===
+      watchedItems.length;
+
   useEffect(() => {
-    if (!hydratedRef.current) return;
-    const timeout = setTimeout(() => {
+    if (watchedPaymentStatus === "unpaid") {
+      form.setValue("amount", 0, { shouldValidate: true });
+    }
+    if (watchedPaymentStatus === "fully_paid") {
+      form.setValue("amount", total, { shouldValidate: true });
+    }
+  }, [form, total, watchedPaymentStatus]);
+
+  useEffect(() => {
+    return () => markLeft();
+  }, [markLeft]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
       setDraft({
         values: form.getValues(),
-        customerDisplay,
+        customerDisplay: supplierDisplay,
         inventoryId,
         productDisplays: product.displays,
       });
     }, 400);
-    return () => clearTimeout(timeout);
+    return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     watchedItems,
     watchedCustomerId,
     watchedDate,
-    customerDisplay,
+    watchedPaymentStatus,
+    watchedPaymentAmount,
+    supplierDisplay,
     inventoryId,
     product.displays,
   ]);
-
-  const handleCreateCustomer = async (values: CreateCustomerPayload) => {
-    const createdCustomer = await createCustomer(values);
-    form.setValue("customerId", createdCustomer.id, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-    setCustomerDisplay(createdCustomer.name);
-    handleCustomerSearch(createdCustomer.name);
-    await mutateCache(
-      createCrudFamilyMatcher("customers", createdCustomer.id),
-    );
-  };
 
   const addItem = () => {
     append({ productId: "", productName: "", quantity: 1, unitPrice: 0 });
@@ -323,59 +329,126 @@ export function NewPurchaseClient() {
     product.removeRow(index);
   };
 
+  const validateInitialPayment = (
+    status: PurchasePaymentStatus,
+    amount: number,
+    purchaseTotal: number,
+  ): string | null => {
+    if (!Number.isFinite(amount) || amount < 0) {
+      return "Enter a valid payment amount.";
+    }
+    if (status === "unpaid") return null;
+    if (status === "partially_paid") {
+      if (amount <= 0) return "A partial payment must be greater than zero.";
+      if (amount >= purchaseTotal) {
+        return "A partial payment must be less than the purchase total.";
+      }
+      return null;
+    }
+    return moneyEquals(amount, purchaseTotal)
+      ? null
+      : "A fully paid purchase must receive the full purchase total.";
+  };
+
   const onSubmit = async (values: FormValues) => {
+    setSubmitError(null);
+    if (!inventoryId) {
+      setSubmitError("Select an inventory before creating the purchase.");
+      return;
+    }
+
+    const items = values.items.map((item) => ({
+      productId: item.productId,
+      quantity: Number(item.quantity),
+      unitPrice: roundMoney(Number(item.unitPrice)),
+    }));
+    const purchaseTotal = purchaseItemsTotal(items);
+    const initialAmount =
+      values.paymentStatus === "unpaid"
+        ? 0
+        : values.paymentStatus === "fully_paid"
+          ? purchaseTotal
+          : roundMoney(Number(values.amount));
+    const paymentError = validateInitialPayment(
+      values.paymentStatus,
+      initialAmount,
+      purchaseTotal,
+    );
+
+    if (paymentError) {
+      form.setError("amount", { message: paymentError });
+      return;
+    }
+
+    if (initialAmount > 0) {
+      try {
+        const activeSession = await hasSession();
+        if (!activeSession) {
+          const message =
+            "Open a store session before recording a purchase payment.";
+          form.setError("amount", { message });
+          setSubmitError(message);
+          return;
+        }
+      } catch (error: unknown) {
+        const message = extractError(
+          error,
+          "Unable to verify the active store session.",
+        );
+        form.setError("amount", { message });
+        setSubmitError(message);
+        return;
+      }
+    }
+
     try {
       const result = await createPurchase({
         customerId: values.customerId,
-        purchaseDate: values.purchaseDate,
-        inventoryId: inventoryId || undefined,
-        items: values.items.map((item) => ({
-          productId: item.productId,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.unitPrice),
-        })),
+        inventoryId,
+        customDate: values.purchaseDate,
+        paymentStatus: values.paymentStatus,
+        amount: initialAmount,
+        items,
       });
 
-      await mutateCache(
-        createCrudFamilyMatcher("purchases", result.purchaseId),
-      );
-
-      toast.success("Purchase saved", {
-        description: `Purchase created as draft.`,
-      });
-
+      await mutateCache(createCrudFamilyMatcher("purchases", result.purchaseId));
       clearDraft();
-
-      navigate(`/purchases/${result.purchaseId}`, {
-        state: { inventoryId },
+      toast.success("Purchase created", {
+        description: result.message || "Purchase created successfully.",
       });
-    } catch (err) {
-      toast.error("Failed to save purchase", {
-        description: extractError(err),
-      });
+      navigate(`/purchases/${result.purchaseId}`);
+    } catch (error: unknown) {
+      setSubmitError(extractError(error, "Failed to create purchase."));
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
-    <div className="mx-auto px-4 py-8 space-y-8">
-      <div className="flex items-center">
-        <div className="flex-col">
-          <h1 className="text-xl font-semibold text-gray-900">New Purchase</h1>
-          <p className="text-sm text-gray-500">
-            Add products and assign them to an inventory
+    <div className="mx-auto space-y-8 px-4 py-8">
+      <div className="flex items-center gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">New purchase</h1>
+          <p className="text-sm text-muted-foreground">
+            Record supplier items, inventory, and the initial payment.
           </p>
         </div>
         <Button
-          className="h-8 ml-auto"
+          type="button"
+          className="ml-auto"
           variant="outline"
           onClick={() => navigate("/purchases")}
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Purchases
+          <ArrowLeft className="size-4" /> Purchases
         </Button>
       </div>
+
+      {submitError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {submitError}
+        </div>
+      )}
 
       <Form {...form}>
         <form
@@ -383,79 +456,53 @@ export function NewPurchaseClient() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="grid gap-6 lg:grid-cols-3"
         >
-          {/* ── Left: form fields ── */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6 lg:col-span-2">
             <Card className="overflow-visible">
               <CardHeader>
-                <CardTitle>Purchase Info</CardTitle>
+                <CardTitle>Purchase information</CardTitle>
               </CardHeader>
-              <CardContent className="overflow-visible space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Supplier */}
+              <CardContent className="space-y-4 overflow-visible">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="customerId"
                     render={({ field, fieldState }) => (
                       <FormItem>
                         <FormLabel htmlFor="supplier">Supplier</FormLabel>
-                        <div className="flex gap-2">
-                          <FormControl>
-                            <div className="flex-1">
-                              <InlineCombobox
-                                id="supplier"
-                                selectedId={field.value}
-                                displayValue={customerDisplay}
-                                placeholder="Search supplier..."
-                                icon={<User className="w-4 h-4" />}
-                                suggestions={customerSuggestions}
-                                loading={customersLoading}
-                                onFocus={() =>
-                                  handleCustomerSearch(customerDisplay)
-                                }
-                                onInputChange={(v) => {
-                                  setCustomerDisplay(v);
-                                  handleCustomerSearch(v);
-                                  field.onChange("");
-                                }}
-                                onSelect={(id, label) => {
-                                  field.onChange(id);
-                                  setCustomerDisplay(label);
-                                }}
-                                error={fieldState.error?.message}
-                              />
-                            </div>
-                          </FormControl>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-11 w-11 rounded-xl border-gray-200 shrink-0"
-                                  onClick={() => setCustomerDialogOpen(true)}
-                                >
-                                  <UserPlus className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Add new supplier</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                        <FormControl>
+                          <InlineCombobox
+                            id="supplier"
+                            selectedId={field.value}
+                            displayValue={supplierDisplay}
+                            placeholder="Search suppliers…"
+                            icon={<User className="size-4" />}
+                            suggestions={customerSuggestions}
+                            loading={suppliersLoading}
+                            onFocus={() => setSupplierSearch(supplierDisplay)}
+                            onInputChange={(value) => {
+                              setSupplierDisplay(value);
+                              setSupplierSearch(value);
+                              field.onChange("");
+                            }}
+                            onSelect={(id, label) => {
+                              field.onChange(id);
+                              setSupplierDisplay(label);
+                              setSupplierSearch(label);
+                            }}
+                            error={fieldState.error?.message}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Date */}
                   <FormField
                     control={form.control}
                     name="purchaseDate"
-                    render={({ field, fieldState }) => (
+                    render={({ field }) => (
                       <FormItem>
-                        <FormLabel htmlFor="purchaseDate">
-                          Purchase Date
-                        </FormLabel>
+                        <FormLabel htmlFor="purchaseDate">Purchase date</FormLabel>
                         <FormControl>
                           <DateInput
                             id="purchaseDate"
@@ -463,36 +510,34 @@ export function NewPurchaseClient() {
                             onChange={field.onChange}
                           />
                         </FormControl>
-                        {fieldState.error && (
-                          <FormMessage>{fieldState.error.message}</FormMessage>
-                        )}
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                {/* Inventory */}
                 <div className="space-y-1.5">
                   <FormLabel
                     htmlFor="inventoryId"
                     className="flex items-center gap-1.5"
                   >
-                    <Warehouse className="size-3.5" /> Destination Inventory
+                    <Warehouse className="size-3.5" /> Inventory
                   </FormLabel>
                   <InventoryCombobox
                     id="inventoryId"
                     value={inventoryId}
                     onChange={setInventoryId}
+                    itemsPerPage={100}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Items will be stocked into this inventory after
-                    confirmation.
-                  </p>
+                  {!hasInventory && form.formState.isSubmitted && (
+                    <p className="text-sm font-medium text-destructive">
+                      Select an inventory.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Items */}
             <Card>
               <CardHeader>
                 <CardTitle>Items</CardTitle>
@@ -510,20 +555,22 @@ export function NewPurchaseClient() {
                     productSuggestions={product.suggestions[index] ?? []}
                     productLoading={product.loadingMap[index] ?? false}
                     onProductFocus={() => product.setActiveIndex(index)}
-                    onProductInputChange={(v) => {
-                      product.setDisplays((prev) => {
-                        const next = [...prev];
-                        next[index] = v;
+                    onProductInputChange={(value) => {
+                      product.setDisplays((previous) => {
+                        const next = [...previous];
+                        next[index] = value;
                         return next;
                       });
                       product.setActiveIndex(index);
                     }}
                     onProductSelect={(_id, label, _sub, price) => {
                       if (price !== undefined && Number.isFinite(price)) {
-                        form.setValue(`items.${index}.unitPrice`, price);
+                        form.setValue(`items.${index}.unitPrice`, roundMoney(price), {
+                          shouldValidate: true,
+                        });
                       }
-                      product.setDisplays((prev) => {
-                        const next = [...prev];
+                      product.setDisplays((previous) => {
+                        const next = [...previous];
                         next[index] = label;
                         return next;
                       });
@@ -534,19 +581,101 @@ export function NewPurchaseClient() {
                 ))}
 
                 <Button type="button" variant="outline" onClick={addItem}>
-                  <Plus className="w-4 h-4 mr-2" /> Add Item
+                  <Plus className="size-4" /> Add item
                 </Button>
 
                 {form.formState.errors.items?.root && (
-                  <p className="text-xs text-red-500">
+                  <p className="text-sm text-destructive">
                     {form.formState.errors.items.root.message}
                   </p>
                 )}
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="size-5" /> Initial payment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="paymentStatus"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment status</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value as PurchasePaymentStatus);
+                          form.clearErrors("amount");
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger aria-label="Initial payment status" className="h-11">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PAYMENT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Initial payment amount (AFN)</FormLabel>
+                      <FormControl>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={Number.isFinite(field.value) ? field.value : ""}
+                          disabled={watchedPaymentStatus === "unpaid" || watchedPaymentStatus === "fully_paid"}
+                          onChange={(event) =>
+                            field.onChange(
+                              event.target.value === ""
+                                ? Number.NaN
+                                : event.target.valueAsNumber,
+                            )
+                          }
+                        />
+                      </FormControl>
+                      {watchedPaymentStatus === "unpaid" ? (
+                        <p className="text-xs text-muted-foreground">
+                          No payment will be recorded when the purchase is created.
+                        </p>
+                      ) : watchedPaymentStatus === "fully_paid" ? (
+                        <p className="text-xs text-muted-foreground">
+                          The full purchase total is recorded automatically.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Enter an amount greater than zero and less than AFN {total.toFixed(2)}.
+                        </p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
           </div>
 
-          {/* ── Right: flow stepper ── */}
           <div className="space-y-6">
             <NewPurchaseFlowCard
               hasSupplier={hasSupplier}
@@ -559,13 +688,6 @@ export function NewPurchaseClient() {
           </div>
         </form>
       </Form>
-
-      <ContactDialog
-        open={customerDialogOpen}
-        onOpenChange={setCustomerDialogOpen}
-        onSubmit={handleCreateCustomer}
-        editingCustomer={null}
-      />
     </div>
   );
 }

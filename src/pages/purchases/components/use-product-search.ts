@@ -5,8 +5,10 @@ import useSWR from "swr";
 import { getProducts } from "@/queries/products";
 import type { Suggestion } from "@/types/purchases";
 
-export function useProductSearch() {
-  const [displays, setDisplays] = useState<string[]>([""]);
+export function useProductSearch(initialDisplays: string[] = [""]) {
+  const [displays, setDisplays] = useState<string[]>(() =>
+    initialDisplays.length ? initialDisplays : [""],
+  );
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const activeSearch =
@@ -21,7 +23,7 @@ export function useProductSearch() {
     searchReady
       ? ([
           "products",
-          { search: debounced, page: 1, itemsPerPage: 8 },
+          { search: debounced, page: 1, itemsPerPage: 100 },
         ] as const)
       : null,
     ([, params]) => getProducts(params),

@@ -28,6 +28,7 @@ interface InventoryComboboxProps {
   onChange: (id: string) => void;
   disabled?: boolean;
   excludeId?: string;
+  itemsPerPage?: number;
 }
 
 export default function InventoryCombobox({
@@ -36,6 +37,7 @@ export default function InventoryCombobox({
   onChange,
   disabled,
   excludeId,
+  itemsPerPage = 8,
 }: InventoryComboboxProps) {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -51,7 +53,7 @@ export default function InventoryCombobox({
           "inventories",
           {
             page: 1,
-            itemsPerPage: 8,
+            itemsPerPage,
             search: debouncedSearch.trim() || undefined,
           },
         ] as const)

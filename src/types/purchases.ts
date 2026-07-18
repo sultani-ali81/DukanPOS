@@ -1,8 +1,11 @@
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
-export type PurchaseStatus = "Draft" | "Done" | "Cancelled" | "Pending";
+export type PurchaseStatus = "Draft" | "Done" | "Cancelled";
 
-export type PaymentMethod = "Cash" | "Bank Transfer" | "Cheque" | "Other";
+export type PurchasePaymentStatus =
+  | "unpaid"
+  | "partially_paid"
+  | "fully_paid";
 
 export type StockInStatus = "Pending" | "Done" | "Cancelled";
 
@@ -11,6 +14,8 @@ export type StockInStatus = "Pending" | "Done" | "Cancelled";
 export interface PurchaseCustomer {
   id: string;
   name: string;
+  phone?: string;
+  address?: string;
 }
 
 export interface PurchasedProduct {
@@ -64,13 +69,12 @@ export interface PurchaseListItem {
   id: string;
   sequenceId: string;
   status: PurchaseStatus;
+  paymentStatus: PurchasePaymentStatus;
   /** ISO date string, e.g. "2026-05-06T00:00:00.000Z" */
   customDate: string;
   totalPrice: number;
   customer: PurchaseCustomer;
   items: PurchasedItemResponse[];
-  totalItems: number;
-  itemsPerPage: number;
   /** Stock-in records associated with this purchase */
   stockIns?: StockInResponse[];
   inventoryId?: string | null;
@@ -79,15 +83,34 @@ export interface PurchaseListItem {
 
 // ── Detail (returned by GET /purchase/:id) ────────────────────────────────────
 
-export type PurchaseDetail = PurchaseListItem;
+export interface PurchasePaymentCashier {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface PurchasePaymentHistoryItem {
+  id: string;
+  amount: number;
+  paidAt: string;
+  cashier: PurchasePaymentCashier | null;
+}
+
+export interface PurchaseDetail extends PurchaseListItem {
+  remainingBalance: number;
+  paymentHistory: PurchasePaymentHistoryItem[];
+}
 
 // ── Create payload (sent to POST /purchase) ───────────────────────────────────
 
 export interface CreatePurchasePayload {
   customerId: string;
-  /** ISO date string from the date picker */
-  purchaseDate: string;
-  inventoryId?: string;
+  inventoryId: string;
+  /** Calendar date in YYYY-MM-DD format. */
+  customDate: string;
+  paymentStatus: PurchasePaymentStatus;
+  /** Initial payment, when applicable. Always a number, never a string. */
+  amount?: number;
   items: PurchaseItemPayload[];
 }
 
@@ -118,15 +141,14 @@ export interface UpdatePurchaseStatusPayload {
   status: PurchaseStatus;
 }
 
-// ── Payment ───────────────────────────────────────────────────────────────────
-
-export interface CreatePaymentPayload {
-  purchaseId: string;
-  method: PaymentMethod;
+export interface AddPurchasePaymentPayload {
   amount: number;
-  paymentDate: string;
-  notes?: string;
+  paymentStatus: Exclude<PurchasePaymentStatus, "unpaid">;
 }
+
+export type UpdatePurchasePayload =
+  | UpdatePurchaseStatusPayload
+  | AddPurchasePaymentPayload;
 
 // ── Stock-In types ────────────────────────────────────────────────────────────
 

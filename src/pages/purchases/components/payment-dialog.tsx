@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,210 +6,209 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatCurrency } from "@/lib/currency";
+import { extractError } from "@/lib/error";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-import { CheckCircle } from "lucide-react";
-
-import { updatePurchaseStatus } from "@/queries/purchase";
-import type { PaymentMethod, PurchaseDetail } from "@/types/purchases";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmtCurrency(n: number) {
-  return "AFN " + Number(n).toLocaleString("id-ID");
-}
-
-function todayISO() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const PAYMENT_METHODS: PaymentMethod[] = [
-  "Cash",
-  "Bank Transfer",
-  "Cheque",
-  "Other",
-];
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface PaymentForm {
-  method: PaymentMethod;
-  amount: string;
-  paymentDate: string;
-  notes: string;
-}
-
-function defaultPaymentForm(totalPrice: number): PaymentForm {
-  return {
-    method: "Cash",
-    amount: String(totalPrice),
-    paymentDate: todayISO(),
-    notes: "",
-  };
-}
+  canAddPurchasePayment,
+  paymentStatusForInstallment,
+  roundMoney,
+} from "@/pages/purchases/purchase-utils";
+import { addPurchasePayment } from "@/queries/purchase";
+import { hasSession } from "@/queries/session";
+import type { PurchaseDetail } from "@/types/purchases";
+import { AlertCircle, Loader2, WalletCards } from "lucide-react";
+import { useId, useRef, useState } from "react";
+import { toast } from "sonner";
 
 export interface PaymentDialogProps {
   purchase: PurchaseDetail;
-  onSuccess: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Refetch the detail; its remaining balance is the source of truth. */
+  onSuccess: () => Promise<unknown> | unknown;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+function hasAtMostTwoDecimalPlaces(value: string): boolean {
+  return /^(?:\d+|\d*\.\d{1,2})$/.test(value.trim());
+}
 
-export function PaymentDialog({ purchase, onSuccess }: PaymentDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<PaymentForm>(
-    defaultPaymentForm(purchase.totalPrice),
-  );
-  const [confirming, setConfirming] = useState(false);
+export function PaymentDialog({
+  purchase,
+  open,
+  onOpenChange,
+  onSuccess,
+}: PaymentDialogProps) {
+  const amountId = useId();
+  const errorId = useId();
+  const submittingRef = useRef(false);
+  const [amount, setAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const canAddPayment = canAddPurchasePayment(purchase);
+  const remainingBalance = roundMoney(purchase.remainingBalance);
 
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (next) {
-      setForm(defaultPaymentForm(purchase.totalPrice));
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (submitting) return;
+    if (nextOpen) {
+      setAmount("");
       setError(null);
     }
+    onOpenChange(nextOpen);
   };
 
-  const handleConfirm = async () => {
-    const amount = parseFloat(form.amount);
-
-    if (!form.method) {
-      setError("Please select a payment method.");
-      return;
-    }
-    if (isNaN(amount) || amount <= 0) {
-      setError("Please enter a valid payment amount.");
-      return;
-    }
-    if (!form.paymentDate) {
-      setError("Please select a payment date.");
+  const handleSubmit = async () => {
+    if (submittingRef.current) return;
+    if (!canAddPayment) {
+      setError("This purchase cannot receive another payment.");
       return;
     }
 
+    const trimmedAmount = amount.trim();
+    if (!trimmedAmount) {
+      setError("Payment amount is required.");
+      return;
+    }
+    if (!hasAtMostTwoDecimalPlaces(trimmedAmount)) {
+      setError("Payment amount cannot have more than two decimal places.");
+      return;
+    }
+
+    const numericAmount = Number(trimmedAmount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setError("Payment amount must be greater than zero.");
+      return;
+    }
+
+    const roundedAmount = roundMoney(numericAmount);
+    if (roundedAmount > remainingBalance) {
+      setError("Payment amount cannot exceed the remaining balance.");
+      return;
+    }
+
+    submittingRef.current = true;
+    setSubmitting(true);
     setError(null);
-    setConfirming(true);
-
     try {
-      await updatePurchaseStatus(purchase.id, { status: "Done" });
+      const activeSession = await hasSession();
+      if (!activeSession) {
+        setError("Open a store session before recording a purchase payment.");
+        return;
+      }
 
-      setOpen(false);
-      onSuccess();
-    } catch (err: unknown) {
+      const paymentStatus = paymentStatusForInstallment(
+        roundedAmount,
+        remainingBalance,
+      );
+      const result = await addPurchasePayment(purchase.id, {
+        amount: roundedAmount,
+        paymentStatus,
+      });
+
+      await onSuccess();
+      toast.success("Payment recorded", {
+        description: result.message || `Payment recorded for ${purchase.sequenceId}.`,
+      });
+      onOpenChange(false);
+    } catch (requestError: unknown) {
       setError(
-        err instanceof Error ? err.message : "Failed to confirm purchase.",
+        extractError(requestError, "Could not record the purchase payment."),
       );
     } finally {
-      setConfirming(false);
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button
-          size="sm"
-          className="h-9 rounded-xl bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs"
-        >
-          <CheckCircle className="w-3.5 h-3.5" />
-          Confirm Purchase
-        </Button>
-      </DialogTrigger>
-
-      <DialogContent className="rounded-2xl sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Confirm Purchase</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <WalletCards className="size-5 text-primary" /> Add payment
+          </DialogTitle>
           <DialogDescription>
-            Record payment for{" "}
-            <span className="font-mono font-medium">
-              #{purchase.sequenceId}
-            </span>
-            . This will mark the purchase as{" "}
-            <span className="text-green-600 font-medium">Done</span>.
+            Record a new installment for purchase {purchase.sequenceId}. The
+            amount is added to the current balance; it is not the total paid.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* Payment method */}
-          <div className="space-y-1.5">
-            <Label>Payment Method</Label>
-            <Select
-              value={form.method}
-              onValueChange={(v) =>
-                setForm((f) => ({ ...f, method: v as PaymentMethod }))
-              }
-            >
-              <SelectTrigger aria-label="Payment Method" className="rounded-xl">
-                <SelectValue placeholder="Select method" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>
-                    {m}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-5">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">Purchase total</span>
+              <span className="font-semibold tabular-nums">
+                {formatCurrency(purchase.totalPrice)}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">Remaining balance</span>
+              <span className="font-semibold tabular-nums">
+                {formatCurrency(remainingBalance)}
+              </span>
+            </div>
           </div>
 
-          {/* Amount */}
           <div className="space-y-1.5">
-            <Label htmlFor="amount">Amount (AFN)</Label>
+            <Label htmlFor={amountId}>Payment amount (AFN)</Label>
             <Input
-              id="amount"
+              id={amountId}
               type="number"
-              min={0}
+              inputMode="decimal"
+              min="0.01"
+              max={remainingBalance}
               step="0.01"
-              className="rounded-xl"
-              value={form.amount}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, amount: e.target.value }))
-              }
+              autoFocus
+              value={amount}
+              onChange={(event) => {
+                setAmount(event.target.value);
+                setError(null);
+              }}
+              placeholder="0.00"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? errorId : undefined}
+              disabled={submitting || !canAddPayment}
             />
-            <p className="text-caption text-gray-400">
-              Purchase total: {fmtCurrency(purchase.totalPrice)}
+            <p className="text-xs text-muted-foreground">
+              Paying the full remaining balance marks this purchase as fully paid.
             </p>
           </div>
 
-          {/* Inline error */}
           {error && (
-            <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              {error}
-            </p>
+            <div
+              id={errorId}
+              role="alert"
+              className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter>
           <Button
+            type="button"
             variant="outline"
-            className="rounded-xl"
-            onClick={() => setOpen(false)}
-            disabled={confirming}
+            onClick={() => handleOpenChange(false)}
+            disabled={submitting}
           >
             Cancel
           </Button>
           <Button
-            className="rounded-xl bg-green-600 hover:bg-green-700 text-white"
-            onClick={handleConfirm}
-            disabled={confirming}
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={submitting || !canAddPayment}
           >
-            {confirming ? "Confirming…" : "Confirm & Mark as Done"}
+            {submitting ? (
+              <>
+                <Loader2 className="animate-spin" /> Recording…
+              </>
+            ) : (
+              "Record payment"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
