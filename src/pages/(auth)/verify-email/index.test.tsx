@@ -23,7 +23,7 @@ vi.mock("sonner", () => ({
 const mockedVerifyRegister = vi.mocked(verifyRegister);
 
 function createToken(payload = {
-  id: "employee-1",
+  sub: "employee-1",
   email: "user@example.com",
   role: "Admin",
 }) {
@@ -87,7 +87,7 @@ describe("registration email verification", () => {
     });
     expect(useAuthStore.getState().token).toBe(token);
     expect(useAuthStore.getState().user).toEqual({
-      id: "employee-1",
+      id: "",
       email: "user@example.com",
       role: "Admin",
     });

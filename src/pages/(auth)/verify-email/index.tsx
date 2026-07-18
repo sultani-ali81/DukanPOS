@@ -52,7 +52,6 @@ export default function VerifyEmailPage() {
 
       if (
         !decoded ||
-        !decoded.id ||
         (decoded.role !== "Admin" && decoded.role !== "Cashier")
       ) {
         throw new Error("The verification token is invalid.");
@@ -60,7 +59,9 @@ export default function VerifyEmailPage() {
 
       setAuth(
         {
-          id: decoded.id,
+          // Registration tokens identify the user with `sub`; the profile
+          // request will provide the employee ID after authentication.
+          id: decoded.id || "",
           email: decoded.email || email,
           role: decoded.role,
         },
