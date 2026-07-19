@@ -15,6 +15,7 @@ import {
   getInitials,
 } from "@/utils/profile.helpers";
 import { ArrowLeft, Loader2, Pencil } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { EditProfileDialog } from "./edit-profile-dialog";
@@ -32,6 +33,14 @@ export default function ProfileClient() {
     pendingEmail,
     handleEmailChange,
   } = useEditProfile(profile);
+  const emailScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const emailField = emailScrollRef.current;
+    if (emailField) {
+      emailField.scrollLeft = emailField.scrollWidth;
+    }
+  }, [profile?.email]);
 
   async function handleVerifyOtp(code: string) {
     await verifyEmployeeEmail({ email: pendingEmail, code });
@@ -80,7 +89,7 @@ export default function ProfileClient() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
         {/* ── Left: Personal information ── */}
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Personal Information</CardTitle>
             <Button
@@ -115,10 +124,14 @@ export default function ProfileClient() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Email</p>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                <div
+                  ref={emailScrollRef}
+                  className="overflow-x-auto whitespace-nowrap rounded-lg border bg-muted/30 px-3 py-2 text-sm"
+                  title={display(profile.email)}
+                >
                   {display(profile.email)}
                 </div>
               </div>
