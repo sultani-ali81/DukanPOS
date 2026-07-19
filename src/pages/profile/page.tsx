@@ -160,13 +160,15 @@ export default function ProfileClient() {
         <TwoFactorCard />
       </div>
 
-      <EditProfileDialog
-        open={editOpen}
-        profile={profile}
-        onOpenChange={(open) => (open ? openEdit() : closeEdit())}
-        onSaved={() => mutate()}
-        onEmailChange={handleEmailChange}
-      />
+      {editOpen && (
+        <EditProfileDialog
+          open
+          profile={profile}
+          onOpenChange={(open) => (open ? openEdit() : closeEdit())}
+          onSaved={() => mutate()}
+          onEmailChange={handleEmailChange}
+        />
+      )}
 
       <OtpDialog
         open={otpOpen}

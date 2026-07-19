@@ -87,19 +87,18 @@ export function EditProfileDialog({
   const {
     register,
     handleSubmit,
-    reset,
     control,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      gender: "",
-      dob: "",
-      storeName: "",
+      firstName: profile.firstName ?? "",
+      lastName: profile.lastName ?? "",
+      email: profile.email ?? "",
+      phone: profile.phone ?? "",
+      gender: (profile.gender as ProfileFormValues["gender"]) ?? "",
+      dob: profile.dob ? profile.dob.split("T")[0] : "",
+      storeName: profile.storeName ?? "",
       oldPassword: "",
       password: "",
       confirmPassword: "",
@@ -129,27 +128,15 @@ export function EditProfileDialog({
     setAvatarPreview(url);
   }
 
-  // Reset form + pending avatar state every time the dialog opens.
+  // The parent mounts a fresh dialog for each edit session. This effect only
+  // releases a local object URL if the dialog unmounts with a preview active.
   useEffect(() => {
-    if (!open) return;
-    setShowOldPassword(false);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    reset({
-      firstName: profile.firstName ?? "",
-      lastName: profile.lastName ?? "",
-      email: profile.email ?? "",
-      phone: profile.phone ?? "",
-      gender: (profile.gender as ProfileFormValues["gender"]) ?? "",
-      dob: profile.dob ? profile.dob.split("T")[0] : "",
-      storeName: profile.storeName ?? "",
-      oldPassword: "",
-      password: "",
-      confirmPassword: "",
-    });
-    updateAvatarPreview(null);
-    setPendingAttachmentId(null);
-  }, [open, profile, reset]);
+    return () => {
+      if (avatarPreviewRef.current) {
+        URL.revokeObjectURL(avatarPreviewRef.current);
+      }
+    };
+  }, []);
 
   async function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
