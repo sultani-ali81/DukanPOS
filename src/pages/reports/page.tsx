@@ -100,6 +100,20 @@ const saleColumns: ReportColumn<SaleReportRow>[] = [
   },
 ];
 
+const purchaseColumns: ReportColumn<SaleReportRow>[] = saleColumns.map(
+  (column) => {
+    if (column.header === "Sale #") {
+      return { ...column, header: "Purchase#" };
+    }
+
+    if (column.header === "Customer") {
+      return { ...column, header: "Supplier" };
+    }
+
+    return column;
+  },
+);
+
 function renderSaleExpanded(row: SaleReportRow) {
   return (
     <Table>
@@ -401,7 +415,7 @@ export default function ReportsPage() {
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as ReportType)}
       >
-        <div className="mb-5 flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1 w-fit flex-wrap">
+        <div className="flex w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
           {REPORT_TABS.map((tab) => (
             <button
               key={tab.value}
@@ -418,7 +432,7 @@ export default function ReportsPage() {
           ))}
         </div>
 
-        <TabsContent value="sale" className="mt-4">
+        <TabsContent value="sale" className="mt-2">
           <ReportPanel
             type="sale"
             columns={saleColumns}
@@ -427,16 +441,16 @@ export default function ReportsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="purchase" className="mt-4">
+        <TabsContent value="purchase" className="mt-2">
           <ReportPanel
             type="purchase"
-            columns={saleColumns}
+            columns={purchaseColumns}
             renderExpanded={renderSaleExpanded}
             emptyLabel="purchases"
           />
         </TabsContent>
 
-        <TabsContent value="inventory" className="mt-4">
+        <TabsContent value="inventory" className="mt-2">
           <ReportPanel
             type="inventory"
             columns={inventoryColumns}
@@ -445,7 +459,7 @@ export default function ReportsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="stock_in" className="mt-4">
+        <TabsContent value="stock_in" className="mt-2">
           <ReportPanel
             type="stock_in"
             columns={makeStockColumns("Stock In")}
@@ -454,7 +468,7 @@ export default function ReportsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="stock_out" className="mt-4">
+        <TabsContent value="stock_out" className="mt-2">
           <ReportPanel
             type="stock_out"
             columns={makeStockColumns("Stock Out")}
@@ -463,7 +477,7 @@ export default function ReportsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="cash_movement" className="mt-4">
+        <TabsContent value="cash_movement" className="mt-2">
           <ReportPanel
             type="cash_movement"
             columns={cashMovementColumns}

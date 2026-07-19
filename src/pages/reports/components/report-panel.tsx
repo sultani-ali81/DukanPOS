@@ -72,11 +72,14 @@ export function ReportPanel<T extends { id: string }>({
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                {hasExpanded && <TableHead className="w-8" />}
+            <TableHeader className="h-10 bg-muted/40">
+              <TableRow className="h-10">
+                {hasExpanded && <TableHead className="h-10 w-10 px-3" />}
                 {columns.map((col) => (
-                  <TableHead key={col.header} className={col.className}>
+                  <TableHead
+                    key={col.header}
+                    className={`h-10 px-4 ${col.className ?? ""}`}
+                  >
                     {col.header}
                   </TableHead>
                 ))}
@@ -109,7 +112,7 @@ export function ReportPanel<T extends { id: string }>({
                         onClick={() => toggleRow(row.id)}
                       >
                         {hasExpanded && (
-                          <TableCell>
+                          <TableCell className="w-10 px-3">
                             {isExpanded ? (
                               <ChevronDown className="size-4 text-muted-foreground" />
                             ) : (
@@ -118,7 +121,10 @@ export function ReportPanel<T extends { id: string }>({
                           </TableCell>
                         )}
                         {columns.map((col) => (
-                          <TableCell key={col.header} className={col.className}>
+                          <TableCell
+                            key={col.header}
+                            className={`px-4 ${col.className ?? ""}`}
+                          >
                             {col.cell(row)}
                           </TableCell>
                         ))}
