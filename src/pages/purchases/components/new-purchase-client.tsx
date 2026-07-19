@@ -27,19 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { createCrudFamilyMatcher } from "@/lib/crud-cache";
 import { extractError } from "@/lib/error";
 import { cn } from "@/lib/utils";
 import { InlineCombobox } from "@/pages/purchases/components/inline-combobox";
 import InventoryCombobox from "@/pages/purchases/components/inventory-combobox";
 import {
-  moneyEquals,
   purchaseItemsTotal,
   roundMoney,
+  validateInitialPurchasePayment,
 } from "@/pages/purchases/purchase-utils";
 import { getCustomers } from "@/queries/customer";
 import { createPurchase } from "@/queries/purchase";
-import { hasSession } from "@/queries/session";
 import type { PurchasePaymentStatus, Suggestion } from "@/types/purchases";
 import {
   ArrowLeft,
@@ -60,6 +60,7 @@ import { useProductSearch } from "./use-product-search";
 const DEFAULT_VALUES: FormValues = {
   customerId: "",
   purchaseDate: "",
+  note: "",
   paymentStatus: "unpaid",
   amount: 0,
   items: [{ productId: "", productName: "", quantity: 1, unitPrice: 0 }],
@@ -199,6 +200,7 @@ export function NewPurchaseClient() {
       ...DEFAULT_VALUES,
       ...persisted,
       items: persisted?.items?.length ? persisted.items : DEFAULT_VALUES.items,
+      note: persisted?.note ?? "",
       paymentStatus: persisted?.paymentStatus ?? "unpaid",
       amount:
         typeof persisted?.amount === "number" && Number.isFinite(persisted.amount)
@@ -259,6 +261,10 @@ export function NewPurchaseClient() {
     control: form.control,
     name: "purchaseDate",
   });
+  const watchedNote = useWatch({
+    control: form.control,
+    name: "note",
+  });
   const watchedPaymentStatus = useWatch({
     control: form.control,
     name: "paymentStatus",
@@ -312,6 +318,7 @@ export function NewPurchaseClient() {
     watchedItems,
     watchedCustomerId,
     watchedDate,
+    watchedNote,
     watchedPaymentStatus,
     watchedPaymentAmount,
     supplierDisplay,
@@ -327,27 +334,6 @@ export function NewPurchaseClient() {
   const removeItem = (index: number) => {
     remove(index);
     product.removeRow(index);
-  };
-
-  const validateInitialPayment = (
-    status: PurchasePaymentStatus,
-    amount: number,
-    purchaseTotal: number,
-  ): string | null => {
-    if (!Number.isFinite(amount) || amount < 0) {
-      return "Enter a valid payment amount.";
-    }
-    if (status === "unpaid") return null;
-    if (status === "partially_paid") {
-      if (amount <= 0) return "A partial payment must be greater than zero.";
-      if (amount >= purchaseTotal) {
-        return "A partial payment must be less than the purchase total.";
-      }
-      return null;
-    }
-    return moneyEquals(amount, purchaseTotal)
-      ? null
-      : "A fully paid purchase must receive the full purchase total.";
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -369,7 +355,8 @@ export function NewPurchaseClient() {
         : values.paymentStatus === "fully_paid"
           ? purchaseTotal
           : roundMoney(Number(values.amount));
-    const paymentError = validateInitialPayment(
+    const note = values.note.trim();
+    const paymentError = validateInitialPurchasePayment(
       values.paymentStatus,
       initialAmount,
       purchaseTotal,
@@ -380,32 +367,12 @@ export function NewPurchaseClient() {
       return;
     }
 
-    if (initialAmount > 0) {
-      try {
-        const activeSession = await hasSession();
-        if (!activeSession) {
-          const message =
-            "Open a store session before recording a purchase payment.";
-          form.setError("amount", { message });
-          setSubmitError(message);
-          return;
-        }
-      } catch (error: unknown) {
-        const message = extractError(
-          error,
-          "Unable to verify the active store session.",
-        );
-        form.setError("amount", { message });
-        setSubmitError(message);
-        return;
-      }
-    }
-
     try {
       const result = await createPurchase({
         customerId: values.customerId,
         inventoryId,
         customDate: values.purchaseDate,
+        ...(note ? { note } : {}),
         paymentStatus: values.paymentStatus,
         amount: initialAmount,
         items,
@@ -535,6 +502,25 @@ export function NewPurchaseClient() {
                     </p>
                   )}
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="note"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel htmlFor="purchaseNote">Note (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          id="purchaseNote"
+                          placeholder="Add a note for this purchase…"
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
@@ -608,7 +594,11 @@ export function NewPurchaseClient() {
                       <Select
                         value={field.value}
                         onValueChange={(value) => {
-                          field.onChange(value as PurchasePaymentStatus);
+                          const paymentStatus = value as PurchasePaymentStatus;
+                          field.onChange(paymentStatus);
+                          if (paymentStatus === "partially_paid") {
+                            form.setValue("amount", 0, { shouldValidate: true });
+                          }
                           form.clearErrors("amount");
                         }}
                       >
@@ -641,6 +631,11 @@ export function NewPurchaseClient() {
                           type="number"
                           inputMode="decimal"
                           min="0"
+                          max={
+                            watchedPaymentStatus === "partially_paid"
+                              ? total
+                              : undefined
+                          }
                           step="0.01"
                           placeholder="0.00"
                           className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"

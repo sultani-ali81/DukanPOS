@@ -79,21 +79,16 @@ export interface PurchaseListItem {
   stockIns?: StockInResponse[];
   inventoryId?: string | null;
   inventoryName?: string | null;
+  note?: string | null;
+  createdAt?: string;
 }
 
 // ── Detail (returned by GET /purchase/:id) ────────────────────────────────────
-
-export interface PurchasePaymentCashier {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
 
 export interface PurchasePaymentHistoryItem {
   id: string;
   amount: number;
   paidAt: string;
-  cashier: PurchasePaymentCashier | null;
 }
 
 export interface PurchaseDetail extends PurchaseListItem {
@@ -108,6 +103,7 @@ export interface CreatePurchasePayload {
   inventoryId: string;
   /** Calendar date in YYYY-MM-DD format. */
   customDate: string;
+  note?: string;
   paymentStatus: PurchasePaymentStatus;
   /** Initial payment, when applicable. Always a number, never a string. */
   amount?: number;

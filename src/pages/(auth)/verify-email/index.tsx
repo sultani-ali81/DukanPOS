@@ -161,13 +161,9 @@ export default function VerifyEmailPage() {
               disabled={loading}
               autoFocus
             >
-              <InputOTPGroup className="gap-2">
+              <InputOTPGroup>
                 {Array.from({ length: 6 }, (_, index) => (
-                  <InputOTPSlot
-                    key={index}
-                    index={index}
-                    className="size-11 rounded-lg border text-lg font-semibold sm:size-12 first:rounded-lg last:rounded-lg"
-                  />
+                  <InputOTPSlot key={index} index={index} />
                 ))}
               </InputOTPGroup>
             </InputOTP>

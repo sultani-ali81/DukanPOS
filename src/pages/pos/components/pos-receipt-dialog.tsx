@@ -370,7 +370,10 @@ export function PosReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <CompactDialogContent className="shadow-none border border-gray-200">
+      <CompactDialogContent
+        showCloseButton={false}
+        className="shadow-none border border-gray-200"
+      >
         {/* Dialog header */}
 
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-gray-100 flex flex-row items-center justify-between">
@@ -379,8 +382,10 @@ export function PosReceiptDialog({
           </DialogTitle>
 
           <button
+            type="button"
+            aria-label="Close receipt"
             onClick={() => onOpenChange(false)}
-            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
+            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-black hover:bg-gray-200 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
           </button>

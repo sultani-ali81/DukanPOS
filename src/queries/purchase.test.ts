@@ -47,6 +47,7 @@ describe("purchase API requests", () => {
       customerId: "supplier-1",
       inventoryId: "inventory-1",
       customDate: "2026-07-18",
+      note: "Supplier invoice #42",
       paymentStatus: "partially_paid" as const,
       amount: 125.5,
       items: [{ productId: "product-1", quantity: 2, unitPrice: 62.75 }],

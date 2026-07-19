@@ -28,7 +28,6 @@ import { createStockIn, updateStockIn } from "@/queries/stock-in";
 import type {
   PurchaseDetail,
   PurchasedItemResponse,
-  PurchasePaymentHistoryItem,
   PurchaseStatus,
 } from "@/types/purchases";
 import {
@@ -51,12 +50,6 @@ import { PaymentDialog } from "./payment-dialog";
 import { PurchasePaymentStatusBadge, PurchaseStatusBadge } from "./purchase-badges";
 import { PurchaseFlowCard } from "./purchase-flow-card";
 import LogsTable from "@/components/logs-table";
-
-function cashierName(cashier: PurchasePaymentHistoryItem["cashier"]): string {
-  if (!cashier) return "Unknown cashier";
-  const name = `${cashier.firstName} ${cashier.lastName}`.trim();
-  return name || "Unknown cashier";
-}
 
 function DetailSkeleton() {
   return (
@@ -389,7 +382,6 @@ export function PurchaseDetailClient() {
                       <TableHeader>
                         <TableRow className="bg-muted/40">
                           <TableHead className="pl-6">Date &amp; time</TableHead>
-                          <TableHead>Cashier</TableHead>
                           <TableHead className="pr-6 text-right">Amount</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -398,9 +390,6 @@ export function PurchaseDetailClient() {
                           <TableRow key={payment.id}>
                             <TableCell className="pl-6 text-muted-foreground">
                               {formatPurchaseDateTime(payment.paidAt)}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {cashierName(payment.cashier)}
                             </TableCell>
                             <TableCell className="pr-6 text-right font-semibold tabular-nums">
                               {formatCurrency(payment.amount)}
@@ -423,10 +412,6 @@ export function PurchaseDetailClient() {
                           <p className="font-semibold tabular-nums text-primary">
                             {formatCurrency(payment.amount)}
                           </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Cashier</p>
-                          <p className="mt-1 text-sm">{cashierName(payment.cashier)}</p>
                         </div>
                       </div>
                     ))}

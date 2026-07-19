@@ -38,7 +38,11 @@ vi.mock("recharts", () => ({
   LineChart: ({ children }: RechartsMockProps) => (
     <div data-testid="line-chart">{children}</div>
   ),
+  Cell: ({ fill }: RechartsMockProps) => (
+    <div data-testid="pie-slice" data-fill={fill} />
+  ),
   Pie: ({
+    children,
     fill,
     innerRadius,
     outerRadius,
@@ -48,7 +52,9 @@ vi.mock("recharts", () => ({
       data-fill={fill}
       data-inner-radius={innerRadius}
       data-outer-radius={outerRadius}
-    />
+    >
+      {children}
+    </div>
   ),
   PieChart: ({ children }: RechartsMockProps) => (
     <div data-testid="pie-chart">{children}</div>
@@ -234,6 +240,40 @@ describe("AiAssistantChart", () => {
     const pie = screen.getByTestId("pie-series");
     expect(pie.getAttribute("data-fill")).toBe("#16a34a");
     expect(pie.getAttribute("data-inner-radius")).toBe("52%");
+  });
+
+  it("assigns a distinct color and label to every circular chart slice", () => {
+    render(
+      <AiAssistantChart
+        graph={graph({
+          type: "doughnut",
+          labels: ["Rice", "Flour", "Oil"],
+          datasets: [
+            {
+              label: "Quantity sold",
+              data: [50, 30, 20],
+              color: "#2563eb",
+            },
+          ],
+        })}
+      />,
+    );
+
+    const sliceColors = screen
+      .getAllByTestId("pie-slice")
+      .map((slice) => slice.getAttribute("data-fill"));
+
+    expect(sliceColors).toHaveLength(3);
+    expect(new Set(sliceColors).size).toBe(3);
+    expect(screen.getByTestId("chart-slice-legend").textContent).toContain(
+      "Rice",
+    );
+    expect(screen.getByTestId("chart-slice-legend").textContent).toContain(
+      "Flour",
+    );
+    expect(screen.getByTestId("chart-slice-legend").textContent).toContain(
+      "Oil",
+    );
   });
 
   it("keeps the chart responsive on mobile and desktop breakpoints", () => {

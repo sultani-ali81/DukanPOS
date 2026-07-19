@@ -14,7 +14,10 @@ import {
 import { usePurchases } from "@/hooks/use-purchases";
 import { formatCurrency } from "@/lib/currency";
 import { extractError } from "@/lib/error";
-import { formatPurchaseDate } from "@/pages/purchases/purchase-utils";
+import {
+  formatPurchaseDate,
+  formatPurchaseDateTime,
+} from "@/pages/purchases/purchase-utils";
 import { updatePurchaseStatus } from "@/queries/purchase";
 import type { PurchaseListItem, PurchaseStatus } from "@/types/purchases";
 import {
@@ -36,7 +39,7 @@ function TableSkeleton() {
     <>
       {Array.from({ length: 6 }).map((_, row) => (
         <TableRow key={row}>
-          {Array.from({ length: 7 }).map((__, column) => (
+          {Array.from({ length: 10 }).map((__, column) => (
             <TableCell key={column}>
               <div className="h-4 max-w-28 animate-pulse rounded bg-muted" />
             </TableCell>
@@ -179,12 +182,15 @@ export function PurchasesClient() {
 
         <CardContent className="p-0">
           <div className="hidden overflow-x-auto md:block">
-            <Table className="min-w-[900px]">
+            <Table className="min-w-[1200px]">
               <TableHeader>
                 <TableRow className="bg-muted/40">
                   <TableHead className="pl-5">Purchase number</TableHead>
                   <TableHead>Supplier</TableHead>
+                  <TableHead>Inventory</TableHead>
+                  <TableHead>Items</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead>Purchase status</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -196,7 +202,7 @@ export function PurchasesClient() {
                   <TableSkeleton />
                 ) : purchases.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={10}>
                       <EmptyPurchases search={search} onClear={clearSearch} />
                     </TableCell>
                   </TableRow>
@@ -213,8 +219,26 @@ export function PurchasesClient() {
                       <TableCell className="max-w-48 truncate font-medium">
                         {purchase.customer?.name ?? "—"}
                       </TableCell>
+                      <TableCell className="max-w-44 truncate text-muted-foreground">
+                        {purchase.inventoryName ?? "—"}
+                      </TableCell>
+                      <TableCell className="max-w-52 text-muted-foreground">
+                        <span className="block truncate">
+                          {purchase.items.length
+                            ? purchase.items
+                                .map((item) => item.product?.name ?? "Unknown product")
+                                .join(", ")
+                            : "—"}
+                        </span>
+                        <span className="text-xs">
+                          {purchase.items.length} {purchase.items.length === 1 ? "item" : "items"}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatPurchaseDate(purchase.customDate)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {formatPurchaseDateTime(purchase.createdAt)}
                       </TableCell>
                       <TableCell>
                         <PurchaseStatusBadge status={purchase.status} />
@@ -319,7 +343,14 @@ export function PurchasesClient() {
                       </span>
                     </div>
                     <p className="mt-3 text-xs text-muted-foreground">
-                      {formatPurchaseDate(purchase.customDate)}
+                      Purchase date: {formatPurchaseDate(purchase.customDate)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {purchase.inventoryName ?? "No inventory"} · {purchase.items.length}{" "}
+                      {purchase.items.length === 1 ? "item" : "items"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Created: {formatPurchaseDateTime(purchase.createdAt)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <PurchaseStatusBadge status={purchase.status} />

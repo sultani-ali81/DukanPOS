@@ -38,6 +38,32 @@ export function paymentStatusForInstallment(
     : "partially_paid";
 }
 
+/**
+ * Validates the initial payment sent when a purchase is created.
+ * The API expects a fully paid purchase to receive its exact item total and a
+ * partial payment to remain below that total.
+ */
+export function validateInitialPurchasePayment(
+  status: PurchasePaymentStatus,
+  amount: number,
+  purchaseTotal: number,
+): string | null {
+  if (!Number.isFinite(amount) || amount < 0) {
+    return "Enter a valid payment amount.";
+  }
+  if (status === "unpaid") return null;
+  if (status === "partially_paid") {
+    if (amount <= 0) return "A partial payment must be greater than zero.";
+    if (amount >= purchaseTotal) {
+      return "A partial payment must be less than the purchase total.";
+    }
+    return null;
+  }
+  return moneyEquals(amount, purchaseTotal)
+    ? null
+    : "A fully paid purchase must receive the full purchase total.";
+}
+
 export function canAddPurchasePayment(
   purchase: Pick<
     PurchaseDetail,

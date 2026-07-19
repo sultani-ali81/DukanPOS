@@ -5,6 +5,7 @@ import {
   paidPurchaseAmount,
   paymentStatusForInstallment,
   purchaseItemsTotal,
+  validateInitialPurchasePayment,
 } from "./purchase-utils";
 
 describe("purchase money and payment helpers", () => {
@@ -26,6 +27,18 @@ describe("purchase money and payment helpers", () => {
   it("marks the final installment as fully paid", () => {
     expect(paymentStatusForInstallment(200, 700)).toBe("partially_paid");
     expect(paymentStatusForInstallment(700, 700)).toBe("fully_paid");
+  });
+
+  it("enforces the initial-payment contract before a purchase is created", () => {
+    expect(validateInitialPurchasePayment("fully_paid", 180, 180)).toBeNull();
+    expect(validateInitialPurchasePayment("fully_paid", 179.99, 180)).toContain(
+      "full purchase total",
+    );
+    expect(validateInitialPurchasePayment("partially_paid", 50, 180)).toBeNull();
+    expect(
+      validateInitialPurchasePayment("partially_paid", 180, 180),
+    ).toContain("less than the purchase total");
+    expect(validateInitialPurchasePayment("unpaid", 0, 180)).toBeNull();
   });
 
   it("allows an unpaid Done purchase to receive an installment", () => {
@@ -60,6 +73,7 @@ describe("purchase form validation", () => {
   const valid = {
     customerId: "supplier-1",
     purchaseDate: "2026-07-18",
+    note: "",
     paymentStatus: "unpaid" as const,
     amount: 0,
     items: [
@@ -74,6 +88,15 @@ describe("purchase form validation", () => {
 
   it("accepts a zero unit price and a non-integer positive quantity", () => {
     expect(purchaseFormSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts an optional purchase note", () => {
+    expect(
+      purchaseFormSchema.safeParse({
+        ...valid,
+        note: "Delivered after the afternoon stock count.",
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects duplicate product rows", () => {

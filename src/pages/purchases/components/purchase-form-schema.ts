@@ -16,6 +16,7 @@ export const purchaseFormSchema = z
   .object({
     customerId: z.string().min(1, "Select a supplier"),
     purchaseDate: z.string().min(1, "Select a date"),
+    note: z.string(),
     paymentStatus: z.enum(["unpaid", "partially_paid", "fully_paid"]),
     amount: z.number().min(0, "Must be 0 or more"),
     items: z.array(purchaseItemSchema).min(1, "Add at least one item"),
@@ -46,6 +47,7 @@ export const purchaseFormSchema = z
 export type FormValues = {
   customerId: string;
   purchaseDate: string;
+  note: string;
   paymentStatus: PurchasePaymentStatus;
   amount: number;
   items: {

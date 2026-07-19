@@ -7,6 +7,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
   Pie,
@@ -19,6 +20,7 @@ import {
 import {
   formatAiAssistantChartValue,
   getAiAssistantChartColor,
+  getAiAssistantPieSliceColor,
 } from "../ai-assistant-chart.utils";
 
 type AiAssistantChartProps = {
@@ -254,11 +256,12 @@ function PieAssistantChart({ graph }: { graph: AiAssistantGraph }) {
       {graph.datasets.map((dataset, index) => {
         const radius = getPieRadius(graph.type, index, graph.datasets.length);
         const color = getAiAssistantChartColor(dataset.color, index);
+        const data = buildPieData(graph, index);
 
         return (
           <Pie
             key={`${dataset.label}-${index}`}
-            data={buildPieData(graph, index)}
+            data={data}
             dataKey="value"
             nameKey="label"
             fill={color}
@@ -266,15 +269,69 @@ function PieAssistantChart({ graph }: { graph: AiAssistantGraph }) {
             innerRadius={radius.innerRadius}
             outerRadius={radius.outerRadius}
             isAnimationActive={false}
-          />
+          >
+            {data.map((_, sliceIndex) => (
+              <Cell
+                key={`${dataset.label}-${index}-${sliceIndex}`}
+                fill={getAiAssistantPieSliceColor(
+                  dataset.color,
+                  index,
+                  sliceIndex,
+                  data.length,
+                )}
+              />
+            ))}
+          </Pie>
         );
       })}
     </PieChart>
   );
 }
 
+function PieChartLegend({ graph }: { graph: AiAssistantGraph }) {
+  const dataset = graph.datasets[0];
+  const data = buildPieData(graph, 0);
+
+  if (!dataset || !data.length) return null;
+
+  return (
+    <div
+      className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground"
+      data-testid="chart-slice-legend"
+    >
+      {data.map((slice, index) => {
+        const label = slice.label || `Item ${index + 1}`;
+        const color = getAiAssistantPieSliceColor(
+          dataset.color,
+          0,
+          index,
+          data.length,
+        );
+
+        return (
+          <span key={`${label}-${index}`} className="inline-flex min-w-0 items-center gap-1.5">
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: color }}
+              aria-hidden="true"
+            />
+            <span className="truncate">{label}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function ChartLegend({ graph }: { graph: AiAssistantGraph }) {
   if (!graph.datasets.length) return null;
+
+  if (
+    (graph.type === "pie" || graph.type === "doughnut") &&
+    graph.datasets.length === 1
+  ) {
+    return <PieChartLegend graph={graph} />;
+  }
 
   return (
     <div

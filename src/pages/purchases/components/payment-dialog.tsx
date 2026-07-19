@@ -17,7 +17,6 @@ import {
   roundMoney,
 } from "@/pages/purchases/purchase-utils";
 import { addPurchasePayment } from "@/queries/purchase";
-import { hasSession } from "@/queries/session";
 import type { PurchaseDetail } from "@/types/purchases";
 import { AlertCircle, Loader2, WalletCards } from "lucide-react";
 import { useId, useRef, useState } from "react";
@@ -92,12 +91,6 @@ export function PaymentDialog({
     setSubmitting(true);
     setError(null);
     try {
-      const activeSession = await hasSession();
-      if (!activeSession) {
-        setError("Open a store session before recording a purchase payment.");
-        return;
-      }
-
       const paymentStatus = paymentStatusForInstallment(
         roundedAmount,
         remainingBalance,
