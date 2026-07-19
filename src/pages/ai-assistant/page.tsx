@@ -10,6 +10,7 @@ import {
   renameAiChatThread,
 } from "@/queries/ai-assistant";
 import type {
+  AiAssistantCustomerInsight,
   AiAssistantGraph,
   AiAssistantToolEventData,
   AiChatThreadSummary,
@@ -151,11 +152,47 @@ export default function AiAssistantPage() {
 
   const appendMessageGraph = (id: string, graph: AiAssistantGraph) => {
     setMessages((current) =>
-      current.map((message) =>
-        message.id === id
-          ? { ...message, graphs: [...(message.graphs ?? []), graph] }
-          : message,
-      ),
+      current.map((message) => {
+        if (message.id !== id) return message;
+
+        const metadata = message.metadata ?? {};
+        const existingMetadataGraphs = Array.isArray(metadata.graphs)
+          ? metadata.graphs
+          : metadata.graph
+            ? [metadata.graph]
+            : [];
+
+        return {
+          ...message,
+          graphs: [...(message.graphs ?? []), graph],
+          metadata: {
+            ...metadata,
+            graphs: [...existingMetadataGraphs, graph],
+          },
+        };
+      }),
+    );
+  };
+
+  const appendMessageCustomers = (
+    id: string,
+    customers: AiAssistantCustomerInsight[],
+  ) => {
+    if (!customers.length) return;
+
+    setMessages((current) =>
+      current.map((message) => {
+        if (message.id !== id) return message;
+
+        const customersById = new Map(
+          (message.customers ?? []).map((customer) => [customer.id, customer]),
+        );
+        customers.forEach((customer) => {
+          customersById.set(customer.id, customer);
+        });
+
+        return { ...message, customers: [...customersById.values()] };
+      }),
     );
   };
 
@@ -283,6 +320,14 @@ export default function AiAssistantPage() {
     const chunkSanitizer = createAssistantChunkSanitizer();
     let visibleStreamText = "";
 
+    const appendStreamContent = (content: string) => {
+      const visibleContent = chunkSanitizer.push(content);
+      if (!visibleContent) return;
+
+      visibleStreamText += visibleContent;
+      setMessageContent(activeAssistantMessageId, visibleStreamText);
+    };
+
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setToolActivities({});
     shouldAutoScrollRef.current = true;
@@ -294,14 +339,19 @@ export default function AiAssistantPage() {
         threadId: streamThreadId ?? undefined,
         onChunk: (chunk) => {
           if (!chunk) return;
-          const visibleChunk = chunkSanitizer.push(chunk);
-          if (!visibleChunk) return;
-
-          visibleStreamText += visibleChunk;
-          setMessageContent(activeAssistantMessageId, visibleStreamText);
+          appendStreamContent(chunk);
         },
         onGraph: ({ graph }) => {
           appendMessageGraph(activeAssistantMessageId, graph);
+        },
+        onTool: (activity) => {
+          setToolActivities((current) => ({
+            ...current,
+            [activity.toolCallId]: activity,
+          }));
+        },
+        onCustomerInsights: ({ customers }) => {
+          appendMessageCustomers(activeAssistantMessageId, customers);
         },
         onToolCall: (activity) => {
           setToolActivities((current) => ({

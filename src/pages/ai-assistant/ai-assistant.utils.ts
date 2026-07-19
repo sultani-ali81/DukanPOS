@@ -1,7 +1,11 @@
 import { extractError } from "@/lib/error";
 import { parseAiAssistantGraph } from "@/lib/ai-assistant-graph";
-import { AiAssistantStreamError } from "@/queries/ai-assistant";
+import {
+  AiAssistantStreamError,
+  extractAiAssistantCustomerInsights,
+} from "@/queries/ai-assistant";
 import type {
+  AiAssistantCustomerInsight,
   AiAssistantGraph,
   AiAssistantToolEventData,
   AiChatMessage,
@@ -14,6 +18,7 @@ export type UiChatMessage = Omit<AiChatMessage, "status"> & {
   status?: "completed" | "failed" | "streaming" | "stopped";
   local?: boolean;
   graphs?: AiAssistantGraph[];
+  customers?: AiAssistantCustomerInsight[];
 };
 
 const assistantReasoningPattern = /<think\b[^>]*>[\s\S]*?(?:<\/think\s*>|$)/gi;
@@ -196,8 +201,9 @@ function getMetadataGraphs(metadata: AiChatMessage["metadata"]) {
 }
 
 /**
- * Preserves live graphs through a history refresh and, for an explicit
- * historical-thread load, hydrates valid graphs persisted in message metadata.
+ * Preserves live assistant artifacts through a history refresh and, for an
+ * explicit historical-thread load, hydrates valid graphs and customer
+ * insights persisted in message metadata.
  */
 export function mergeThreadMessagesWithLiveGraphs(
   currentMessages: UiChatMessage[],
@@ -205,11 +211,17 @@ export function mergeThreadMessagesWithLiveGraphs(
   hydrateMetadataGraphs = true,
 ): UiChatMessage[] {
   const graphsByMessageId = new Map<string, AiAssistantGraph[]>();
+  const customersByMessageId = new Map<string, AiAssistantCustomerInsight[]>();
 
   currentMessages.forEach((message) => {
     if (message.role === "assistant" && message.graphs?.length) {
       graphsByMessageId.set(message.id, message.graphs);
     }
+
+    if (message.role === "assistant" && message.customers?.length) {
+      customersByMessageId.set(message.id, message.customers);
+    }
+
   });
 
   return threadMessages.map((message) => {
@@ -222,6 +234,22 @@ export function mergeThreadMessagesWithLiveGraphs(
         ? getMetadataGraphs(message.metadata)
         : undefined;
     const graphs = liveGraphs ?? metadataGraphs;
+    const liveCustomers =
+      message.role === "assistant"
+        ? customersByMessageId.get(message.id)
+        : undefined;
+    const metadataCustomers =
+      message.role === "assistant" && hydrateMetadataGraphs
+        ? extractAiAssistantCustomerInsights(message.metadata)?.customers
+        : undefined;
+    const customers = liveCustomers ?? metadataCustomers;
+    const metadata =
+      message.role === "assistant" && graphs?.length
+        ? {
+            ...(isRecord(message.metadata) ? message.metadata : {}),
+            graphs,
+          }
+        : message.metadata;
 
     return {
       ...message,
@@ -229,7 +257,9 @@ export function mergeThreadMessagesWithLiveGraphs(
         message.role === "assistant"
           ? stripAssistantReasoning(message.content)
           : message.content,
+      ...(metadata !== message.metadata ? { metadata } : {}),
       ...(graphs ? { graphs } : {}),
+      ...(customers ? { customers } : {}),
     };
   });
 }
@@ -323,7 +353,7 @@ export function getActiveToolActivityLabel(
   for (let index = toolActivities.length - 1; index >= 0; index -= 1) {
     const activity = toolActivities[index];
     if (activity.status === "started") {
-      return "Analyzing store data…";
+      return activity.message?.trim() || "Analyzing store data…";
     }
   }
 

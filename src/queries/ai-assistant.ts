@@ -2,12 +2,16 @@ import api from "@/lib/axios";
 import { parseAiAssistantGraph } from "@/lib/ai-assistant-graph";
 import { useAuthStore } from "@/lib/store";
 import type {
+  AiAssistantCustomerInsight,
+  AiAssistantCustomerInsightsData,
   AiAssistantDoneEventData,
   AiAssistantErrorEventData,
   AiAssistantGraphEventData,
   AiAssistantSseEvent,
+  AiAssistantToolEventData,
   AiAssistantToolCallEventData,
   AiAssistantToolResultEventData,
+  AiAssistantToolStatus,
   AiChatThreadDetail,
   AiChatThreadSummary,
   DeleteAiChatThreadResponse,
@@ -29,6 +33,13 @@ type AskAssistantSseStreamOptions = {
   threadId?: string;
   onChunk: (content: string) => void;
   onGraph?: (data: AiAssistantGraphEventData) => void;
+  /** Latest backend progress event (`event: tool`). */
+  onTool?: (data: AiAssistantToolEventData) => void;
+  /**
+   * Normalized customer tool results, whether they arrive with a tool or
+   * final assistant event.
+   */
+  onCustomerInsights?: (data: AiAssistantCustomerInsightsData) => void;
   onDone: (data: AiAssistantDoneEventData) => void;
   onError: (data: AiAssistantErrorEventData) => void;
   onToolCall: (data: AiAssistantToolCallEventData) => void;
@@ -118,6 +129,218 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && Boolean(value.trim());
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function getOptionalText(value: Record<string, unknown>) {
+  return isNonEmptyString(value.message)
+    ? value.message
+    : isNonEmptyString(value.content)
+      ? value.content
+      : undefined;
+}
+
+function getOptionalTotalCount(value: Record<string, unknown>) {
+  return typeof value.totalCount === "number" &&
+    Number.isInteger(value.totalCount) &&
+    value.totalCount >= 0
+    ? value.totalCount
+    : undefined;
+}
+
+/**
+ * Validates one detailed customer response before exposing it to the message
+ * UI. We deliberately require the complete documented base shape so a random
+ * object in a tool payload cannot be rendered as a customer card.
+ */
+export function parseAiAssistantCustomerInsight(
+  value: unknown,
+): AiAssistantCustomerInsight | null {
+  if (!isRecord(value)) return null;
+
+  const id = value.id;
+  const name = value.name;
+  const phone = value.phone;
+  const address = value.address;
+  const createdAt = value.createdAt;
+  if (
+    typeof id !== "string" ||
+    typeof name !== "string" ||
+    typeof phone !== "string" ||
+    typeof address !== "string" ||
+    typeof createdAt !== "string"
+  ) {
+    return null;
+  }
+
+  const saleCount = value.saleCount;
+  const salesTotal = value.salesTotal;
+  const paidSales = value.paidSales;
+  const salesBalance = value.salesBalance;
+  const purchaseCount = value.purchaseCount;
+  const purchaseTotal = value.purchaseTotal;
+  const paidPurchases = value.paidPurchases;
+  const purchaseBalance = value.purchaseBalance;
+  if (
+    !isFiniteNumber(saleCount) ||
+    !isFiniteNumber(salesTotal) ||
+    !isFiniteNumber(paidSales) ||
+    !isFiniteNumber(salesBalance) ||
+    !isFiniteNumber(purchaseCount) ||
+    !isFiniteNumber(purchaseTotal) ||
+    !isFiniteNumber(paidPurchases) ||
+    !isFiniteNumber(purchaseBalance)
+  ) {
+    return null;
+  }
+
+  if (value.profit !== undefined && !isFiniteNumber(value.profit)) return null;
+
+  return {
+    id,
+    name,
+    phone,
+    address,
+    saleCount,
+    salesTotal,
+    paidSales,
+    salesBalance,
+    purchaseCount,
+    purchaseTotal,
+    paidPurchases,
+    purchaseBalance,
+    ...(isFiniteNumber(value.profit) ? { profit: value.profit } : {}),
+    createdAt,
+  };
+}
+
+function parseCustomerCollection(
+  value: unknown,
+  totalCount?: number,
+): AiAssistantCustomerInsightsData | null {
+  if (Array.isArray(value)) {
+    const customers = value.map(parseAiAssistantCustomerInsight);
+    if (customers.some((customer) => customer === null)) return null;
+
+    return {
+      customers: customers as AiAssistantCustomerInsight[],
+      ...(totalCount !== undefined ? { totalCount } : {}),
+    };
+  }
+
+  const customer = parseAiAssistantCustomerInsight(value);
+  return customer
+    ? {
+        customers: [customer],
+        ...(totalCount !== undefined ? { totalCount } : {}),
+      }
+    : null;
+}
+
+const CUSTOMER_INSIGHT_KEYS = [
+  "customerInsights",
+  "customerInsight",
+  "customers",
+  "customer",
+] as const;
+
+const CUSTOMER_INSIGHT_WRAPPER_KEYS = [
+  "output",
+  "result",
+  "data",
+  "payload",
+  "toolResult",
+  "metadata",
+] as const;
+
+/**
+ * Extracts documented customer-tool data and a small set of intentional
+ * compatibility wrappers. It does not perform an unbounded deep search, so
+ * unrelated nested objects cannot accidentally become customer insights.
+ */
+export function extractAiAssistantCustomerInsights(
+  value: unknown,
+): AiAssistantCustomerInsightsData | undefined {
+  const findInsights = (
+    candidate: unknown,
+    inheritedTotalCount?: number,
+    depth = 0,
+  ): AiAssistantCustomerInsightsData | undefined => {
+    if (!isRecord(candidate) || depth > 2) return undefined;
+
+    const totalCount = getOptionalTotalCount(candidate) ?? inheritedTotalCount;
+
+    for (const key of CUSTOMER_INSIGHT_KEYS) {
+      if (!(key in candidate)) continue;
+      const parsed = parseCustomerCollection(candidate[key], totalCount);
+      if (parsed) return parsed;
+
+      // Some compatible payloads use `customerInsights: { customers, ... }`.
+      if (isRecord(candidate[key])) {
+        const nested = findInsights(candidate[key], totalCount, depth + 1);
+        if (nested) return nested;
+      }
+    }
+
+    for (const key of CUSTOMER_INSIGHT_WRAPPER_KEYS) {
+      if (!(key in candidate)) continue;
+      const nested = findInsights(candidate[key], totalCount, depth + 1);
+      if (nested) return nested;
+    }
+
+    return undefined;
+  };
+
+  return findInsights(value);
+}
+
+function parseToolStatus(value: unknown): AiAssistantToolStatus | null {
+  return value === "started" || value === "completed" || value === "failed"
+    ? value
+    : null;
+}
+
+function getToolEventData(
+  value: Record<string, unknown>,
+  options: { requireCallId: boolean; status?: AiAssistantToolStatus },
+): AiAssistantToolEventData | null {
+  const toolName = isNonEmptyString(value.toolName)
+    ? value.toolName
+    : isNonEmptyString(value.name)
+      ? value.name
+      : null;
+  const toolCallId = isNonEmptyString(value.toolCallId)
+    ? value.toolCallId
+    : options.requireCallId
+      ? null
+      : toolName;
+  const status = parseToolStatus(value.status);
+
+  if (
+    !toolName ||
+    !toolCallId ||
+    !status ||
+    (options.status !== undefined && status !== options.status)
+  ) {
+    return null;
+  }
+
+  const message = getOptionalText(value);
+  const customerInsights = extractAiAssistantCustomerInsights(value);
+  return {
+    toolCallId,
+    toolName,
+    status,
+    ...(message ? { message } : {}),
+    ...(customerInsights ? { customerInsights } : {}),
+  };
+}
+
 function invalidStreamEvent(): AiAssistantSseEvent {
   return {
     event: "error",
@@ -153,41 +376,32 @@ function parseEventData(
       : invalidStreamEvent();
   }
 
+  if (eventName === "tool") {
+    const data = getToolEventData(value, { requireCallId: false });
+    return data ? { event: "tool", data } : invalidStreamEvent();
+  }
+
   if (eventName === "tool-call") {
-    return typeof value.toolCallId === "string" &&
-      Boolean(value.toolCallId) &&
-      typeof value.toolName === "string" &&
-      Boolean(value.toolName) &&
-      value.status === "started"
-      ? {
-          event: "tool-call",
-          data: {
-            toolCallId: value.toolCallId,
-            toolName: value.toolName,
-            status: value.status,
-          },
-        }
+    const data = getToolEventData(value, {
+      requireCallId: true,
+      status: "started",
+    });
+    return data?.status === "started"
+      ? { event: "tool-call", data: { ...data, status: "started" } }
       : invalidStreamEvent();
   }
 
   if (eventName === "tool-result") {
-    return typeof value.toolCallId === "string" &&
-      Boolean(value.toolCallId) &&
-      typeof value.toolName === "string" &&
-      Boolean(value.toolName) &&
-      (value.status === "completed" || value.status === "failed")
-      ? {
-          event: "tool-result",
-          data: {
-            toolCallId: value.toolCallId,
-            toolName: value.toolName,
-            status: value.status,
-          },
-        }
-      : invalidStreamEvent();
+    const data = getToolEventData(value, { requireCallId: true });
+    if (data?.status === "completed" || data?.status === "failed") {
+      return { event: "tool-result", data: { ...data, status: data.status } };
+    }
+
+    return invalidStreamEvent();
   }
 
   if (eventName === "done") {
+    const customerInsights = extractAiAssistantCustomerInsights(value);
     return typeof value.content === "string" &&
       typeof value.threadId === "string" &&
       typeof value.userMessageId === "string" &&
@@ -199,6 +413,7 @@ function parseEventData(
             threadId: value.threadId,
             userMessageId: value.userMessageId,
             assistantMessageId: value.assistantMessageId,
+            ...(customerInsights ? { customerInsights } : {}),
           },
         }
       : invalidStreamEvent();
@@ -313,6 +528,8 @@ export async function askAssistantSseStream({
   threadId,
   onChunk,
   onGraph,
+  onTool,
+  onCustomerInsights,
   onDone,
   onError,
   onToolCall,
@@ -376,17 +593,26 @@ export async function askAssistantSseStream({
       return false;
     }
 
+    if (event === "tool") {
+      onTool?.(data);
+      if (data.customerInsights) onCustomerInsights?.(data.customerInsights);
+      return false;
+    }
+
     if (event === "tool-call") {
       onToolCall(data);
+      if (data.customerInsights) onCustomerInsights?.(data.customerInsights);
       return false;
     }
 
     if (event === "tool-result") {
       onToolResult(data);
+      if (data.customerInsights) onCustomerInsights?.(data.customerInsights);
       return false;
     }
 
     if (event === "done") {
+      if (data.customerInsights) onCustomerInsights?.(data.customerInsights);
       onDone(data);
       return true;
     }

@@ -124,6 +124,7 @@ describe("thread history graph merging", () => {
     expect(mergedMessages[1]).toMatchObject({
       id: "saved-assistant-id",
       graphs: [liveGraph],
+      metadata: { graph: liveGraph, graphs: [liveGraph] },
     });
   });
 
@@ -150,6 +151,7 @@ describe("thread history graph merging", () => {
     expect(mergedMessages[1]).toMatchObject({
       id: "saved-assistant-id",
       graphs: [liveSalesGraph, liveGraph],
+      metadata: { graphs: [liveSalesGraph, liveGraph] },
     });
   });
 
@@ -189,8 +191,10 @@ describe("thread history graph merging", () => {
       id: "saved-assistant-id",
       content: "Saved text-only response",
       graphs: [liveSalesGraph, liveGraph],
+      metadata: { graphs: [liveSalesGraph, liveGraph] },
     });
   });
+
 });
 
 describe("AI assistant tool activity labels", () => {

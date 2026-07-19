@@ -28,12 +28,47 @@ export interface AiAssistantGraph {
   datasets: AiAssistantGraphDataset[];
 }
 
+/**
+ * A verified customer result returned by the AI customer tool. `profit` is
+ * intentionally optional because the backend only includes it when the
+ * assistant specifically asks for customer profit.
+ */
+export interface AiAssistantCustomerInsight {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  saleCount: number;
+  salesTotal: number;
+  paidSales: number;
+  salesBalance: number;
+  purchaseCount: number;
+  purchaseTotal: number;
+  paidPurchases: number;
+  purchaseBalance: number;
+  profit?: number;
+  createdAt: string;
+}
+
+export interface AiAssistantCustomerInsightsData {
+  customers: AiAssistantCustomerInsight[];
+  totalCount?: number;
+}
+
 export type AiAssistantToolStatus = "started" | "completed" | "failed";
 
 export interface AiAssistantToolEventData {
   toolCallId: string;
   toolName: string;
   status: AiAssistantToolStatus;
+  /** Human-readable progress/failure information when the backend supplies it. */
+  message?: string;
+  /**
+   * Present when a customer tool result is included in the event. Keeping
+   * customer data normalized here lets the UI support a single lookup, search
+   * results, and customer lists through the same callback.
+   */
+  customerInsights?: AiAssistantCustomerInsightsData;
 }
 
 export interface AiAssistantToolCallEventData
@@ -59,6 +94,8 @@ export interface AiAssistantDoneEventData {
   threadId: string;
   userMessageId: string;
   assistantMessageId: string;
+  /** Optional customer data included alongside a final assistant response. */
+  customerInsights?: AiAssistantCustomerInsightsData;
 }
 
 export interface AiAssistantErrorEventData {
@@ -68,6 +105,7 @@ export interface AiAssistantErrorEventData {
 }
 
 export type AiAssistantSseEvent =
+  | { event: "tool"; data: AiAssistantToolEventData }
   | { event: "tool-call"; data: AiAssistantToolCallEventData }
   | { event: "tool-result"; data: AiAssistantToolResultEventData }
   | { event: "chunk"; data: AiAssistantChunkEventData }

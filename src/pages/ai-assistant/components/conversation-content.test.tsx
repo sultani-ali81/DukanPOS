@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UiChatMessage } from "../ai-assistant.utils";
 import { MessageBubble } from "./conversation-content";
+import type { CustomerInsight } from "./customer-insights";
 
 vi.mock("./ai-assistant-chart", () => ({
   AiAssistantChart: ({ graph }: { graph: AiAssistantGraph }) => (
@@ -28,6 +29,22 @@ const profitGraph: AiAssistantGraph = {
   valueFormat: "currency",
   labels: ["Today"],
   datasets: [{ label: "Profit", data: [382.29] }],
+};
+
+const customerInsight: CustomerInsight = {
+  id: "customer-1",
+  name: "Amina Rahimi",
+  phone: "+93700123456",
+  address: "Kabul, Afghanistan",
+  saleCount: 7,
+  salesTotal: 15000,
+  paidSales: 12000,
+  salesBalance: 3000,
+  purchaseCount: 2,
+  purchaseTotal: 9000,
+  paidPurchases: 8000,
+  purchaseBalance: 1000,
+  createdAt: "2026-07-19T10:00:00.000Z",
 };
 
 function assistantMessage(
@@ -94,5 +111,23 @@ describe("MessageBubble", () => {
         .getAllByTestId("message-chart")
         .map((chart) => chart.textContent),
     ).toEqual(["Sales Today", "Profit Today"]);
+  });
+
+  it("renders supplied customer insights inside an assistant message", () => {
+    render(
+      <MessageBubble
+        message={{
+          ...assistantMessage({ content: "Customer summary" }),
+          customers: [customerInsight],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Customer summary")).toBeTruthy();
+    expect(screen.getByText("Amina Rahimi")).toBeTruthy();
+    expect(screen.getByText("AFN 15,000")).toBeTruthy();
+    expect(
+      screen.getByText("Sales balance (customer owes the store)"),
+    ).toBeTruthy();
   });
 });

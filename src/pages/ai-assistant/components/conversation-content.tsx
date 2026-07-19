@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { UiChatMessage } from "../ai-assistant.utils";
 import { AiAssistantChart } from "./ai-assistant-chart";
+import { CustomerInsights } from "./customer-insights";
 
 const promptStarters = [
   {
@@ -53,6 +54,8 @@ export function MessageBubble({
   const isStopped = message.status === "stopped";
   const isStreaming = message.status === "streaming";
   const hasCharts = !isUser && Boolean(message.graphs?.length);
+  const customerInsights = isUser ? undefined : message.customers;
+  const hasCustomerInsights = Boolean(customerInsights?.length);
 
   useEffect(() => {
     return () => {
@@ -97,7 +100,7 @@ export function MessageBubble({
       <div
         className={cn(
           "group/message relative min-w-0",
-          hasCharts
+          hasCharts || hasCustomerInsights
             ? "w-[calc(100%-2.75rem)] max-w-[960px]"
             : "max-w-[min(720px,85%)]",
         )}
@@ -142,6 +145,8 @@ export function MessageBubble({
               {message.errorMessage || "Failed to get assistant response."}
             </p>
           ) : null}
+
+          <CustomerInsights customers={customerInsights} />
 
           {message.graphs?.map((graph, index) => (
             <AiAssistantChart

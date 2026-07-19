@@ -32,7 +32,10 @@ import {
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { PurchasePaymentStatusBadge, PurchaseStatusBadge } from "./purchase-badges";
+import {
+  PurchasePaymentStatusBadge,
+  PurchaseStatusBadge,
+} from "./purchase-badges";
 
 function TableSkeleton() {
   return (
@@ -118,7 +121,9 @@ export function PurchasesClient() {
       );
     } catch (requestError: unknown) {
       toast.error(
-        status === "Done" ? "Could not complete purchase" : "Could not cancel purchase",
+        status === "Done"
+          ? "Could not complete purchase"
+          : "Could not cancel purchase",
         { description: extractError(requestError) },
       );
     } finally {
@@ -187,10 +192,8 @@ export function PurchasesClient() {
                 <TableRow className="bg-muted/40">
                   <TableHead className="pl-5">Purchase number</TableHead>
                   <TableHead>Supplier</TableHead>
-                  <TableHead>Inventory</TableHead>
                   <TableHead>Items</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Created</TableHead>
                   <TableHead>Purchase status</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -219,32 +222,32 @@ export function PurchasesClient() {
                       <TableCell className="max-w-48 truncate font-medium">
                         {purchase.customer?.name ?? "—"}
                       </TableCell>
-                      <TableCell className="max-w-44 truncate text-muted-foreground">
-                        {purchase.inventoryName ?? "—"}
-                      </TableCell>
                       <TableCell className="max-w-52 text-muted-foreground">
                         <span className="block truncate">
                           {purchase.items.length
                             ? purchase.items
-                                .map((item) => item.product?.name ?? "Unknown product")
+                                .map(
+                                  (item) =>
+                                    item.product?.name ?? "Unknown product",
+                                )
                                 .join(", ")
                             : "—"}
                         </span>
                         <span className="text-xs">
-                          {purchase.items.length} {purchase.items.length === 1 ? "item" : "items"}
+                          {purchase.items.length}{" "}
+                          {purchase.items.length === 1 ? "item" : "items"}
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {formatPurchaseDate(purchase.customDate)}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {formatPurchaseDateTime(purchase.createdAt)}
-                      </TableCell>
                       <TableCell>
                         <PurchaseStatusBadge status={purchase.status} />
                       </TableCell>
                       <TableCell>
-                        <PurchasePaymentStatusBadge status={purchase.paymentStatus} />
+                        <PurchasePaymentStatusBadge
+                          status={purchase.paymentStatus}
+                        />
                       </TableCell>
                       <TableCell className="text-right font-semibold tabular-nums">
                         {formatCurrency(purchase.totalPrice)}
@@ -311,7 +314,10 @@ export function PurchasesClient() {
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="h-32 animate-pulse rounded-lg bg-muted" />
+                  <div
+                    key={index}
+                    className="h-32 animate-pulse rounded-lg bg-muted"
+                  />
                 ))}
               </div>
             ) : purchases.length === 0 ? (
@@ -346,7 +352,8 @@ export function PurchasesClient() {
                       Purchase date: {formatPurchaseDate(purchase.customDate)}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {purchase.inventoryName ?? "No inventory"} · {purchase.items.length}{" "}
+                      {purchase.inventoryName ?? "No inventory"} ·{" "}
+                      {purchase.items.length}{" "}
                       {purchase.items.length === 1 ? "item" : "items"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -354,7 +361,9 @@ export function PurchasesClient() {
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <PurchaseStatusBadge status={purchase.status} />
-                      <PurchasePaymentStatusBadge status={purchase.paymentStatus} />
+                      <PurchasePaymentStatusBadge
+                        status={purchase.paymentStatus}
+                      />
                     </div>
                     <div className="mt-4 flex gap-2 border-t pt-3">
                       <Button

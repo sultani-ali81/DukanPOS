@@ -41,12 +41,31 @@ function handlers() {
   return {
     onChunk: vi.fn(),
     onGraph: vi.fn(),
+    onTool: vi.fn(),
+    onCustomerInsights: vi.fn(),
     onToolCall: vi.fn(),
     onToolResult: vi.fn(),
     onDone: vi.fn(),
     onError: vi.fn(),
   };
 }
+
+const customerInsight = {
+  id: "customer-1",
+  name: "Amina Rahimi",
+  phone: "+93700123456",
+  address: "Kabul, Afghanistan",
+  saleCount: 7,
+  salesTotal: 15000,
+  paidSales: 12000,
+  salesBalance: 3000,
+  purchaseCount: 2,
+  purchaseTotal: 9000,
+  paidPurchases: 8000,
+  purchaseBalance: 1000,
+  profit: 3200,
+  createdAt: "2026-07-19T10:00:00.000Z",
+};
 
 function getCapturedRequest(fetchMock: ReturnType<typeof vi.fn>) {
   const [input, init] = fetchMock.mock.calls[0] as [
@@ -165,7 +184,7 @@ describe("AI assistant streaming API", () => {
     expect(callbacks.onError).not.toHaveBeenCalled();
   });
 
-  it("reports tool-call and completed or failed tool-result events by toolCallId", async () => {
+  it("emits tool-call and completed or failed tool-result events by toolCallId", async () => {
     const events = [
       "event: tool-call",
       'data: {"toolCallId":"tool-1","toolName":"getDashboardStats","status":"started"}',
@@ -224,6 +243,135 @@ describe("AI assistant streaming API", () => {
     ]);
     expect(callbacks.onError).not.toHaveBeenCalled();
     expect(callbacks.onDone).toHaveBeenCalledOnce();
+  });
+
+  it("normalizes latest generic tool events and exposes customer tool results", async () => {
+    const events = [
+      "event: tool",
+      'data: {"name":"getCustomerSummary","status":"started"}',
+      "",
+      "event: tool",
+      `data: ${JSON.stringify({
+        name: "getCustomerSummary",
+        status: "completed",
+        output: { totalCount: 1, customers: [customerInsight] },
+      })}`,
+      "",
+      doneEvent(),
+    ].join("\n");
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([events]));
+    vi.stubGlobal("fetch", fetchMock);
+    const callbacks = handlers();
+
+    await askAssistantSseStream({
+      question: "Show Amina's customer information",
+      ...callbacks,
+    });
+
+    expect(callbacks.onTool.mock.calls).toEqual([
+      [
+        {
+          toolCallId: "getCustomerSummary",
+          toolName: "getCustomerSummary",
+          status: "started",
+        },
+      ],
+      [
+        {
+          toolCallId: "getCustomerSummary",
+          toolName: "getCustomerSummary",
+          status: "completed",
+          customerInsights: {
+            customers: [customerInsight],
+            totalCount: 1,
+          },
+        },
+      ],
+    ]);
+    expect(callbacks.onCustomerInsights).toHaveBeenCalledWith({
+      customers: [customerInsight],
+      totalCount: 1,
+    });
+    expect(callbacks.onToolCall).not.toHaveBeenCalled();
+    expect(callbacks.onToolResult).not.toHaveBeenCalled();
+    expect(callbacks.onDone).toHaveBeenCalledOnce();
+  });
+
+  it("extracts customer insight data from legacy tool-result and final-response wrappers", async () => {
+    const finalPayload = {
+      content: "Amina has an outstanding sales balance.",
+      threadId: "thread-1",
+      userMessageId: "user-message-1",
+      assistantMessageId: "assistant-message-1",
+      data: { totalCount: 1, customers: [customerInsight] },
+    };
+    const events = [
+      "event: tool-result",
+      `data: ${JSON.stringify({
+        toolCallId: "tool-1",
+        toolName: "getCustomerSummary",
+        status: "completed",
+        output: { result: { customer: customerInsight } },
+      })}`,
+      "",
+      "event: done",
+      `data: ${JSON.stringify(finalPayload)}`,
+      "",
+    ].join("\n");
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([events]));
+    vi.stubGlobal("fetch", fetchMock);
+    const callbacks = handlers();
+
+    await askAssistantSseStream({
+      question: "What does Amina owe?",
+      ...callbacks,
+    });
+
+    expect(callbacks.onToolResult).toHaveBeenCalledWith({
+      toolCallId: "tool-1",
+      toolName: "getCustomerSummary",
+      status: "completed",
+      customerInsights: { customers: [customerInsight] },
+    });
+    expect(callbacks.onCustomerInsights.mock.calls).toEqual([
+      [{ customers: [customerInsight] }],
+      [{ customers: [customerInsight], totalCount: 1 }],
+    ]);
+    expect(callbacks.onDone).toHaveBeenCalledWith({
+      content: "Amina has an outstanding sales balance.",
+      threadId: "thread-1",
+      userMessageId: "user-message-1",
+      assistantMessageId: "assistant-message-1",
+      customerInsights: { customers: [customerInsight], totalCount: 1 },
+    });
+  });
+
+  it("does not expose malformed customer objects as customer insights", async () => {
+    const events = [
+      "event: tool",
+      `data: ${JSON.stringify({
+        name: "getCustomerSummary",
+        status: "completed",
+        output: { customers: [{ id: "incomplete-customer", name: "Amina" }] },
+      })}`,
+      "",
+      doneEvent(),
+    ].join("\n");
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([events]));
+    vi.stubGlobal("fetch", fetchMock);
+    const callbacks = handlers();
+
+    await askAssistantSseStream({
+      question: "Find an incomplete customer",
+      ...callbacks,
+    });
+
+    expect(callbacks.onTool).toHaveBeenCalledWith({
+      toolCallId: "getCustomerSummary",
+      toolName: "getCustomerSummary",
+      status: "completed",
+    });
+    expect(callbacks.onCustomerInsights).not.toHaveBeenCalled();
   });
 
   it("lets done content replace the accumulated draft as authoritative", async () => {
@@ -304,7 +452,7 @@ describe("AI assistant streaming API", () => {
     });
   });
 
-  it("preserves partial content and reports a terminal SSE error", async () => {
+  it("preserves partial content and handles a terminal SSE error", async () => {
     const response = [
       "event: chunk",
       'data: {"content":"Partial answer"}',

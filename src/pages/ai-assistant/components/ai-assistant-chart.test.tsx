@@ -1,18 +1,35 @@
 import type { AiAssistantGraph } from "@/types/ai-assistant";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatAiAssistantChartValue } from "../ai-assistant-chart.utils";
 import { AiAssistantChart } from "./ai-assistant-chart";
 
+type PieDatum = {
+  label?: string;
+  value?: number;
+};
+
+type PieEventHandler = (
+  data: PieDatum,
+  index: number,
+  event: unknown,
+) => void;
+
 type RechartsMockProps = {
   children?: ReactNode;
+  data?: PieDatum[];
   dataKey?: string;
   fill?: string;
   innerRadius?: string | number;
   name?: string;
+  onClick?: PieEventHandler;
+  onMouseEnter?: PieEventHandler;
+  onMouseLeave?: () => void;
+  opacity?: number;
   outerRadius?: string | number;
   stroke?: string;
+  strokeWidth?: number;
   value?: string;
 };
 
@@ -38,13 +55,23 @@ vi.mock("recharts", () => ({
   LineChart: ({ children }: RechartsMockProps) => (
     <div data-testid="line-chart">{children}</div>
   ),
-  Cell: ({ fill }: RechartsMockProps) => (
-    <div data-testid="pie-slice" data-fill={fill} />
+  Cell: ({ fill, opacity, stroke, strokeWidth }: RechartsMockProps) => (
+    <div
+      data-testid="pie-slice"
+      data-fill={fill}
+      data-opacity={opacity}
+      data-stroke={stroke}
+      data-stroke-width={strokeWidth}
+    />
   ),
   Pie: ({
     children,
+    data,
     fill,
     innerRadius,
+    onClick,
+    onMouseEnter,
+    onMouseLeave,
     outerRadius,
   }: RechartsMockProps) => (
     <div
@@ -52,6 +79,9 @@ vi.mock("recharts", () => ({
       data-fill={fill}
       data-inner-radius={innerRadius}
       data-outer-radius={outerRadius}
+      onClick={(event) => onClick?.(data?.[0] ?? {}, 0, event)}
+      onMouseEnter={(event) => onMouseEnter?.(data?.[0] ?? {}, 0, event)}
+      onMouseLeave={() => onMouseLeave?.()}
     >
       {children}
     </div>
@@ -121,7 +151,7 @@ describe("AiAssistantChart", () => {
       "#16a34a",
     );
     expect(screen.getByText("Today")).toBeTruthy();
-    expect(screen.getByText("AFN 118")).toBeTruthy();
+    expect(screen.getAllByText("AFN 118").length).toBeGreaterThan(0);
   });
 
   it("keeps Cartesian labels and the series legend outside the Recharts drawing area", () => {
@@ -175,6 +205,57 @@ describe("AiAssistantChart", () => {
     ).toEqual(initialColors);
   });
 
+  it("renders one customer paid-sales and profit bar chart with accessible AFN data", () => {
+    const customerPaidSalesAndProfit = {
+      type: "bar",
+      title: "Customer paid sales and profit",
+      xAxisLabel: "Customer",
+      yAxisLabel: "Amount",
+      valueFormat: "currency",
+      labels: ["Ahmad", "Fatima"],
+      datasets: [
+        {
+          label: "Paid sales",
+          data: [1250, 975],
+        },
+        {
+          label: "Profit",
+          data: [385.5, 260.25],
+        },
+      ],
+    } satisfies AiAssistantGraph;
+
+    render(<AiAssistantChart graph={customerPaidSalesAndProfit} />);
+
+    expect(screen.getAllByTestId("ai-assistant-chart")).toHaveLength(1);
+    expect(screen.getAllByTestId("bar-chart")).toHaveLength(1);
+
+    const series = screen.getAllByTestId("bar-series");
+    expect(series).toHaveLength(2);
+    expect(series.map((item) => item.textContent)).toEqual([
+      "Paid sales",
+      "Profit",
+    ]);
+
+    const colors = series.map((item) => item.getAttribute("data-color"));
+    expect(colors.every(Boolean)).toBe(true);
+    expect(new Set(colors).size).toBe(2);
+
+    const accessibleData = screen.getByRole("table", {
+      name: "Customer paid sales and profit chart data",
+    });
+    expect(accessibleData.textContent).toContain("AFN 1,250");
+    expect(accessibleData.textContent).toContain("AFN 975");
+    expect(accessibleData.textContent).toContain("AFN 385.5");
+    expect(accessibleData.textContent).toContain("AFN 260.25");
+    expect(screen.getByTestId("chart-series-legend").textContent).toContain(
+      "AFN 2,225",
+    );
+    expect(screen.getByTestId("chart-series-legend").textContent).toContain(
+      "AFN 645.75",
+    );
+  });
+
   it("formats currency and number values with the expected app formatters", () => {
     expect(formatAiAssistantChartValue(118, "currency")).toBe("AFN 118");
     expect(formatAiAssistantChartValue(1234.56, "number")).toBe(
@@ -201,12 +282,12 @@ describe("AiAssistantChart", () => {
     );
 
     expect(
-      screen.getByText(
+      screen.getAllByText(
         new Intl.NumberFormat(undefined, {
           maximumFractionDigits: 20,
         }).format(1234.56),
-      ),
-    ).toBeTruthy();
+      ).length,
+    ).toBeGreaterThan(0);
   });
 
   it("handles empty, invalid, and mismatched data without crashing", () => {
@@ -274,6 +355,56 @@ describe("AiAssistantChart", () => {
     expect(screen.getByTestId("chart-slice-legend").textContent).toContain(
       "Oil",
     );
+    expect(screen.getByTestId("chart-slice-legend").textContent).toContain(
+      "AFN 50",
+    );
+  });
+
+  it("lets users inspect and select a circular slice from the chart or legend", () => {
+    render(
+      <AiAssistantChart
+        graph={graph({
+          type: "doughnut",
+          labels: ["Rice", "Flour", "Oil"],
+          datasets: [
+            {
+              label: "Quantity sold",
+              data: [50, 30, 20],
+              color: "#2563eb",
+            },
+          ],
+        })}
+      />,
+    );
+
+    const centerSummary = screen.getByTestId("doughnut-center-summary");
+    expect(centerSummary.textContent).toContain("Total");
+    expect(centerSummary.textContent).toContain("AFN 100");
+
+    fireEvent.mouseEnter(screen.getByTestId("pie-series"));
+
+    expect(centerSummary.textContent).toContain("Rice");
+    expect(centerSummary.textContent).toContain("AFN 50");
+    expect(centerSummary.textContent).toContain("50%");
+    expect(screen.getAllByTestId("pie-slice")[0]?.getAttribute("data-opacity")).toBe(
+      "1",
+    );
+    expect(screen.getAllByTestId("pie-slice")[1]?.getAttribute("data-opacity")).toBe(
+      "0.48",
+    );
+
+    const riceLegendItem = screen.getByRole("button", {
+      name: "Show Rice: AFN 50 (50%)",
+    });
+    fireEvent.click(riceLegendItem);
+    fireEvent.mouseLeave(riceLegendItem);
+
+    expect(riceLegendItem.getAttribute("aria-pressed")).toBe("true");
+    expect(centerSummary.textContent).toContain("Rice");
+
+    fireEvent.click(riceLegendItem);
+    expect(riceLegendItem.getAttribute("aria-pressed")).toBe("false");
+    expect(centerSummary.textContent).toContain("Total");
   });
 
   it("keeps the chart responsive on mobile and desktop breakpoints", () => {

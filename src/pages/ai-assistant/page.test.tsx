@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/lib/store";
 import type {
+  AiAssistantCustomerInsight,
   AiAssistantGraph,
   AiChatMessage,
   AiChatThreadDetail,
@@ -116,11 +117,21 @@ vi.mock("./components/conversation-panel", () => ({
             data-testid={`${message.role}-message`}
             data-message-id={message.id}
             data-status={message.status}
+            data-graph-metadata-count={
+              Array.isArray(message.metadata?.graphs)
+                ? message.metadata.graphs.length
+                : 0
+            }
           >
             {message.content}
             {message.graphs?.map((graph, index) => (
               <span key={`${graph.title}-${index}`} data-testid="message-graph">
                 {graph.title}
+              </span>
+            ))}
+            {message.customers?.map((customer) => (
+              <span key={customer.id} data-testid="message-customer">
+                {customer.name}
               </span>
             ))}
             {message.errorMessage ? (
@@ -269,6 +280,23 @@ const sampleSalesGraph: AiAssistantGraph = {
   ],
 };
 
+const sampleCustomerInsight: AiAssistantCustomerInsight = {
+  id: "customer-amina",
+  name: "Amina Rahimi",
+  phone: "+93700123456",
+  address: "Kabul, Afghanistan",
+  saleCount: 7,
+  salesTotal: 15000,
+  paidSales: 12000,
+  salesBalance: 3000,
+  purchaseCount: 2,
+  purchaseTotal: 9000,
+  paidPurchases: 8000,
+  purchaseBalance: 1000,
+  profit: 3200,
+  createdAt: "2026-07-19T10:00:00.000Z",
+};
+
 describe("AI assistant page streaming flow", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -336,6 +364,9 @@ describe("AI assistant page streaming flow", () => {
       streamOptions.onGraph?.({ graph: sampleGraph });
     });
     expect(renderedGraphTitles()).toEqual(["Sales Today", "Profit Today"]);
+    expect(
+      lastMessage("assistant").getAttribute("data-graph-metadata-count"),
+    ).toBe("2");
 
     await act(async () => {
       streamOptions.onChunk("Draft response");
@@ -388,6 +419,67 @@ describe("AI assistant page streaming flow", () => {
         "Authoritative answer",
       );
       expect(renderedGraphTitles()).toEqual(["Sales Today", "Profit Today"]);
+    });
+  });
+
+  it("keeps customer tool data attached while the answer streams", async () => {
+    const stream = deferred<void>();
+    queryMocks.getAiChatThreads.mockResolvedValue([]);
+    queryMocks.askAssistantSseStream.mockImplementation(
+      () => stream.promise,
+    );
+
+    renderPage();
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByLabelText("Ask the AI assistant"),
+      "Show Amina's paid sales and profit",
+    );
+    await user.click(screen.getByText("Send question"));
+
+    const streamOptions = latestStreamOptions();
+    await act(async () => {
+      streamOptions.onTool?.({
+        toolCallId: "getCustomerSummary",
+        toolName: "getCustomerSummary",
+        status: "started",
+        message: "Looking up customer details…",
+      });
+      streamOptions.onCustomerInsights?.({
+        customers: [sampleCustomerInsight],
+      });
+    });
+
+    expect(screen.getByText("Looking up customer details…")).toBeTruthy();
+    expect(lastMessage("assistant").getAttribute("data-status")).toBe(
+      "streaming",
+    );
+    expect(screen.getByTestId("message-customer").textContent).toBe(
+      "Amina Rahimi",
+    );
+
+    await act(async () => {
+      streamOptions.onDone({
+        content: "Amina has paid AFN 12,000 and generated AFN 3,200 profit.",
+        threadId: "customer-thread",
+        userMessageId: "customer-user",
+        assistantMessageId: "customer-assistant",
+      });
+    });
+
+    expect(lastMessage("assistant").getAttribute("data-status")).toBe(
+      "completed",
+    );
+    expect(lastMessage("assistant").textContent).toContain(
+      "Amina has paid AFN 12,000",
+    );
+    expect(screen.getByTestId("message-customer").textContent).toBe(
+      "Amina Rahimi",
+    );
+
+    await act(async () => {
+      stream.resolve();
+      await stream.promise;
     });
   });
 
