@@ -56,7 +56,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-dvh overflow-hidden gap-2.5 bg-gray-300 p-2.5">
       {/* Desktop sidebar */}
-      <aside className="hidden h-full w-64 shrink-0 rounded-lg bg-white lg:block">
+      <aside className="hidden h-full w-64 shrink-0 overflow-hidden p-1 rounded-lg bg-white lg:block">
         <SidebarNav />
       </aside>
 

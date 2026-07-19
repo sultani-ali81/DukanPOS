@@ -62,7 +62,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 pt-3 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 overflow-y-auto">
         {aiAssistantItem && (
           <>
             {renderNavItem(aiAssistantItem)}
