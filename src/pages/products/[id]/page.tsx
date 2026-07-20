@@ -285,7 +285,7 @@ export default function ProductDetailPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 items-center px-2.5 text-xs"
+                      className="h-7 px-2.5 text-xs"
                       onClick={() => setStockDialogOpen(true)}
                     >
                       View
