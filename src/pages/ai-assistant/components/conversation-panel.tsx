@@ -221,7 +221,7 @@ export function ConversationPanel({
               aria-label="Ask the AI assistant"
               placeholder="Ask about sales, profit, stock, or cashier performance..."
               disabled={isStreaming || threadLoading}
-              className="max-h-32 min-h-12 resize-none rounded-xl bg-white"
+              className="max-h-32 min-h-10 resize-none rounded-md bg-white"
             />
             {isStreaming ? (
               <Button
