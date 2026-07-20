@@ -64,7 +64,7 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
   const { mutate: mutateCache } = useSWRConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
@@ -186,7 +186,7 @@ export default function ProductDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Images */}
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader>
             <CardTitle>Images</CardTitle>
           </CardHeader>
@@ -212,12 +212,16 @@ export default function ProductDetailPage() {
                   )}
                 </div>
                 {images.length > 1 && (
-                  <div className="flex gap-2">
+                  <div
+                    className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-2"
+                    aria-label="Product image thumbnails"
+                  >
                     {images.map((img, i) => (
                       <button
                         key={img.id}
                         type="button"
                         onClick={() => setActiveImage(i)}
+                        aria-label={`View product image ${i + 1}`}
                         className={cn(
                           "size-14 shrink-0 overflow-hidden rounded-md border-2 transition-colors",
                           i === activeImage
@@ -256,8 +260,16 @@ export default function ProductDetailPage() {
         <div className="flex flex-col gap-6 lg:col-span-3">
           {/* Summary */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Summary</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setBarcodeDialogOpen(true)}
+              >
+                View Barcode
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -274,23 +286,8 @@ export default function ProductDetailPage() {
                   </p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Total Stock
-                      </p>
-                      <p className="mt-1 font-semibold">{totalStock} units</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2.5 text-xs"
-                      onClick={() => setStockDialogOpen(true)}
-                    >
-                      View
-                    </Button>
-                  </div>
+                  <p className="text-xs text-muted-foreground">Total Stock</p>
+                  <p className="mt-1 font-semibold">{totalStock} units</p>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Status</p>
@@ -309,10 +306,59 @@ export default function ProductDetailPage() {
             </CardContent>
           </Card>
 
-          <ProductBarcode
-            productCode={product.productCode}
-            productName={product.name}
-          />
+          <Card className="overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Boxes className="size-4 text-muted-foreground" />
+                Stock by Inventory
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {inventories.length === 0 ? (
+                <p className="px-6 pb-6 text-sm text-muted-foreground">
+                  This product isn't stocked in any inventory yet.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="py-3 pl-6">Inventory</TableHead>
+                      <TableHead className="py-3 pr-6 text-right">
+                        Quantity
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inventories.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="py-3 pl-6">{inv.name}</TableCell>
+                        <TableCell className="py-3 pr-6 text-right tabular-nums">
+                          <span
+                            className={cn(
+                              "font-medium",
+                              getStockStatus(inv.quantity) === "Out of Stock"
+                                ? "text-red-500"
+                                : getStockStatus(inv.quantity) === "Low Stock"
+                                  ? "text-orange-500"
+                                  : "text-green-500",
+                            )}
+                          >
+                            {inv.quantity}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="border-t-2 font-semibold">
+                      <TableCell className="py-3 pl-6">Total</TableCell>
+                      <TableCell className="py-3 pr-6 text-right tabular-nums">
+                        {totalStock}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -326,63 +372,18 @@ export default function ProductDetailPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={stockDialogOpen} onOpenChange={setStockDialogOpen}>
-        <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
-          <DialogHeader className="px-6 pt-6">
-            <DialogTitle className="flex items-center gap-2">
-              <Boxes className="size-4 text-muted-foreground" />
-              Stock by Inventory
-            </DialogTitle>
+      <Dialog open={barcodeDialogOpen} onOpenChange={setBarcodeDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Product Barcode</DialogTitle>
             <DialogDescription>
-              Current stock distribution for {product.name}.
+              View or print the barcode label for {product.name}.
             </DialogDescription>
           </DialogHeader>
-
-          {inventories.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-muted-foreground">
-              This product isn't stocked in any inventory yet.
-            </p>
-          ) : (
-            <div className="max-h-[55vh] overflow-y-auto border-t">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="py-3 pl-6">Inventory</TableHead>
-                    <TableHead className="py-3 pr-6 text-right">
-                      Quantity
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inventories.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell className="py-3 pl-6">{inv.name}</TableCell>
-                      <TableCell className="py-3 pr-6 text-right tabular-nums">
-                        <span
-                          className={cn(
-                            "font-medium",
-                            getStockStatus(inv.quantity) === "Out of Stock"
-                              ? "text-red-500"
-                              : getStockStatus(inv.quantity) === "Low Stock"
-                                ? "text-orange-500"
-                                : "text-green-500",
-                          )}
-                        >
-                          {inv.quantity}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="border-t-2 font-semibold">
-                    <TableCell className="py-3 pl-6">Total</TableCell>
-                    <TableCell className="py-3 pr-6 text-right tabular-nums">
-                      {totalStock}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <ProductBarcode
+            productCode={product.productCode}
+            productName={product.name}
+          />
         </DialogContent>
       </Dialog>
 

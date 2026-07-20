@@ -2,10 +2,18 @@ import { useAuditLogs } from "@/hooks/use-audit-log";
 import { usePagination } from "@/hooks/use-pagination";
 import type { AuditLog } from "@/types/audit";
 import { AuditEntityType } from "@/types/audit";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react";
 import { Fragment, useState } from "react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { Pagination } from "./ui/pagination";
 import {
   Select,
@@ -22,6 +30,12 @@ import {
   TableHeader,
   TableRow,
 } from "./ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 import { formatAuditRecord } from "@/lib/audit-format";
 import {
@@ -52,9 +66,53 @@ function formatDate(dateStr: string) {
   });
 }
 
+const AUDIT_VALUE_PREVIEW_LENGTH = 80;
+
+function AuditValuePreview({
+  label,
+  value,
+  onView,
+}: {
+  label: string;
+  value: string;
+  onView: () => void;
+}) {
+  const isLong = value.length > AUDIT_VALUE_PREVIEW_LENGTH;
+
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      {isLong && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="size-7 shrink-0"
+              aria-label={`View all ${label.toLowerCase()} values`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onView();
+              }}
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>View all</TooltipContent>
+        </Tooltip>
+      )}
+      <span className="min-w-0 truncate">{value}</span>
+    </div>
+  );
+}
+
 export default function LogsTable({ entityId }: LogsTableProps) {
   const [type, setType] = useState<AuditEntityType | undefined>(undefined);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [detail, setDetail] = useState<{
+    label: string;
+    value: string;
+  } | null>(null);
   const { page, goToPage, itemsPerPage } = usePagination();
 
   const { logs, meta, isLoading, error } = useAuditLogs({
@@ -78,7 +136,8 @@ export default function LogsTable({ entityId }: LogsTableProps) {
   }
 
   return (
-    <div>
+    <TooltipProvider>
+      <div>
       {!entityId && (
         <div className="flex items-center justify-between p-3">
           <Select
@@ -102,15 +161,17 @@ export default function LogsTable({ entityId }: LogsTableProps) {
         </div>
       )}
 
-      <Table>
+      <Table className="table-fixed min-w-[760px]">
         <TableHeader>
           <TableRow className="bg-gray-200">
-            <TableHead className="p-3 w-8" />
-            <TableHead className="p-3 font-semibold">Employee</TableHead>
-            <TableHead className="p-3 font-semibold">Action</TableHead>
-            <TableHead className="p-3 font-semibold">Before</TableHead>
-            <TableHead className="p-3 font-semibold">After</TableHead>
-            <TableHead className="p-3 font-semibold">Date</TableHead>
+            <TableHead className="w-10 p-3" />
+            <TableHead className="w-[18%] p-3 font-semibold">
+              Employee
+            </TableHead>
+            <TableHead className="w-[12%] p-3 font-semibold">Action</TableHead>
+            <TableHead className="w-[25%] p-3 font-semibold">Before</TableHead>
+            <TableHead className="w-[25%] p-3 font-semibold">After</TableHead>
+            <TableHead className="w-[16%] p-3 font-semibold">Date</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -139,6 +200,8 @@ export default function LogsTable({ entityId }: LogsTableProps) {
           {logs.map((log: AuditLog) => {
             const hasMovement = !!(log.stockIn || log.stockOut);
             const isExpanded = expandedIds.has(log.id);
+            const before = formatAuditRecord(log.before);
+            const after = formatAuditRecord(log.after);
 
             return (
               <Fragment key={log.id}>
@@ -175,11 +238,19 @@ export default function LogsTable({ entityId }: LogsTableProps) {
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="p-3 text-sm text-muted-foreground">
-                    {formatAuditRecord(log.before)}
+                  <TableCell className="overflow-hidden p-3 text-sm text-muted-foreground">
+                    <AuditValuePreview
+                      label="Before"
+                      value={before}
+                      onView={() => setDetail({ label: "Before", value: before })}
+                    />
                   </TableCell>
-                  <TableCell className="p-3 text-sm">
-                    {formatAuditRecord(log.after)}
+                  <TableCell className="overflow-hidden p-3 text-sm">
+                    <AuditValuePreview
+                      label="After"
+                      value={after}
+                      onView={() => setDetail({ label: "After", value: after })}
+                    />
                   </TableCell>
                   <TableCell className="p-3 text-muted-foreground">
                     {formatDate(log.createdAt)}
@@ -211,6 +282,23 @@ export default function LogsTable({ entityId }: LogsTableProps) {
           />
         </div>
       )}
-    </div>
+
+        <Dialog open={!!detail} onOpenChange={(open) => !open && setDetail(null)}>
+          <DialogContent className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>{detail?.label} values</DialogTitle>
+              <DialogDescription>
+                Complete audit-log value for this change.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-y-auto rounded-lg border bg-muted/30 p-4">
+              <p className="break-words whitespace-pre-wrap text-sm leading-relaxed">
+                {detail?.value}
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }

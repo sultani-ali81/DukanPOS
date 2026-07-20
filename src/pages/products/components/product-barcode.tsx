@@ -49,7 +49,7 @@ export function ProductBarcode({
   }
 
   return (
-    <section className={cn("rounded-lg border bg-white m-6 p-3", className)}>
+    <section className={cn("rounded-lg border bg-white  p-3", className)}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-foreground">Product Barcode</p>
