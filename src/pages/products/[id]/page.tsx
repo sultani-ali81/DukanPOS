@@ -12,6 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -57,6 +64,7 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
   const { mutate: mutateCache } = useSWRConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
@@ -242,15 +250,10 @@ export default function ProductDetailPage() {
                 <p className="text-sm">No images uploaded.</p>
               </div>
             )}
-            <ProductBarcode
-              productCode={product.productCode}
-              productName={product.name}
-              className="mt-4"
-            />
           </CardContent>
         </Card>
 
-        <div className="gap-6 lg:col-span-3 lg:flex-col">
+        <div className="flex flex-col gap-6 lg:col-span-3">
           {/* Summary */}
           <Card>
             <CardHeader>
@@ -271,8 +274,23 @@ export default function ProductDetailPage() {
                   </p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Total Stock</p>
-                  <p className="mt-1 font-semibold">{totalStock} units</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Total Stock
+                      </p>
+                      <p className="mt-1 font-semibold">{totalStock} units</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 items-center px-2.5 text-xs"
+                      onClick={() => setStockDialogOpen(true)}
+                    >
+                      View
+                    </Button>
+                  </div>
                 </div>
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Status</p>
@@ -291,60 +309,10 @@ export default function ProductDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Stock by location */}
-          <Card className="lg:col-span-2 mt-6 overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Boxes className="size-4 text-muted-foreground" />
-                Stock by Inventory
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {inventories.length === 0 ? (
-                <p className="px-6 pb-6 text-sm text-muted-foreground">
-                  This product isn't stocked in any inventory yet.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="py-3 pl-6">Inventory</TableHead>
-                      <TableHead className="py-3 pr-6 text-right">
-                        Quantity
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventories.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="py-3 pl-6">{inv.name}</TableCell>
-                        <TableCell className="py-3 pr-6 text-right tabular-nums">
-                          <span
-                            className={cn(
-                              "font-medium",
-                              getStockStatus(inv.quantity) === "Out of Stock"
-                                ? "text-red-500"
-                                : getStockStatus(inv.quantity) === "Low Stock"
-                                  ? "text-orange-500"
-                                  : "text-green-500",
-                            )}
-                          >
-                            {inv.quantity}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="border-t-2 font-semibold">
-                      <TableCell className="py-3 pl-6">Total</TableCell>
-                      <TableCell className="py-3 pr-6 text-right tabular-nums">
-                        {totalStock}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <ProductBarcode
+            productCode={product.productCode}
+            productName={product.name}
+          />
         </div>
       </div>
 
@@ -357,6 +325,66 @@ export default function ProductDetailPage() {
           <LogsTable entityId={product.id} />
         </CardContent>
       </Card>
+
+      <Dialog open={stockDialogOpen} onOpenChange={setStockDialogOpen}>
+        <DialogContent className="overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle className="flex items-center gap-2">
+              <Boxes className="size-4 text-muted-foreground" />
+              Stock by Inventory
+            </DialogTitle>
+            <DialogDescription>
+              Current stock distribution for {product.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {inventories.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-muted-foreground">
+              This product isn't stocked in any inventory yet.
+            </p>
+          ) : (
+            <div className="max-h-[55vh] overflow-y-auto border-t">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="py-3 pl-6">Inventory</TableHead>
+                    <TableHead className="py-3 pr-6 text-right">
+                      Quantity
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inventories.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="py-3 pl-6">{inv.name}</TableCell>
+                      <TableCell className="py-3 pr-6 text-right tabular-nums">
+                        <span
+                          className={cn(
+                            "font-medium",
+                            getStockStatus(inv.quantity) === "Out of Stock"
+                              ? "text-red-500"
+                              : getStockStatus(inv.quantity) === "Low Stock"
+                                ? "text-orange-500"
+                                : "text-green-500",
+                          )}
+                        >
+                          {inv.quantity}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="border-t-2 font-semibold">
+                    <TableCell className="py-3 pl-6">Total</TableCell>
+                    <TableCell className="py-3 pr-6 text-right tabular-nums">
+                      {totalStock}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ProductDialog
         open={dialogOpen}
