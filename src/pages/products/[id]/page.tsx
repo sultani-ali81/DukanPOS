@@ -25,6 +25,7 @@ import { formatCurrency } from "@/lib/currency";
 import { extractError } from "@/lib/error";
 import { getStockStatus } from "@/lib/stock-status";
 import { cn } from "@/lib/utils";
+import { ProductBarcode } from "@/pages/products/components/product-barcode";
 import { ProductDialog } from "@/pages/products/components/product-dialog";
 import { getCategories } from "@/queries/category";
 import {
@@ -65,9 +66,8 @@ export default function ProductDetailPage() {
     data: product,
     isLoading,
     error: productError,
-  } = useSWR(
-    id ? (["product-detail", id] as const) : null,
-    ([, productId]) => getProductById(productId),
+  } = useSWR(id ? (["product-detail", id] as const) : null, ([, productId]) =>
+    getProductById(productId),
   );
   const { data: categoriesData } = useSWR(
     dialogOpen ? PRODUCT_CATEGORIES_KEY : null,
@@ -242,6 +242,11 @@ export default function ProductDetailPage() {
                 <p className="text-sm">No images uploaded.</p>
               </div>
             )}
+            <ProductBarcode
+              productCode={product.productCode}
+              productName={product.name}
+              className="mt-4"
+            />
           </CardContent>
         </Card>
 
@@ -376,8 +381,8 @@ export default function ProductDetailPage() {
         <AlertDialogContent className="max-w-sm rounded-2xl">
           <AlertDialogTitle>Delete product?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{product.name}"? This action
-            cannot be undone.
+            Are you sure you want to delete "{product.name}"? This action cannot
+            be undone.
           </AlertDialogDescription>
           <div className="flex gap-2 pt-1">
             <AlertDialogCancel className="flex-1" disabled={deleting}>
@@ -392,9 +397,7 @@ export default function ProductDetailPage() {
                 void handleDelete();
               }}
             >
-              {deleting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
+              {deleting ? <Loader2 className="size-4 animate-spin" /> : null}
               {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </div>

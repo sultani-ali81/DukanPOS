@@ -57,6 +57,7 @@ import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 
 import { CategoryDialog } from "@/pages/categories/components/category-dialog";
+import { ProductBarcode } from "@/pages/products/components/product-barcode";
 // ^ adjust this path to match where category-dialog.tsx actually lives in your project
 
 interface ProductDialogProps {
@@ -493,6 +494,13 @@ export function ProductDialog({
                 </p>
               )}
             </div>
+
+            {isEdit && (
+              <ProductBarcode
+                productCode={editingProduct.productCode}
+                productName={editingProduct.name}
+              />
+            )}
 
             <div className="grid gap-2">
               <div className="flex items-center justify-between gap-3">

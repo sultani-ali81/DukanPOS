@@ -2,7 +2,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  barcode?: string;
+  productCode?: string;
   category?: string;
   categoryId?: string;
   categories?: ProductCategory[];
