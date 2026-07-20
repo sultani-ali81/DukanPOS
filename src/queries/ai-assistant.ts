@@ -6,7 +6,9 @@ import type {
   AiAssistantCustomerInsightsData,
   AiAssistantDoneEventData,
   AiAssistantErrorEventData,
+  AiAssistantAttachment,
   AiAssistantGraphEventData,
+  AiAssistantPdfEventData,
   AiAssistantSseEvent,
   AiAssistantToolEventData,
   AiAssistantToolCallEventData,
@@ -33,6 +35,8 @@ type AskAssistantSseStreamOptions = {
   threadId?: string;
   onChunk: (content: string) => void;
   onGraph?: (data: AiAssistantGraphEventData) => void;
+  /** PDF-generation progress and ready report attachments. */
+  onPdf?: (data: AiAssistantPdfEventData) => void;
   /** Latest backend progress event (`event: tool`). */
   onTool?: (data: AiAssistantToolEventData) => void;
   /**
@@ -137,6 +141,15 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isSafeSignedUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function getOptionalText(value: Record<string, unknown>) {
   return isNonEmptyString(value.message)
     ? value.message
@@ -151,6 +164,44 @@ function getOptionalTotalCount(value: Record<string, unknown>) {
     value.totalCount >= 0
     ? value.totalCount
     : undefined;
+}
+
+/**
+ * Validates a stored report attachment before it is exposed to the chat UI.
+ * This is also exported for history metadata, which is untyped at runtime.
+ */
+export function parseAiAssistantAttachment(
+  value: unknown,
+): AiAssistantAttachment | null {
+  if (!isRecord(value)) return null;
+
+  const { id, fileName, mimeType, signedUrl } = value;
+  if (
+    !isNonEmptyString(id) ||
+    !isNonEmptyString(fileName) ||
+    !isNonEmptyString(mimeType) ||
+    !isNonEmptyString(signedUrl) ||
+    !isSafeSignedUrl(signedUrl)
+  ) {
+    return null;
+  }
+
+  return { id, fileName, mimeType, signedUrl };
+}
+
+/**
+ * Returns `null` for malformed attachment collections so callers never render
+ * unvalidated URLs from persisted assistant-message metadata.
+ */
+export function parseAiAssistantAttachments(
+  value: unknown,
+): AiAssistantAttachment[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const attachments = value.map(parseAiAssistantAttachment);
+  return attachments.some((attachment) => attachment === null)
+    ? null
+    : (attachments as AiAssistantAttachment[]);
 }
 
 /**
@@ -305,6 +356,30 @@ function parseToolStatus(value: unknown): AiAssistantToolStatus | null {
     : null;
 }
 
+function parseAiAssistantPdfEvent(
+  value: Record<string, unknown>,
+): AiAssistantPdfEventData | null {
+  if (value.status !== "generating" && value.status !== "ready") return null;
+
+  const title = isNonEmptyString(value.title) ? value.title : undefined;
+
+  if (value.status === "generating") {
+    return {
+      status: "generating",
+      ...(title ? { title } : {}),
+    };
+  }
+
+  const attachment = parseAiAssistantAttachment(value.attachment);
+  return attachment
+    ? {
+        status: "ready",
+        ...(title ? { title } : {}),
+        attachment,
+      }
+    : null;
+}
+
 function getToolEventData(
   value: Record<string, unknown>,
   options: { requireCallId: boolean; status?: AiAssistantToolStatus },
@@ -376,6 +451,11 @@ function parseEventData(
       : invalidStreamEvent();
   }
 
+  if (eventName === "pdf") {
+    const data = parseAiAssistantPdfEvent(value);
+    return data ? { event: "pdf", data } : invalidStreamEvent();
+  }
+
   if (eventName === "tool") {
     const data = getToolEventData(value, { requireCallId: false });
     return data ? { event: "tool", data } : invalidStreamEvent();
@@ -402,10 +482,15 @@ function parseEventData(
 
   if (eventName === "done") {
     const customerInsights = extractAiAssistantCustomerInsights(value);
+    const attachments =
+      value.attachments === undefined
+        ? undefined
+        : parseAiAssistantAttachments(value.attachments);
     return typeof value.content === "string" &&
       typeof value.threadId === "string" &&
       typeof value.userMessageId === "string" &&
-      typeof value.assistantMessageId === "string"
+      typeof value.assistantMessageId === "string" &&
+      attachments !== null
       ? {
           event: "done",
           data: {
@@ -413,6 +498,7 @@ function parseEventData(
             threadId: value.threadId,
             userMessageId: value.userMessageId,
             assistantMessageId: value.assistantMessageId,
+            ...(attachments !== undefined ? { attachments } : {}),
             ...(customerInsights ? { customerInsights } : {}),
           },
         }
@@ -528,6 +614,7 @@ export async function askAssistantSseStream({
   threadId,
   onChunk,
   onGraph,
+  onPdf,
   onTool,
   onCustomerInsights,
   onDone,
@@ -590,6 +677,11 @@ export async function askAssistantSseStream({
 
     if (event === "graph") {
       onGraph?.(data);
+      return false;
+    }
+
+    if (event === "pdf") {
+      onPdf?.(data);
       return false;
     }
 

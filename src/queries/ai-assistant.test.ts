@@ -3,6 +3,7 @@ import { useAuthStore } from "@/lib/store";
 import {
   AiAssistantStreamError,
   askAssistantSseStream,
+  parseAiAssistantAttachments,
   renameAiChatThread,
 } from "@/queries/ai-assistant";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,6 +42,7 @@ function handlers() {
   return {
     onChunk: vi.fn(),
     onGraph: vi.fn(),
+    onPdf: vi.fn(),
     onTool: vi.fn(),
     onCustomerInsights: vi.fn(),
     onToolCall: vi.fn(),
@@ -450,6 +452,80 @@ describe("AI assistant streaming API", () => {
       userMessageId: "user-message-1",
       assistantMessageId: "assistant-message-1",
     });
+  });
+
+  it("emits PDF progress and persists completed report attachments", async () => {
+    const attachment = {
+      id: "attachment-1",
+      fileName: "asanpos-report-message-1.pdf",
+      mimeType: "application/pdf",
+      signedUrl: "https://files.example.test/reports/message-1.pdf",
+    };
+    const donePayload = {
+      content: "Your PDF is ready.",
+      threadId: "thread-1",
+      userMessageId: "user-message-1",
+      assistantMessageId: "assistant-message-1",
+      attachments: [attachment],
+    };
+    const response = [
+      "event: pdf",
+      'data: {"status":"generating","title":"July sales report"}',
+      "",
+      "event: pdf",
+      `data: ${JSON.stringify({ status: "ready", attachment })}`,
+      "",
+      "event: graph",
+      `data: ${JSON.stringify({
+        type: "bar",
+        title: "Sales and profit July 2026",
+        xAxisLabel: "Date",
+        yAxisLabel: "AFN",
+        valueFormat: "currency",
+        labels: ["2026-07-01"],
+        datasets: [{ label: "Sales", data: [1200] }],
+      })}`,
+      "",
+      "event: done",
+      `data: ${JSON.stringify(donePayload)}`,
+      "",
+    ].join("\n");
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse([response]));
+    vi.stubGlobal("fetch", fetchMock);
+    const callbacks = handlers();
+
+    await askAssistantSseStream({
+      question: "Create a sales report",
+      ...callbacks,
+    });
+
+    expect(callbacks.onPdf.mock.calls).toEqual([
+      [{ status: "generating", title: "July sales report" }],
+      [{ status: "ready", attachment }],
+    ]);
+    expect(callbacks.onGraph).toHaveBeenCalledOnce();
+    expect(callbacks.onDone).toHaveBeenCalledWith(donePayload);
+    expect(callbacks.onError).not.toHaveBeenCalled();
+  });
+
+  it("only accepts complete attachment objects from persisted metadata", () => {
+    const attachment = {
+      id: "attachment-1",
+      fileName: "asanpos-report-message-1.pdf",
+      mimeType: "application/pdf",
+      signedUrl: "https://files.example.test/reports/message-1.pdf",
+    };
+
+    expect(parseAiAssistantAttachments([attachment])).toEqual([attachment]);
+    expect(
+      parseAiAssistantAttachments([{ ...attachment, signedUrl: "" }]),
+    ).toBeNull();
+    expect(
+      parseAiAssistantAttachments([
+        { ...attachment, signedUrl: "javascript:alert('unsafe')" },
+      ]),
+    ).toBeNull();
+    expect(parseAiAssistantAttachments({ attachments: [attachment] })).toBeNull();
   });
 
   it("preserves partial content and handles a terminal SSE error", async () => {

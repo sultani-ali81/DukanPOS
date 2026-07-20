@@ -18,10 +18,12 @@ import {
   YAxis,
 } from "recharts";
 import {
+  createAiAssistantChartCsv,
   formatAiAssistantChartValue,
   getAiAssistantChartColor,
   getAiAssistantPieSliceColor,
 } from "../ai-assistant-chart.utils";
+import { Download } from "lucide-react";
 import { useState } from "react";
 
 type AiAssistantChartProps = {
@@ -77,6 +79,54 @@ function getMaxDataLength(graph: AiAssistantGraph) {
     ...graph.datasets.map((dataset) => dataset.data.length),
     0,
   );
+}
+
+function getVisibleGraph(
+  graph: AiAssistantGraph,
+  hiddenDatasetIndexes: ReadonlySet<number>,
+): AiAssistantGraph {
+  return {
+    ...graph,
+    // Preserve a dataset's original palette position when another series is
+    // hidden. Otherwise a remaining colorless series could change color just
+    // because its neighbour was filtered out.
+    datasets: graph.datasets.flatMap((dataset, datasetIndex) => {
+      if (hiddenDatasetIndexes.has(datasetIndex)) return [];
+
+      return [
+        {
+          ...dataset,
+          color: getAiAssistantChartColor(dataset.color, datasetIndex),
+        },
+      ];
+    }),
+  };
+}
+
+function getChartCsvFileName(title: string) {
+  const name = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+  return `${name || "business-chart"}.csv`;
+}
+
+function downloadAiAssistantChartCsv(graph: AiAssistantGraph) {
+  const blob = new Blob([createAiAssistantChartCsv(graph)], {
+    type: "text/csv;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = getChartCsvFileName(graph.title);
+  link.style.display = "none";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function buildCartesianData(graph: AiAssistantGraph): CartesianChartRow[] {
@@ -534,6 +584,57 @@ function PieChartLegend({
   );
 }
 
+function DatasetVisibilityControls({
+  graph,
+  hiddenDatasetIndexes,
+  onToggleDataset,
+}: {
+  graph: AiAssistantGraph;
+  hiddenDatasetIndexes: ReadonlySet<number>;
+  onToggleDataset: (datasetIndex: number) => void;
+}) {
+  if (graph.datasets.length <= 1) return null;
+
+  return (
+    <div
+      className="mt-3 flex flex-wrap items-center gap-1.5 text-xs"
+      role="group"
+      aria-label="Filter chart data series"
+      data-testid="chart-dataset-filter"
+    >
+      <span className="mr-0.5 text-muted-foreground">Series:</span>
+      {graph.datasets.map((dataset, index) => {
+        const isVisible = !hiddenDatasetIndexes.has(index);
+        const color = getAiAssistantChartColor(dataset.color, index);
+
+        return (
+          <button
+            key={`${dataset.label}-${index}`}
+            type="button"
+            className={cn(
+              "inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              isVisible
+                ? "border-border/70 bg-background text-foreground hover:bg-muted/70"
+                : "border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/60",
+            )}
+            aria-label={`${isVisible ? "Hide" : "Show"} ${dataset.label} series`}
+            aria-pressed={isVisible}
+            onClick={() => onToggleDataset(index)}
+          >
+            <span
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: color }}
+              aria-hidden="true"
+            />
+            <span className="max-w-36 truncate">{dataset.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ChartLegend({ graph }: { graph: AiAssistantGraph }) {
   if (!graph.datasets.length) return null;
 
@@ -745,9 +846,30 @@ export function AiAssistantChart({
   graph,
   className,
 }: AiAssistantChartProps) {
-  const hasValues = hasRenderableValues(graph);
+  const [hiddenDatasetIndexes, setHiddenDatasetIndexes] = useState<
+    ReadonlySet<number>
+  >(() => new Set());
+  const visibleGraph = getVisibleGraph(graph, hiddenDatasetIndexes);
+  const hasValues = hasRenderableValues(visibleGraph);
+  const allDatasetsAreHidden =
+    graph.datasets.length > 0 && visibleGraph.datasets.length === 0;
   const chartLabel = graph.title || "Business chart";
-  const isCircularChart = graph.type === "pie" || graph.type === "doughnut";
+  const isCircularChart =
+    visibleGraph.type === "pie" || visibleGraph.type === "doughnut";
+
+  function toggleDataset(datasetIndex: number) {
+    setHiddenDatasetIndexes((current) => {
+      const next = new Set(current);
+
+      if (next.has(datasetIndex)) {
+        next.delete(datasetIndex);
+      } else {
+        next.add(datasetIndex);
+      }
+
+      return next;
+    });
+  }
 
   return (
     <figure
@@ -760,26 +882,49 @@ export function AiAssistantChart({
       data-testid="ai-assistant-chart"
       data-chart-type={graph.type}
     >
-      {graph.title ? (
-        <h3 className="text-sm font-semibold text-foreground">
-          {graph.title}
-        </h3>
-      ) : null}
+      <div className="flex items-start justify-between gap-3">
+        {graph.title ? (
+          <h3 className="text-sm font-semibold text-foreground">
+            {graph.title}
+          </h3>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          aria-label="Download chart data as CSV"
+          title="Download chart data as CSV"
+          onClick={() => downloadAiAssistantChartCsv(visibleGraph)}
+        >
+          <Download className="size-4" aria-hidden="true" />
+        </button>
+      </div>
       <figcaption className="sr-only">
         {graph.title}
         {graph.xAxisLabel ? ` ${graph.xAxisLabel}.` : ""}
         {graph.yAxisLabel ? ` ${graph.yAxisLabel}.` : ""}
       </figcaption>
-      <ChartDataTable graph={graph} />
+      <ChartDataTable graph={visibleGraph} />
 
-      {hasValues ? (
+      <DatasetVisibilityControls
+        graph={graph}
+        hiddenDatasetIndexes={hiddenDatasetIndexes}
+        onToggleDataset={toggleDataset}
+      />
+
+      {allDatasetsAreHidden ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          All data series are hidden. Select a series to show it.
+        </p>
+      ) : hasValues ? (
         <>
           {isCircularChart ? (
-            <CircularChartFrame graph={graph} />
+            <CircularChartFrame graph={visibleGraph} />
           ) : (
-            <CartesianChartFrame graph={graph} />
+            <CartesianChartFrame graph={visibleGraph} />
           )}
-          {isCircularChart ? null : <ChartLegend graph={graph} />}
+          {isCircularChart ? null : <ChartLegend graph={visibleGraph} />}
         </>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">

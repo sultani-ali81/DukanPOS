@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/lib/store";
 import type {
+  AiAssistantAttachment,
   AiAssistantCustomerInsight,
   AiAssistantGraph,
   AiChatMessage,
@@ -122,6 +123,8 @@ vi.mock("./components/conversation-panel", () => ({
                 ? message.metadata.graphs.length
                 : 0
             }
+            data-attachment-count={message.attachments?.length ?? 0}
+            data-pdf-status={message.pdf?.status ?? ""}
           >
             {message.content}
             {message.graphs?.map((graph, index) => (
@@ -132,6 +135,11 @@ vi.mock("./components/conversation-panel", () => ({
             {message.customers?.map((customer) => (
               <span key={customer.id} data-testid="message-customer">
                 {customer.name}
+              </span>
+            ))}
+            {message.attachments?.map((attachment) => (
+              <span key={attachment.id} data-testid="message-attachment">
+                {attachment.fileName}
               </span>
             ))}
             {message.errorMessage ? (
@@ -297,6 +305,13 @@ const sampleCustomerInsight: AiAssistantCustomerInsight = {
   createdAt: "2026-07-19T10:00:00.000Z",
 };
 
+const sampleReportAttachment: AiAssistantAttachment = {
+  id: "report-attachment",
+  fileName: "july-sales-report.pdf",
+  mimeType: "application/pdf",
+  signedUrl: "https://files.example.test/july-sales-report.pdf",
+};
+
 describe("AI assistant page streaming flow", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -419,6 +434,71 @@ describe("AI assistant page streaming flow", () => {
         "Authoritative answer",
       );
       expect(renderedGraphTitles()).toEqual(["Sales Today", "Profit Today"]);
+    });
+  });
+
+  it("keeps a streamed PDF report on the assistant message through completion", async () => {
+    const stream = deferred<void>();
+    queryMocks.getAiChatThreads.mockResolvedValue([]);
+    queryMocks.askAssistantSseStream.mockImplementation(
+      () => stream.promise,
+    );
+
+    renderPage();
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByLabelText("Ask the AI assistant"),
+      "Create this month's sales report",
+    );
+    await user.click(screen.getByText("Send question"));
+
+    const streamOptions = latestStreamOptions();
+    await act(async () => {
+      streamOptions.onPdf?.({
+        status: "generating",
+        title: "July sales report",
+      });
+    });
+    expect(lastMessage("assistant").getAttribute("data-pdf-status")).toBe(
+      "generating",
+    );
+
+    await act(async () => {
+      streamOptions.onPdf?.({
+        status: "ready",
+        attachment: sampleReportAttachment,
+      });
+    });
+    expect(
+      lastMessage("assistant").getAttribute("data-attachment-count"),
+    ).toBe("1");
+    expect(screen.getByTestId("message-attachment").textContent).toBe(
+      "july-sales-report.pdf",
+    );
+
+    await act(async () => {
+      streamOptions.onDone({
+        content: "Your PDF is ready.",
+        threadId: "report-thread",
+        userMessageId: "report-user",
+        assistantMessageId: "report-assistant",
+        attachments: [sampleReportAttachment],
+      });
+    });
+
+    expect(lastMessage("assistant").getAttribute("data-status")).toBe(
+      "completed",
+    );
+    expect(lastMessage("assistant").getAttribute("data-pdf-status")).toBe(
+      "",
+    );
+    expect(
+      lastMessage("assistant").getAttribute("data-attachment-count"),
+    ).toBe("1");
+
+    await act(async () => {
+      stream.resolve();
+      await stream.promise;
     });
   });
 

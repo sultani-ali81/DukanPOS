@@ -3,10 +3,14 @@ import { parseAiAssistantGraph } from "@/lib/ai-assistant-graph";
 import {
   AiAssistantStreamError,
   extractAiAssistantCustomerInsights,
+  parseAiAssistantAttachment,
+  parseAiAssistantAttachments,
 } from "@/queries/ai-assistant";
 import type {
+  AiAssistantAttachment,
   AiAssistantCustomerInsight,
   AiAssistantGraph,
+  AiAssistantPdfStatus,
   AiAssistantToolEventData,
   AiChatMessage,
   AiChatRole,
@@ -19,6 +23,11 @@ export type UiChatMessage = Omit<AiChatMessage, "status"> & {
   local?: boolean;
   graphs?: AiAssistantGraph[];
   customers?: AiAssistantCustomerInsight[];
+  /** A backend-generated report that is still being prepared for this reply. */
+  pdf?: {
+    status: AiAssistantPdfStatus;
+    title?: string;
+  };
 };
 
 const assistantReasoningPattern = /<think\b[^>]*>[\s\S]*?(?:<\/think\s*>|$)/gi;
@@ -200,6 +209,62 @@ function getMetadataGraphs(metadata: AiChatMessage["metadata"]) {
   return graph ? [graph] : undefined;
 }
 
+function getAttachmentCandidates(value: unknown): AiAssistantAttachment[] {
+  const collection = parseAiAssistantAttachments(value);
+  if (collection) return collection;
+
+  const attachment = parseAiAssistantAttachment(value);
+  return attachment ? [attachment] : [];
+}
+
+/**
+ * Keeps a single, current copy of each attachment. When an attachment is
+ * repeated with a refreshed signed URL, the later source wins.
+ */
+export function mergeAiAssistantAttachments(
+  ...collections: Array<AiAssistantAttachment[] | undefined>
+) {
+  const attachmentsById = new Map<string, AiAssistantAttachment>();
+
+  collections.forEach((attachments) => {
+    attachments?.forEach((attachment) => {
+      attachmentsById.set(attachment.id, attachment);
+    });
+  });
+
+  return [...attachmentsById.values()];
+}
+
+/**
+ * Supports the saved message shape as well as the intentionally small set of
+ * metadata shapes used by backend versions during the attachment rollout.
+ */
+function getMetadataAttachments(metadata: AiChatMessage["metadata"]) {
+  if (!isRecord(metadata)) return undefined;
+
+  const candidates: unknown[] = [metadata.attachments, metadata.attachment];
+  if (isRecord(metadata.pdf)) {
+    candidates.push(metadata.pdf.attachments, metadata.pdf.attachment);
+  }
+
+  const attachments = mergeAiAssistantAttachments(
+    ...candidates.map(getAttachmentCandidates),
+  );
+
+  return attachments.length ? attachments : undefined;
+}
+
+function getMessageAttachments(message: AiChatMessage) {
+  const directAttachments = getAttachmentCandidates(message.attachments);
+  const metadataAttachments = getMetadataAttachments(message.metadata);
+  const attachments = mergeAiAssistantAttachments(
+    metadataAttachments,
+    directAttachments,
+  );
+
+  return attachments.length ? attachments : undefined;
+}
+
 /**
  * Preserves live assistant artifacts through a history refresh and, for an
  * explicit historical-thread load, hydrates valid graphs and customer
@@ -212,6 +277,7 @@ export function mergeThreadMessagesWithLiveGraphs(
 ): UiChatMessage[] {
   const graphsByMessageId = new Map<string, AiAssistantGraph[]>();
   const customersByMessageId = new Map<string, AiAssistantCustomerInsight[]>();
+  const attachmentsByMessageId = new Map<string, AiAssistantAttachment[]>();
 
   currentMessages.forEach((message) => {
     if (message.role === "assistant" && message.graphs?.length) {
@@ -222,6 +288,9 @@ export function mergeThreadMessagesWithLiveGraphs(
       customersByMessageId.set(message.id, message.customers);
     }
 
+    if (message.role === "assistant" && message.attachments?.length) {
+      attachmentsByMessageId.set(message.id, message.attachments);
+    }
   });
 
   return threadMessages.map((message) => {
@@ -243,11 +312,22 @@ export function mergeThreadMessagesWithLiveGraphs(
         ? extractAiAssistantCustomerInsights(message.metadata)?.customers
         : undefined;
     const customers = liveCustomers ?? metadataCustomers;
+    const liveAttachments =
+      message.role === "assistant"
+        ? attachmentsByMessageId.get(message.id)
+        : undefined;
+    const savedAttachments =
+      message.role === "assistant" ? getMessageAttachments(message) : undefined;
+    const attachments = mergeAiAssistantAttachments(
+      savedAttachments,
+      liveAttachments,
+    );
     const metadata =
-      message.role === "assistant" && graphs?.length
+      message.role === "assistant" && (graphs?.length || attachments.length)
         ? {
             ...(isRecord(message.metadata) ? message.metadata : {}),
-            graphs,
+            ...(graphs?.length ? { graphs } : {}),
+            ...(attachments.length ? { attachments } : {}),
           }
         : message.metadata;
 
@@ -260,6 +340,7 @@ export function mergeThreadMessagesWithLiveGraphs(
       ...(metadata !== message.metadata ? { metadata } : {}),
       ...(graphs ? { graphs } : {}),
       ...(customers ? { customers } : {}),
+      ...(attachments.length ? { attachments } : {}),
     };
   });
 }
@@ -324,6 +405,9 @@ export function getToolActivityLabel(toolName: string) {
   const normalizedName = toolName.toLowerCase();
 
   if (normalizedName.includes("dashboard")) return "Checking dashboard…";
+  if (normalizedName.includes("pdf") || normalizedName.includes("report")) {
+    return "Preparing report…";
+  }
   if (
     normalizedName.includes("product") ||
     normalizedName.includes("inventory") ||
@@ -353,7 +437,7 @@ export function getActiveToolActivityLabel(
   for (let index = toolActivities.length - 1; index >= 0; index -= 1) {
     const activity = toolActivities[index];
     if (activity.status === "started") {
-      return activity.message?.trim() || "Analyzing store data…";
+      return activity.message?.trim() || getToolActivityLabel(activity.toolName);
     }
   }
 

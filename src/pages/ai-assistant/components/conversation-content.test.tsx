@@ -1,4 +1,7 @@
-import type { AiAssistantGraph } from "@/types/ai-assistant";
+import type {
+  AiAssistantAttachment,
+  AiAssistantGraph,
+} from "@/types/ai-assistant";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UiChatMessage } from "../ai-assistant.utils";
@@ -45,6 +48,13 @@ const customerInsight: CustomerInsight = {
   paidPurchases: 8000,
   purchaseBalance: 1000,
   createdAt: "2026-07-19T10:00:00.000Z",
+};
+
+const reportAttachment: AiAssistantAttachment = {
+  id: "report-1",
+  fileName: "july-sales-report.pdf",
+  mimeType: "application/pdf",
+  signedUrl: "https://files.example.test/july-sales-report.pdf",
 };
 
 function assistantMessage(
@@ -129,5 +139,47 @@ describe("MessageBubble", () => {
     expect(
       screen.getByText("Sales balance (customer owes the store)"),
     ).toBeTruthy();
+  });
+
+  it("shows a subtle PDF generation state without exposing an internal tool name", () => {
+    render(
+      <MessageBubble
+        message={assistantMessage({
+          content: "I am preparing your report.",
+          status: "streaming",
+          pdf: {
+            status: "generating",
+            title: "July sales report",
+          },
+        })}
+      />,
+    );
+
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((status) =>
+          status.textContent?.includes("Generating July sales report…"),
+        ),
+    ).toBe(true);
+    expect(screen.queryByRole("link", { name: /Open report/i })).toBeNull();
+  });
+
+  it("opens saved PDF attachments in a new tab", () => {
+    render(
+      <MessageBubble
+        message={assistantMessage({
+          content: "Your report is ready.",
+          attachments: [reportAttachment],
+        })}
+      />,
+    );
+
+    const reportLink = screen.getByRole("link", {
+      name: "Open report july-sales-report.pdf",
+    });
+    expect(reportLink.getAttribute("href")).toBe(reportAttachment.signedUrl);
+    expect(reportLink.getAttribute("target")).toBe("_blank");
+    expect(reportLink.getAttribute("rel")).toBe("noopener noreferrer");
   });
 });

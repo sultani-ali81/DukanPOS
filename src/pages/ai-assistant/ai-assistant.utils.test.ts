@@ -1,4 +1,8 @@
-import type { AiAssistantGraph, AiChatMessage } from "@/types/ai-assistant";
+import type {
+  AiAssistantAttachment,
+  AiAssistantGraph,
+  AiChatMessage,
+} from "@/types/ai-assistant";
 import { describe, expect, it } from "vitest";
 import {
   createAssistantChunkSanitizer,
@@ -28,6 +32,27 @@ const liveSalesGraph: AiAssistantGraph = {
   valueFormat: "currency",
   labels: ["Today"],
   datasets: [{ label: "Sales", data: [2038] }],
+};
+
+const metadataReport: AiAssistantAttachment = {
+  id: "metadata-report",
+  fileName: "metadata-report.pdf",
+  mimeType: "application/pdf",
+  signedUrl: "https://files.example.test/metadata-report.pdf",
+};
+
+const savedReport: AiAssistantAttachment = {
+  id: "saved-report",
+  fileName: "saved-report.pdf",
+  mimeType: "application/pdf",
+  signedUrl: "https://files.example.test/saved-report.pdf",
+};
+
+const liveReport: AiAssistantAttachment = {
+  id: "live-report",
+  fileName: "live-report.pdf",
+  mimeType: "application/pdf",
+  signedUrl: "https://files.example.test/live-report.pdf",
 };
 
 describe("assistant response sanitization", () => {
@@ -195,11 +220,72 @@ describe("thread history graph merging", () => {
     });
   });
 
+  it("hydrates saved top-level and metadata PDF attachments", () => {
+    const threadMessages: AiChatMessage[] = [
+      {
+        id: "saved-user-id",
+        role: "user",
+        content: "Create a report",
+      },
+      {
+        id: "saved-assistant-id",
+        role: "assistant",
+        content: "Your report is ready.",
+        attachments: [savedReport],
+        metadata: { attachment: metadataReport },
+      },
+    ];
+
+    const mergedMessages = mergeThreadMessagesWithLiveGraphs(
+      [],
+      threadMessages,
+    );
+    const assistantMessage = mergedMessages[1];
+
+    expect(assistantMessage.attachments).toEqual([
+      metadataReport,
+      savedReport,
+    ]);
+    expect(assistantMessage.metadata).toMatchObject({
+      attachments: [metadataReport, savedReport],
+    });
+  });
+
+  it("preserves a live report attachment when refreshed history is text-only", () => {
+    const currentMessages: UiChatMessage[] = [
+      {
+        id: "saved-assistant-id",
+        role: "assistant",
+        content: "Your report is ready.",
+        attachments: [liveReport],
+      },
+    ];
+    const threadMessages: AiChatMessage[] = [
+      {
+        id: "saved-assistant-id",
+        role: "assistant",
+        content: "Saved response",
+      },
+    ];
+
+    const mergedMessages = mergeThreadMessagesWithLiveGraphs(
+      currentMessages,
+      threadMessages,
+    );
+
+    expect(mergedMessages[0]).toMatchObject({
+      content: "Saved response",
+      attachments: [liveReport],
+      metadata: { attachments: [liveReport] },
+    });
+  });
+
 });
 
 describe("AI assistant tool activity labels", () => {
   it.each([
     ["getDashboardStats", "Checking dashboard…"],
+    ["createBusinessPdf", "Preparing report…"],
     ["searchProducts", "Searching products…"],
     ["check_inventory_levels", "Searching products…"],
     ["analyzeSales", "Analyzing sales…"],
@@ -223,7 +309,7 @@ describe("AI assistant tool activity labels", () => {
           status: "completed",
         },
       }),
-    ).toBe("Analyzing store data…");
+    ).toBe("Checking dashboard…");
   });
 
   it("shows a generic failure notice when a tool failed but no tool is running", () => {

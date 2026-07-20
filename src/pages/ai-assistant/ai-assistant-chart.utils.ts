@@ -1,5 +1,8 @@
 import { formatCurrency } from "@/lib/currency";
-import type { AiAssistantGraphValueFormat } from "@/types/ai-assistant";
+import type {
+  AiAssistantGraph,
+  AiAssistantGraphValueFormat,
+} from "@/types/ai-assistant";
 
 export const AI_ASSISTANT_CHART_PALETTE = [
   "#2563eb",
@@ -66,4 +69,44 @@ export function formatAiAssistantChartValue(
   return new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 20,
   }).format(value);
+}
+
+function escapeCsvField(value: number | string | undefined) {
+  if (value === undefined) return "";
+
+  const text = String(value);
+  // Spreadsheet applications can interpret leading formula characters. Chart
+  // labels and series names come from the server, so keep exported CSV safe.
+  const safeText =
+    typeof value === "string" && /^[=+\-@]/.test(text) ? `'${text}` : text;
+
+  return /[",\r\n]/.test(safeText)
+    ? `"${safeText.replaceAll('"', '""')}"`
+    : safeText;
+}
+
+/** Creates a spreadsheet-friendly export of the chart data currently shown. */
+export function createAiAssistantChartCsv(graph: AiAssistantGraph) {
+  const rowCount = Math.max(
+    graph.labels.length,
+    ...graph.datasets.map((dataset) => dataset.data.length),
+    0,
+  );
+  const rows = Array.from({ length: rowCount }, (_, rowIndex) => [
+    graph.labels[rowIndex] ?? "",
+    ...graph.datasets.map((dataset) => {
+      const value = dataset.data[rowIndex];
+      return typeof value === "number" && Number.isFinite(value)
+        ? value
+        : undefined;
+    }),
+  ]);
+  const headers = [
+    graph.xAxisLabel || "Label",
+    ...graph.datasets.map((dataset) => dataset.label),
+  ];
+
+  return [headers, ...rows]
+    .map((row) => row.map(escapeCsvField).join(","))
+    .join("\r\n");
 }

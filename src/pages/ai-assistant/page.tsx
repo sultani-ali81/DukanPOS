@@ -10,8 +10,10 @@ import {
   renameAiChatThread,
 } from "@/queries/ai-assistant";
 import type {
+  AiAssistantAttachment,
   AiAssistantCustomerInsight,
   AiAssistantGraph,
+  AiAssistantPdfEventData,
   AiAssistantToolEventData,
   AiChatThreadSummary,
 } from "@/types/ai-assistant";
@@ -24,6 +26,7 @@ import {
   getActiveToolActivityLabel,
   getAssistantErrorMessage,
   getThreadTitle,
+  mergeAiAssistantAttachments,
   mergeThreadMessagesWithLiveGraphs,
   type UiChatMessage,
 } from "./ai-assistant.utils";
@@ -41,6 +44,10 @@ type RetryRequest = {
 
 function createLocalConversationId() {
   return `local-thread-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export default function AiAssistantPage() {
@@ -196,6 +203,72 @@ export default function AiAssistantPage() {
     );
   };
 
+  const updateMessagePdf = (id: string, pdf: AiAssistantPdfEventData) => {
+    setMessages((current) =>
+      current.map((message) => {
+        if (message.id !== id) return message;
+
+        const attachments = pdf.attachment
+          ? mergeAiAssistantAttachments(message.attachments, [pdf.attachment])
+          : message.attachments;
+        const metadata = pdf.attachment
+          ? {
+              ...(isRecord(message.metadata) ? message.metadata : {}),
+              attachments,
+            }
+          : message.metadata;
+        const title = pdf.title ?? message.pdf?.title;
+
+        return {
+          ...message,
+          pdf: {
+            status: pdf.status,
+            ...(title ? { title } : {}),
+          },
+          ...(pdf.attachment ? { attachments } : {}),
+          ...(metadata !== message.metadata ? { metadata } : {}),
+        };
+      }),
+    );
+  };
+
+  const finalizeAssistantMessage = (
+    id: string,
+    savedId: string,
+    content: string,
+    attachments?: AiAssistantAttachment[],
+  ) => {
+    setMessages((current) =>
+      current.map((message) => {
+        if (message.id !== id) return message;
+
+        const mergedAttachments = mergeAiAssistantAttachments(
+          message.attachments,
+          attachments,
+        );
+        const metadata = mergedAttachments.length
+          ? {
+              ...(isRecord(message.metadata) ? message.metadata : {}),
+              attachments: mergedAttachments,
+            }
+          : message.metadata;
+
+        return {
+          ...message,
+          id: savedId,
+          content,
+          status: "completed",
+          local: false,
+          pdf: undefined,
+          ...(mergedAttachments.length
+            ? { attachments: mergedAttachments }
+            : {}),
+          ...(metadata !== message.metadata ? { metadata } : {}),
+        };
+      }),
+    );
+  };
+
   const resetConversation = () => {
     setMobileHistoryOpen(false);
     setSelectedThreadId(null);
@@ -344,6 +417,9 @@ export default function AiAssistantPage() {
         onGraph: ({ graph }) => {
           appendMessageGraph(activeAssistantMessageId, graph);
         },
+        onPdf: (pdf) => {
+          updateMessagePdf(activeAssistantMessageId, pdf);
+        },
         onTool: (activity) => {
           setToolActivities((current) => ({
             ...current,
@@ -370,6 +446,7 @@ export default function AiAssistantPage() {
           threadId,
           userMessageId: savedUserMessageId,
           assistantMessageId: savedAssistantMessageId,
+          attachments,
         }) => {
           threadIdToRefresh = threadId ?? streamThreadId;
           if (!streamThreadId) hydrateHistoryGraphsRef.current = false;
@@ -380,12 +457,12 @@ export default function AiAssistantPage() {
             status: "completed",
             local: false,
           });
-          updateMessage(activeAssistantMessageId, {
-            id: savedAssistantMessageId ?? activeAssistantMessageId,
-            content: chunkSanitizer.sanitizeFinal(content),
-            status: "completed",
-            local: false,
-          });
+          finalizeAssistantMessage(
+            activeAssistantMessageId,
+            savedAssistantMessageId ?? activeAssistantMessageId,
+            chunkSanitizer.sanitizeFinal(content),
+            attachments,
+          );
           setToolActivities({});
           setRetryRequest(null);
           setIsStreaming(false);
@@ -410,6 +487,7 @@ export default function AiAssistantPage() {
           updateMessage(activeAssistantMessageId, {
             status: "failed",
             errorMessage: message,
+            pdf: undefined,
           });
           setToolActivities({});
           setIsStreaming(false);
@@ -419,7 +497,10 @@ export default function AiAssistantPage() {
       });
     } catch (error) {
       if (controller.signal.aborted) {
-        updateMessage(activeAssistantMessageId, { status: "stopped" });
+        updateMessage(activeAssistantMessageId, {
+          status: "stopped",
+          pdf: undefined,
+        });
         return;
       }
 
@@ -432,6 +513,7 @@ export default function AiAssistantPage() {
       updateMessage(activeAssistantMessageId, {
         status: "failed",
         errorMessage: message,
+        pdf: undefined,
       });
     } finally {
       if (activeRequestRef.current?.conversationId === conversationId) {

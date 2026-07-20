@@ -2,7 +2,10 @@ import type { AiAssistantGraph } from "@/types/ai-assistant";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatAiAssistantChartValue } from "../ai-assistant-chart.utils";
+import {
+  createAiAssistantChartCsv,
+  formatAiAssistantChartValue,
+} from "../ai-assistant-chart.utils";
 import { AiAssistantChart } from "./ai-assistant-chart";
 
 type PieDatum = {
@@ -121,7 +124,11 @@ function graph(overrides: Partial<AiAssistantGraph> = {}): AiAssistantGraph {
 }
 
 describe("AiAssistantChart", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   it.each([
     ["line", "line-chart", "line-series"],
@@ -414,5 +421,76 @@ describe("AiAssistantChart", () => {
     expect(chartFrame?.className).toContain("h-64");
     expect(chartFrame?.className).toContain("sm:h-80");
     expect(chartFrame?.className).toContain("min-w-0");
+  });
+
+  it("lets users filter a multi-series chart without changing its remaining series color", () => {
+    render(
+      <AiAssistantChart
+        graph={graph({
+          datasets: [
+            { label: "Sales", data: [1200] },
+            { label: "Profit", data: [300] },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getAllByTestId("bar-series")).toHaveLength(2);
+
+    const profitToggle = screen.getByRole("button", {
+      name: "Hide Profit series",
+    });
+    fireEvent.click(profitToggle);
+
+    expect(screen.getAllByTestId("bar-series")).toHaveLength(1);
+    expect(profitToggle.getAttribute("aria-pressed")).toBe("false");
+    expect(
+      screen.getByRole("button", { name: "Show Profit series" }),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hide Sales series" }),
+    );
+    expect(
+      screen.getByText("All data series are hidden. Select a series to show it."),
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show Profit series" }),
+    );
+    expect(screen.getAllByTestId("bar-series")).toHaveLength(1);
+    expect(screen.getByTestId("bar-series").getAttribute("data-color")).toBe(
+      "#16a34a",
+    );
+  });
+
+  it("exports chart data as a safe CSV and provides a download control", () => {
+    const exportGraph = graph({
+      labels: ["=formula", "Tomorrow, next"],
+      datasets: [
+        { label: "Sales", data: [1200, 900] },
+        { label: "Profit", data: [300, Number.NaN] },
+      ],
+    });
+
+    expect(createAiAssistantChartCsv(exportGraph)).toBe(
+      "Period,Sales,Profit\r\n'=formula,1200,300\r\n\"Tomorrow, next\",900,",
+    );
+
+    const createObjectURL = vi.fn(() => "blob:chart-data");
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined);
+
+    render(<AiAssistantChart graph={exportGraph} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Download chart data as CSV" }),
+    );
+
+    expect(click).toHaveBeenCalledOnce();
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:chart-data");
   });
 });

@@ -6,6 +6,8 @@ import {
   Boxes,
   Check,
   Copy,
+  ExternalLink,
+  FileText,
   Loader2,
   Sparkles,
   TrendingUp,
@@ -16,6 +18,67 @@ import { toast } from "sonner";
 import type { UiChatMessage } from "../ai-assistant.utils";
 import { AiAssistantChart } from "./ai-assistant-chart";
 import { CustomerInsights } from "./customer-insights";
+
+function ReportAttachments({
+  attachments,
+  generatingTitle,
+}: Pick<UiChatMessage, "attachments"> & {
+  generatingTitle?: string;
+}) {
+  const reports = attachments?.filter((attachment) =>
+    attachment.mimeType.toLowerCase().includes("pdf"),
+  );
+
+  if (!generatingTitle && !reports?.length) return null;
+
+  return (
+    <div className="mt-3 space-y-2">
+      {generatingTitle ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 rounded-md border border-border/70 bg-background/70 px-2.5 py-2 text-xs text-muted-foreground"
+        >
+          <Loader2 className="size-3.5 shrink-0 animate-spin" />
+          <span className="truncate">{generatingTitle}</span>
+        </div>
+      ) : null}
+
+      {reports?.map((attachment) => (
+        <div
+          key={attachment.id}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/15 bg-background/80 px-2.5 py-2"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <FileText className="size-3.5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-medium text-foreground">
+                {attachment.fileName}
+              </span>
+              <span className="block text-[11px] text-muted-foreground">
+                PDF report
+              </span>
+            </span>
+          </div>
+
+          <Button asChild variant="outline" size="xs">
+            <a
+              href={attachment.signedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open report ${attachment.fileName}`}
+            >
+              <ExternalLink className="size-3" />
+              Open report
+            </a>
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const promptStarters = [
   {
@@ -56,6 +119,8 @@ export function MessageBubble({
   const hasCharts = !isUser && Boolean(message.graphs?.length);
   const customerInsights = isUser ? undefined : message.customers;
   const hasCustomerInsights = Boolean(customerInsights?.length);
+  const isGeneratingReport = !isUser && message.pdf?.status === "generating";
+  const hasReports = !isUser && Boolean(message.attachments?.length);
 
   useEffect(() => {
     return () => {
@@ -100,7 +165,7 @@ export function MessageBubble({
       <div
         className={cn(
           "group/message relative min-w-0",
-          hasCharts || hasCustomerInsights
+          hasCharts || hasCustomerInsights || hasReports || isGeneratingReport
             ? "w-[calc(100%-2.75rem)] max-w-[960px]"
             : "max-w-[min(720px,85%)]",
         )}
@@ -154,6 +219,17 @@ export function MessageBubble({
               graph={graph}
             />
           ))}
+
+          <ReportAttachments
+            attachments={isUser ? undefined : message.attachments}
+            generatingTitle={
+              isGeneratingReport
+                ? message.pdf?.title
+                  ? `Generating ${message.pdf.title}…`
+                  : "Generating report…"
+                : undefined
+            }
+          />
         </div>
 
         {message.content ? (
