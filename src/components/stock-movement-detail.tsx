@@ -34,7 +34,7 @@ export function StockMovementDetails({
       <div className="p-3 space-y-2">
         <div className="flex flex-wrap gap-12 text-sm text-muted-foreground">
           <span className="font-semibold bg-gray-200 px-2 py-1 rounded-md">
-            {isStockIn ? "Stock In:" : "Stock Out:"} #{stockMovement.id}
+            {isStockIn ? "Stock In" : "Stock Out"}
           </span>
           <span className="font-semibold bg-gray-200 px-2 py-1 rounded-md">
             Status: {stockMovement.status}
