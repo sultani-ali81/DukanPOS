@@ -421,6 +421,15 @@ export function PurchaseDetailClient() {
             </CardContent>
           </Card>
 
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader>
+              <CardTitle>Logs History</CardTitle>
+            </CardHeader>
+            <CardContent className="min-w-0 p-0">
+              <LogsTable entityId={purchase.id} />
+            </CardContent>
+          </Card>
+
         </div>
 
         <div className="min-w-0 space-y-6">
@@ -526,16 +535,6 @@ export function PurchaseDetailClient() {
 
         </div>
 
-        {/* Keep audit history last in the mobile reading order while placing it
-            beneath the main purchase content on wide screens. */}
-        <Card className="min-w-0 overflow-hidden xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Logs History</CardTitle>
-          </CardHeader>
-          <CardContent className="min-w-0 p-0">
-            <LogsTable entityId={purchase.id} />
-          </CardContent>
-        </Card>
       </div>
 
       {paymentOpen && canAddPayment && (

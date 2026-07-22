@@ -392,6 +392,7 @@ export default function InventoryDetailPage() {
           <LogsTable
             entityId={id}
             stockMovementLogs={inventory?.stockMovementAudits}
+            showEntityColumn
           />
         </CardContent>
       </Card>

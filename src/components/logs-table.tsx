@@ -49,6 +49,7 @@ import { StockMovementDetails } from "./stock-movement-detail";
 interface LogsTableProps {
   entityId?: string;
   stockMovementLogs?: AuditLog[];
+  showEntityColumn?: boolean;
 }
 
 function getInitials(name: string) {
@@ -110,6 +111,7 @@ function AuditValuePreview({
 export default function LogsTable({
   entityId,
   stockMovementLogs = [],
+  showEntityColumn = false,
 }: LogsTableProps) {
   const [type, setType] = useState<AuditEntityType | undefined>(undefined);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -136,6 +138,7 @@ export default function LogsTable({
       (left, right) =>
         new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
     );
+  const columnCount = showEntityColumn ? 7 : 6;
 
   function toggleExpand(id: string) {
     setExpandedIds((prev) => {
@@ -184,7 +187,9 @@ export default function LogsTable({
               Employee
             </TableHead>
             <TableHead className="w-[12%] p-3 font-semibold">Action</TableHead>
-            <TableHead className="w-[14%] p-3 font-semibold">Entity</TableHead>
+            {showEntityColumn && (
+              <TableHead className="w-[14%] p-3 font-semibold">Entity</TableHead>
+            )}
             <TableHead className="w-[25%] p-3 font-semibold">Before</TableHead>
             <TableHead className="w-[25%] p-3 font-semibold">After</TableHead>
             <TableHead className="w-40 p-3 font-semibold">Date</TableHead>
@@ -194,7 +199,7 @@ export default function LogsTable({
           {isLoading && (
             <TableRow>
               <TableCell
-                colSpan={7}
+                colSpan={columnCount}
                 className="p-3 text-center text-muted-foreground"
               >
                 Loading logs...
@@ -205,7 +210,7 @@ export default function LogsTable({
           {!isLoading && displayedLogs.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={7}
+                colSpan={columnCount}
                 className="p-3 text-center text-muted-foreground"
               >
                 No logs found.
@@ -258,9 +263,13 @@ export default function LogsTable({
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="p-3">
-                    <Badge variant="outline">{entityLabel[log.entityType]}</Badge>
-                  </TableCell>
+                  {showEntityColumn && (
+                    <TableCell className="p-3">
+                      <Badge variant="outline">
+                        {entityLabel[log.entityType]}
+                      </Badge>
+                    </TableCell>
+                  )}
                   <TableCell className="overflow-hidden p-3 text-sm text-muted-foreground">
                     <AuditValuePreview
                       label="Before"
@@ -287,7 +296,10 @@ export default function LogsTable({
 
                 {hasMovement && isExpanded && (
                   <TableRow>
-                    <TableCell colSpan={7} className="bg-muted/30 p-0">
+                    <TableCell
+                      colSpan={columnCount}
+                      className="bg-muted/30 p-0"
+                    >
                       <StockMovementDetails
                         stockIn={log.stockIn}
                         stockOut={log.stockOut}
