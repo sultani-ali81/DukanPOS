@@ -1,4 +1,5 @@
 import api from "@/lib/axios";
+import { normalizeAuditLog } from "@/lib/audit-normalize";
 import type {
   GetInventoriesParams,
   Inventory,
@@ -128,6 +129,9 @@ export const getInventory = (id: string): Promise<InventoryDetail> =>
           categories: p.categories ?? [],
           images: p.images ?? [],
         }),
+      ),
+      stockMovementAudits: (raw.stockMovementAudits?.data ?? []).map(
+        normalizeAuditLog,
       ),
     };
     return detail;

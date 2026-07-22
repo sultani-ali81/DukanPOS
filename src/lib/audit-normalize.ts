@@ -2,11 +2,12 @@ import type {
   AuditEmployee,
   AuditLog,
   StockInDetails,
+  StockMovementDetails,
   StockOutDetails,
 } from "@/types/audit";
 
 // Raw shape as it actually comes off the wire — either endpoint's response.
-interface RawAuditLog {
+export interface RawAuditLog {
   id: string;
   entityType: AuditLog["entityType"];
   entityId: string | null;
@@ -18,6 +19,7 @@ interface RawAuditLog {
   performedBy?: { id: string; name: string }; // from GET /audit/entity/:id
   stockIn?: StockInDetails | null;
   stockOut?: StockOutDetails | null;
+  stockMovement?: StockMovementDetails | null;
 }
 
 export function normalizeAuditLog(raw: RawAuditLog): AuditLog {
@@ -40,5 +42,6 @@ export function normalizeAuditLog(raw: RawAuditLog): AuditLog {
     employee,
     stockIn: raw.stockIn ?? null,
     stockOut: raw.stockOut ?? null,
+    stockMovement: raw.stockMovement ?? null,
   };
 }

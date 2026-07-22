@@ -24,6 +24,7 @@ export const entityLabel: Record<AuditEntityType, string> = {
   [AuditEntityType.Purchase]: "Purchase",
   [AuditEntityType.StockIn]: "Stock In",
   [AuditEntityType.StockOut]: "Stock Out",
+  [AuditEntityType.StockMovement]: "Stock Movement",
   [AuditEntityType.JournalEntry]: "Journal Entry",
   [AuditEntityType.Category]: "Category",
   [AuditEntityType.Product]: "Product",

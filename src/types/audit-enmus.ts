@@ -14,6 +14,7 @@ export const AuditEntityType = {
   Purchase: "purchase",
   StockIn: "stock_in",
   StockOut: "stock_out",
+  StockMovement: "StockMovement",
   JournalEntry: "journal_entry",
   Category: "category",
   Product: "product",

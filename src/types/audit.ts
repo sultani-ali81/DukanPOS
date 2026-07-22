@@ -35,6 +35,14 @@ export interface StockOutDetails {
   items: StockMovementItem[];
 }
 
+export interface StockMovementDetails {
+  id: string;
+  status: string;
+  sourceInventory: { id: string; name: string };
+  destinationInventory: { id: string; name: string };
+  products: { id: string; name: string; quantity: number }[];
+}
+
 // Normalized shape used everywhere in the frontend, regardless of which
 // endpoint (/audit or /audit/entity/:id) the log came from.
 export interface AuditLog {
@@ -48,6 +56,7 @@ export interface AuditLog {
   employee: AuditEmployee;
   stockIn?: StockInDetails | null;
   stockOut?: StockOutDetails | null;
+  stockMovement?: StockMovementDetails | null;
 }
 
 export interface AuditResponse {

@@ -1,4 +1,6 @@
 // src/types/inventory.ts
+import type { RawAuditLog } from "@/lib/audit-normalize";
+import type { AuditLog } from "./audit";
 
 export type StockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 
@@ -47,6 +49,7 @@ export interface InventoryDetail {
   name: string;
   address: string;
   products: InventoryProduct[];
+  stockMovementAudits: AuditLog[];
 }
 
 // ── Pagination ────────────────────────────────────────────────────────────────
@@ -119,4 +122,8 @@ export interface RawInventoryDetail {
         data: RawInventoryDetailProduct[];
         meta?: PaginationMeta;
       };
+  stockMovementAudits?: {
+    data: RawAuditLog[];
+    meta?: PaginationMeta;
+  };
 }

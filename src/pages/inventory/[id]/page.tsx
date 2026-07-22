@@ -389,7 +389,10 @@ export default function InventoryDetailPage() {
           <CardTitle className="text-lg">Logs History</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <LogsTable entityId={id} />
+          <LogsTable
+            entityId={id}
+            stockMovementLogs={inventory?.stockMovementAudits}
+          />
         </CardContent>
       </Card>
     </div>

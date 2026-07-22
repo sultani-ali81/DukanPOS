@@ -48,6 +48,7 @@ import { StockMovementDetails } from "./stock-movement-detail";
 
 interface LogsTableProps {
   entityId?: string;
+  stockMovementLogs?: AuditLog[];
 }
 
 function getInitials(name: string) {
@@ -106,7 +107,10 @@ function AuditValuePreview({
   );
 }
 
-export default function LogsTable({ entityId }: LogsTableProps) {
+export default function LogsTable({
+  entityId,
+  stockMovementLogs = [],
+}: LogsTableProps) {
   const [type, setType] = useState<AuditEntityType | undefined>(undefined);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<{
@@ -121,6 +125,17 @@ export default function LogsTable({ entityId }: LogsTableProps) {
     page,
     itemsPerPage,
   });
+  const displayedLogs = [
+    ...logs,
+    ...(page === 1 ? stockMovementLogs : []),
+  ]
+    .filter(
+      (log, index, all) => all.findIndex((item) => item.id === log.id) === index,
+    )
+    .sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+    );
 
   function toggleExpand(id: string) {
     setExpandedIds((prev) => {
@@ -169,6 +184,7 @@ export default function LogsTable({ entityId }: LogsTableProps) {
               Employee
             </TableHead>
             <TableHead className="w-[12%] p-3 font-semibold">Action</TableHead>
+            <TableHead className="w-[14%] p-3 font-semibold">Entity</TableHead>
             <TableHead className="w-[25%] p-3 font-semibold">Before</TableHead>
             <TableHead className="w-[25%] p-3 font-semibold">After</TableHead>
             <TableHead className="w-40 p-3 font-semibold">Date</TableHead>
@@ -178,7 +194,7 @@ export default function LogsTable({ entityId }: LogsTableProps) {
           {isLoading && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="p-3 text-center text-muted-foreground"
               >
                 Loading logs...
@@ -186,10 +202,10 @@ export default function LogsTable({ entityId }: LogsTableProps) {
             </TableRow>
           )}
 
-          {!isLoading && logs.length === 0 && (
+          {!isLoading && displayedLogs.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="p-3 text-center text-muted-foreground"
               >
                 No logs found.
@@ -197,8 +213,12 @@ export default function LogsTable({ entityId }: LogsTableProps) {
             </TableRow>
           )}
 
-          {logs.map((log: AuditLog) => {
-            const hasMovement = !!(log.stockIn || log.stockOut);
+          {displayedLogs.map((log: AuditLog) => {
+            const hasMovement = !!(
+              log.stockIn ||
+              log.stockOut ||
+              log.stockMovement
+            );
             const isExpanded = expandedIds.has(log.id);
             const before = formatAuditRecord(log.before);
             const after = formatAuditRecord(log.after);
@@ -238,6 +258,9 @@ export default function LogsTable({ entityId }: LogsTableProps) {
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
                   </TableCell>
+                  <TableCell className="p-3">
+                    <Badge variant="outline">{entityLabel[log.entityType]}</Badge>
+                  </TableCell>
                   <TableCell className="overflow-hidden p-3 text-sm text-muted-foreground">
                     <AuditValuePreview
                       label="Before"
@@ -264,10 +287,12 @@ export default function LogsTable({ entityId }: LogsTableProps) {
 
                 {hasMovement && isExpanded && (
                   <TableRow>
-                    <TableCell colSpan={6} className="bg-muted/30 p-0">
+                    <TableCell colSpan={7} className="bg-muted/30 p-0">
                       <StockMovementDetails
                         stockIn={log.stockIn}
                         stockOut={log.stockOut}
+                        stockMovement={log.stockMovement}
+                        inventoryId={entityId}
                       />
                     </TableCell>
                   </TableRow>
