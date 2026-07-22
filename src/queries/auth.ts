@@ -32,6 +32,22 @@ export const forgotPassword = (email: string) =>
     .post<{ message: string }>("/auth/forgot-password", { email })
     .then((response) => response.data);
 
+export const verifyResetCode = (payload: { email: string; code: string }) =>
+  api
+    .post<{ message: string; resetToken: string }>(
+      "/auth/reset-password",
+      payload,
+    )
+    .then((response) => response.data);
+
+export const setNewPassword = (payload: {
+  resetToken: string;
+  newPassword: string;
+}) =>
+  api
+    .post<{ message: string }>("/auth/new-password", payload)
+    .then((response) => response.data);
+
 export const resetPassword = (payload: {
   token: string | null;
   password: string;

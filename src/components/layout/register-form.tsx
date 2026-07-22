@@ -98,229 +98,229 @@ export default function RegisterForm() {
   };
 
   return (
-      <AuthLayout
-        reverse
-        panel={
-          <>
-            <h2 className="text-3xl font-bold">Welcome Back!</h2>
-            <p className="mt-4 text-sm leading-relaxed text-white/80">
-              Already have an account? Sign in to continue managing your store.
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="mt-8 rounded-full border-1 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition text-white hover:bg-blue-900 hover:text-primary cursor-pointer"
-            >
-              Sign In
-            </button>
-          </>
-        }
-      >
-        <div className="w-full max-w-sm">
-          <h1 className="text-center text-3xl font-bold text-primary">
-            Create Your Store
-          </h1>
-          <p className="mt-2 text-center text-sm text-slate-400">
-            Set up your POS account in minutes
+    <AuthLayout
+      reverse
+      panel={
+        <>
+          <h2 className="text-3xl font-bold">Hello, Friend!</h2>
+          <p className="mt-4 text-sm leading-relaxed text-white/80">
+            Already have an account? Sign in to continue managing your store.
           </p>
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+            className="mt-8 rounded-full border-1 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition text-white hover:bg-blue-900 hover:text-primary cursor-pointer"
+          >
+            Sign In
+          </button>
+        </>
+      }
+    >
+      <div className="w-full max-w-sm">
+        <h1 className="text-center text-3xl font-bold text-primary">
+          Create Your Store
+        </h1>
+        <p className="mt-2 text-center text-sm text-slate-400">
+          Set up your POS account in minutes
+        </p>
 
-          <Form {...formHook}>
-            <form
-              onSubmit={formHook.handleSubmit(handleSubmit)}
-              className="mt-6 space-y-4"
-            >
-              {/* Name fields */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={formHook.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <AuthInput
-                          icon={User}
-                          autoComplete="given-name"
-                          placeholder="First Name"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="px-1 text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={formHook.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <AuthInput
-                          icon={User}
-                          autoComplete="family-name"
-                          placeholder="Last Name"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="px-1 text-xs" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Store Name */}
+        <Form {...formHook}>
+          <form
+            onSubmit={formHook.handleSubmit(handleSubmit)}
+            className="mt-6 space-y-4"
+          >
+            {/* Name fields */}
+            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={formHook.control}
-                name="storeName"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
                       <AuthInput
-                        icon={Store}
-                        placeholder="Store Name"
+                        icon={User}
+                        autoComplete="given-name"
+                        placeholder="First Name"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="text-xs px-1" />
+                    <FormMessage className="px-1 text-xs" />
                   </FormItem>
                 )}
               />
 
-              {/* Email */}
               <FormField
                 control={formHook.control}
-                name="email"
+                name="lastName"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
                       <AuthInput
-                        icon={Mail}
-                        type="email"
-                        placeholder="Email"
+                        icon={User}
+                        autoComplete="family-name"
+                        placeholder="Last Name"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="text-xs px-1" />
+                    <FormMessage className="px-1 text-xs" />
                   </FormItem>
                 )}
               />
+            </div>
 
-              {/* Phone */}
-              <FormField
-                control={formHook.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <PhoneNumberInput
-                        value={field.value as Value}
-                        placeholder="700000000"
-                        onChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs px-1" />
-                  </FormItem>
-                )}
-              />
-
-              {/* Password */}
-              <FormField
-                control={formHook.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <AuthInput
-                        icon={Lock}
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Password"
-                        trailing={
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-                          >
-                            {showPassword ? (
-                              <EyeOff size={18} />
-                            ) : (
-                              <Eye size={18} />
-                            )}
-                          </Button>
-                        }
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs px-1" />
-                  </FormItem>
-                )}
-              />
-
-              {/* Confirm Password */}
-              <FormField
-                control={formHook.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <AuthInput
-                        icon={Lock}
-                        type={showConfirm ? "text" : "password"}
-                        placeholder="Confirm Password"
-                        trailing={
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setShowConfirm((prev) => !prev)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-                          >
-                            {showConfirm ? (
-                              <EyeOff size={18} />
-                            ) : (
-                              <Eye size={18} />
-                            )}
-                          </Button>
-                        }
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs px-1" />
-                  </FormItem>
-                )}
-              />
-
-              {/* API error */}
-              {error && (
-                <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-                  {error}
-                </div>
+            {/* Store Name */}
+            <FormField
+              control={formHook.control}
+              name="storeName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <AuthInput
+                      icon={Store}
+                      placeholder="Store Name"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs px-1" />
+                </FormItem>
               )}
+            />
 
-              <div className="flex justify-center pt-2">
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="h-12 rounded-full bg-primary/90 px-16 text-sm font-semibold uppercase tracking-wide text-white hover:bg-primary"
-                >
-                  {loading ? "Creating Account..." : "Create Account"}
-                </Button>
+            {/* Email */}
+            <FormField
+              control={formHook.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <AuthInput
+                      icon={Mail}
+                      type="email"
+                      placeholder="Email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs px-1" />
+                </FormItem>
+              )}
+            />
+
+            {/* Phone */}
+            <FormField
+              control={formHook.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <PhoneNumberInput
+                      value={field.value as Value}
+                      placeholder="700000000"
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs px-1" />
+                </FormItem>
+              )}
+            />
+
+            {/* Password */}
+            <FormField
+              control={formHook.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <AuthInput
+                      icon={Lock}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Password"
+                      trailing={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                        >
+                          {showPassword ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </Button>
+                      }
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs px-1" />
+                </FormItem>
+              )}
+            />
+
+            {/* Confirm Password */}
+            <FormField
+              control={formHook.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <AuthInput
+                      icon={Lock}
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="Confirm Password"
+                      trailing={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowConfirm((prev) => !prev)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
+                        >
+                          {showConfirm ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </Button>
+                      }
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs px-1" />
+                </FormItem>
+              )}
+            />
+
+            {/* API error */}
+            {error && (
+              <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
+                {error}
               </div>
-            </form>
-          </Form>
+            )}
 
-          {/* Mobile-only switch link */}
-          <div className="mt-6 text-center text-sm text-slate-500 lg:hidden">
-            Already have an account?{" "}
-            <span
-              onClick={() => navigate("/login")}
-              className="cursor-pointer font-semibold text-teal-600 hover:underline"
-            >
-              Sign In
-            </span>
-          </div>
+            <div className="flex justify-center pt-2">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="h-12 rounded-full bg-primary/90 px-16 text-sm font-semibold uppercase tracking-wide text-white hover:bg-primary"
+              >
+                {loading ? "Creating Account..." : "Create Account"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+
+        {/* Mobile-only switch link */}
+        <div className="mt-6 text-center text-sm text-slate-500 lg:hidden">
+          Already have an account?{" "}
+          <span
+            onClick={() => navigate("/login")}
+            className="cursor-pointer font-semibold text-teal-600 hover:underline"
+          >
+            Sign In
+          </span>
         </div>
-      </AuthLayout>
+      </div>
+    </AuthLayout>
   );
 }

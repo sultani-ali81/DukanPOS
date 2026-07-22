@@ -1,7 +1,7 @@
 import { AuthInput } from "@/components/layout/auth-input";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/lib/store";
 import { extractError } from "@/lib/error";
+import { useAuthStore } from "@/lib/store";
 import { decodeToken } from "@/lib/utils";
 import TwoFADialog from "@/pages/(auth)/two-fa-dialog";
 import { login } from "@/queries/auth";
@@ -103,12 +103,15 @@ export default function LoginForm() {
           <>
             <h2 className="text-3xl font-bold">Hello, Friend!</h2>
             <p className="mt-4 text-sm leading-relaxed text-white/80">
-              Enter your details and start your journey with us today.
+              Don't have an Account?
+            </p>
+            <p className="text-sm leading-relaxed text-white/80">
+              Create an Account and start managing your Store today.
             </p>
             <button
               type="button"
               onClick={() => navigate("/register")}
-              className="mt-8 rounded-full border-1 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition text-white hover:bg-blue-900 hover:text-primary cursor-pointer"
+              className="mt-8 rounded-xl border-1 border-white px-12 py-3 text-sm font-semibold uppercase tracking-wide transition text-white hover:bg-blue-900 hover:text-primary cursor-pointer"
             >
               Sign Up
             </button>
@@ -155,6 +158,16 @@ export default function LoginForm() {
                 </Button>
               }
             />
+
+            <div className="text-left -mt-3">
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/auth/forgot-password")}
+                className="text-sm text-primary/60 hover:underline hover:text-primary/90 hover:bg-white"
+              >
+                Forgot password?
+              </Button>
+            </div>
           </div>
 
           {error && (
@@ -167,7 +180,7 @@ export default function LoginForm() {
             <Button
               disabled={loading}
               onClick={handleSubmit}
-              className="h-12 rounded-full bg-primary/90 px-16 text-sm font-semibold uppercase tracking-wide text-white hover:bg-primary"
+              className="h-12 rounded-xl bg-primary/90 px-16 text-sm font-semibold uppercase tracking-wide text-white hover:bg-primary"
             >
               {loading ? "Signing In..." : "Sign In"}
             </Button>

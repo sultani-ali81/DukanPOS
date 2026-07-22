@@ -19,7 +19,7 @@ export function AuthInput({
       <Icon className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
       <Input
         className={cn(
-          "h-12 rounded-xl pl-12 pr-12 placeholder:text-slate-400",
+          "h-12 rounded-lg pl-12 pr-12 placeholder:text-slate-400",
           className,
         )}
         {...props}

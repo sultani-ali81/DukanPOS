@@ -1,6 +1,9 @@
 import { lazy } from "react";
 
 export const LoginPage = lazy(() => import("@/pages/(auth)/login"));
+export const ForgotPasswordPage = lazy(
+  () => import("@/pages/(auth)/forgot-password"),
+);
 export const RegisterPage = lazy(() => import("@/pages/(auth)/register"));
 export const VerifyEmailPage = lazy(
   () => import("@/pages/(auth)/verify-email"),
