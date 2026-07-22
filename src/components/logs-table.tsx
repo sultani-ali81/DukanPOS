@@ -103,7 +103,7 @@ function AuditValuePreview({
           <TooltipContent>View all</TooltipContent>
         </Tooltip>
       )}
-      <span className="min-w-0 truncate">{value}</span>
+      <span className="min-w-0 whitespace-nowrap">{value}</span>
     </div>
   );
 }
@@ -179,20 +179,58 @@ export default function LogsTable({
         </div>
       )}
 
-      <Table className="w-full min-w-[760px] table-fixed border-collapse">
+      <Table
+        className={cn(
+          "w-full table-fixed border-collapse",
+          showEntityColumn ? "min-w-[1100px]" : "min-w-[900px]",
+        )}
+      >
         <TableHeader className="border-b bg-gray-200">
           <TableRow className="border-b-0 hover:bg-transparent">
-            <TableHead className="w-10 p-3" />
-            <TableHead className="w-[18%] p-3 font-semibold">
+            <TableHead className="w-[5%] p-3" />
+            <TableHead
+              className={cn(
+                "p-3 font-semibold",
+                showEntityColumn ? "w-[15%]" : "w-[19%]",
+              )}
+            >
               Employee
             </TableHead>
-            <TableHead className="w-[12%] p-3 font-semibold">Action</TableHead>
+            <TableHead
+              className={cn(
+                "p-3 font-semibold",
+                showEntityColumn ? "w-[11%]" : "w-[14%]",
+              )}
+            >
+              Action
+            </TableHead>
             {showEntityColumn && (
-              <TableHead className="w-[14%] p-3 font-semibold">Entity</TableHead>
+              <TableHead className="w-[17%] p-3 font-semibold">Entity</TableHead>
             )}
-            <TableHead className="w-[25%] p-3 font-semibold">Before</TableHead>
-            <TableHead className="w-[25%] p-3 font-semibold">After</TableHead>
-            <TableHead className="w-40 p-3 font-semibold">Date</TableHead>
+            <TableHead
+              className={cn(
+                "p-3 font-semibold",
+                showEntityColumn ? "w-[17%]" : "w-[22%]",
+              )}
+            >
+              Before
+            </TableHead>
+            <TableHead
+              className={cn(
+                "p-3 font-semibold",
+                showEntityColumn ? "w-[17%]" : "w-[22%]",
+              )}
+            >
+              After
+            </TableHead>
+            <TableHead
+              className={cn(
+                "p-3 font-semibold",
+                showEntityColumn ? "w-[18%]" : "w-[18%]",
+              )}
+            >
+              Date
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="[&_tr]:border-b [&_tr:last-child]:border-b-0">
@@ -270,25 +308,22 @@ export default function LogsTable({
                       </Badge>
                     </TableCell>
                   )}
-                  <TableCell className="overflow-hidden p-3 text-sm text-muted-foreground">
+                  <TableCell className="p-3 text-sm text-muted-foreground">
                     <AuditValuePreview
                       label="Before"
                       value={before}
                       onView={() => setDetail({ label: "Before", value: before })}
                     />
                   </TableCell>
-                  <TableCell className="overflow-hidden p-3 text-sm">
+                  <TableCell className="p-3 text-sm">
                     <AuditValuePreview
                       label="After"
                       value={after}
                       onView={() => setDetail({ label: "After", value: after })}
                     />
                   </TableCell>
-                  <TableCell
-                    className="overflow-hidden p-3 text-muted-foreground"
-                    title={formatDate(log.createdAt)}
-                  >
-                    <span className="block truncate whitespace-nowrap">
+                  <TableCell className="p-3 text-muted-foreground">
+                    <span className="block whitespace-normal">
                       {formatDate(log.createdAt)}
                     </span>
                   </TableCell>
