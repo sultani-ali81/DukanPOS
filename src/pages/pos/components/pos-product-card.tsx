@@ -51,7 +51,7 @@ export function PosProductCard({
       )}
     >
       {/* Image */}
-      <div className="relative aspect-square w-full h-20 w-20 sm:h-60 sm:w-full group">
+      <div className="group relative aspect-[4/3] w-full sm:aspect-square">
         <img
           src={images[currentIndex]}
           alt={product.name}
@@ -128,12 +128,12 @@ export function PosProductCard({
       </div>
 
       {/* Info */}
-      <div className="p-3">
-        <div className="flex items-start justify-between gap-1 min-h-[36px]">
+      <div className="p-2.5 sm:p-3">
+        <div className="flex min-h-[36px] min-w-0 flex-col items-start gap-1 min-[460px]:flex-row min-[460px]:justify-between">
           <h3 className="text-sm font-medium text-gray-800 line-clamp-2 break-words leading-tight">
             {product.name}
           </h3>
-          <span className="text-sm font-semibold text-green-600 shrink-0 whitespace-nowrap">
+          <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-green-600 sm:text-sm">
             {product.hasPrice ? formatCurrency(product.price) : "No price"}
           </span>
         </div>

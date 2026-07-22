@@ -185,16 +185,17 @@ export default function ProductsPage() {
         title="Products"
         description="Manage your product catalog, prices, and stock."
       >
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 min-[420px]:flex-row sm:w-auto">
           <SearchField
             value={search}
             onValueChange={handleSearch}
             onClear={clearSearch}
             placeholder="Search by name or barcode..."
             aria-label="Search products by name or barcode"
-            inputClassName="w-64"
+            className="min-w-0 flex-1 sm:flex-none"
+            inputClassName="w-full sm:w-64"
           />
-          <Button onClick={openCreate}>
+          <Button className="w-full min-[420px]:w-auto" onClick={openCreate}>
             <Plus className="size-4" /> Add Product
           </Button>
         </div>

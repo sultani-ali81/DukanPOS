@@ -137,16 +137,16 @@ export default function LogsTable({ entityId }: LogsTableProps) {
 
   return (
     <TooltipProvider>
-      <div>
+      <div className="min-w-0 max-w-full overflow-hidden">
       {!entityId && (
-        <div className="flex items-center justify-between p-3">
+        <div className="flex min-w-0 items-center justify-between p-3">
           <Select
             value={type ?? "all"}
             onValueChange={(val) =>
               setType(val === "all" ? undefined : (val as AuditEntityType))
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full max-w-[180px]">
               <SelectValue placeholder="Filter by entity" />
             </SelectTrigger>
             <SelectContent>
@@ -161,9 +161,9 @@ export default function LogsTable({ entityId }: LogsTableProps) {
         </div>
       )}
 
-      <Table className="table-fixed min-w-[760px]">
-        <TableHeader>
-          <TableRow className="bg-gray-200">
+      <Table className="w-full min-w-[760px] table-fixed border-collapse">
+        <TableHeader className="border-b bg-gray-200">
+          <TableRow className="border-b-0 hover:bg-transparent">
             <TableHead className="w-10 p-3" />
             <TableHead className="w-[18%] p-3 font-semibold">
               Employee
@@ -171,10 +171,10 @@ export default function LogsTable({ entityId }: LogsTableProps) {
             <TableHead className="w-[12%] p-3 font-semibold">Action</TableHead>
             <TableHead className="w-[25%] p-3 font-semibold">Before</TableHead>
             <TableHead className="w-[25%] p-3 font-semibold">After</TableHead>
-            <TableHead className="w-[16%] p-3 font-semibold">Date</TableHead>
+            <TableHead className="w-40 p-3 font-semibold">Date</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="[&_tr]:border-b [&_tr:last-child]:border-b-0">
           {isLoading && (
             <TableRow>
               <TableCell
@@ -252,8 +252,13 @@ export default function LogsTable({ entityId }: LogsTableProps) {
                       onView={() => setDetail({ label: "After", value: after })}
                     />
                   </TableCell>
-                  <TableCell className="p-3 text-muted-foreground">
-                    {formatDate(log.createdAt)}
+                  <TableCell
+                    className="overflow-hidden p-3 text-muted-foreground"
+                    title={formatDate(log.createdAt)}
+                  >
+                    <span className="block truncate whitespace-nowrap">
+                      {formatDate(log.createdAt)}
+                    </span>
                   </TableCell>
                 </TableRow>
 

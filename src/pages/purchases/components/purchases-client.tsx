@@ -186,7 +186,7 @@ export function PurchasesClient() {
         </div>
 
         <CardContent className="p-0">
-          <div className="hidden overflow-x-auto md:block">
+          <div className="hidden overflow-x-auto xl:block">
             <Table className="min-w-[1200px]">
               <TableHeader>
                 <TableRow className="bg-muted/40">
@@ -310,7 +310,7 @@ export function PurchasesClient() {
             </Table>
           </div>
 
-          <div className="p-3 md:hidden">
+          <div className="p-3 xl:hidden">
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, index) => (

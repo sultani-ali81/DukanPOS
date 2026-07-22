@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CalendarDays, X } from "lucide-react";
 import { useState } from "react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export interface DateRange {
   from: Date | undefined;
@@ -36,15 +37,28 @@ export function DateRangePicker({
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [local, setLocal] = useState<DateRange>(value);
+  const isMobile = useMediaQuery("(max-width: 639px)");
 
   const handleOpen = (o: boolean) => {
     if (o) setLocal(value);
     setOpen(o);
   };
 
-  const handleSelect = (range: { from?: Date; to?: Date } | undefined) => {
-    const next: DateRange = { from: range?.from, to: range?.to };
-    setLocal(next);
+  const handleDayClick = (day: Date) => {
+    // An empty or completed range always starts a fresh two-click selection.
+    if (!local.from || local.to) {
+      setLocal({ from: day, to: undefined });
+      return;
+    }
+
+    // Allow the second date to be before the first while keeping the stored
+    // range chronologically ordered.
+    if (day < local.from) {
+      setLocal({ from: day, to: local.from });
+      return;
+    }
+
+    setLocal({ from: local.from, to: day });
   };
 
   const handleApply = () => {
@@ -73,15 +87,15 @@ export function DateRangePicker({
         <Button
           disabled={disabled}
           className={cn(
-            "flex items-center gap-2 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
+            "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-0 sm:w-auto",
             hasRange
-              ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50",
+              ? "border-indigo-300 bg-indigo-50 text-indigo-700 hover:border-indigo-500 hover:bg-indigo-100 active:border-indigo-600"
+              : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 active:border-gray-500",
             disabled && "opacity-50 cursor-not-allowed",
           )}
         >
           <CalendarDays className="size-3.5 shrink-0" />
-          <span className="max-w-[180px] truncate">{label}</span>
+          <span className="min-w-0 flex-1 truncate text-left sm:max-w-[180px]">{label}</span>
           {hasRange && (
             <span
               role="Button"
@@ -98,8 +112,8 @@ export function DateRangePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className="p-0 w-auto rounded-2xl shadow-xl border border-gray-100"
-        align="end"
+        className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gray-100 p-0 shadow-xl sm:w-auto"
+        align={isMobile ? "center" : "end"}
         sideOffset={8}
       >
         {/* Header */}
@@ -120,8 +134,8 @@ export function DateRangePicker({
         <Calendar
           mode="range"
           selected={{ from: local.from, to: local.to }}
-          onSelect={handleSelect}
-          numberOfMonths={2}
+          onDayClick={handleDayClick}
+          numberOfMonths={isMobile ? 1 : 2}
           pagedNavigation
           startMonth={new Date(2020, 0)}
           endMonth={new Date(new Date().getFullYear() + 1, 11)}

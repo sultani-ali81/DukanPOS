@@ -124,14 +124,14 @@ export default function InventoryPage() {
         title="Inventory"
         description="Manage warehouses, stock levels, and stock movements."
       >
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 min-[420px]:flex-row sm:w-auto">
           <Button
             variant="outline"
             onClick={() => navigate("/stock-movement/new")}
           >
             <ArrowLeftRight className="size-4" /> Transfer Stock
           </Button>
-          <Button onClick={openCreate}>
+          <Button className="min-[420px]:flex-1 sm:flex-none" onClick={openCreate}>
             <Plus className="size-4" /> Add Inventory
           </Button>
         </div>

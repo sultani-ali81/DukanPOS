@@ -256,8 +256,8 @@ export function PurchaseDetailClient() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-3">
+        <div className="min-w-0 space-y-6 xl:col-span-2">
           <Card>
             <CardHeader className="flex-row items-center justify-between gap-3">
               <CardTitle>Purchased items</CardTitle>
@@ -328,7 +328,7 @@ export function PurchaseDetailClient() {
                         <p className="font-medium">
                           {item.product?.name ?? "Unknown product"}
                         </p>
-                        <dl className="grid grid-cols-3 gap-2 text-sm">
+                        <dl className="grid grid-cols-2 gap-3 text-sm min-[420px]:grid-cols-3">
                           <div>
                             <dt className="text-xs text-muted-foreground">Unit price</dt>
                             <dd className="mt-1 tabular-nums">
@@ -421,17 +421,9 @@ export function PurchaseDetailClient() {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden">
-            <CardHeader>
-              <CardTitle>Logs History</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <LogsTable entityId={purchase.id} />
-            </CardContent>
-          </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <PurchaseFlowCard
             purchase={purchase}
             onConfirm={() => void updateStatus("Done")}
@@ -453,13 +445,13 @@ export function PurchaseDetailClient() {
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Hash className="size-4" /> Purchase number
                   </dt>
-                  <dd className="font-mono text-sm font-semibold">{purchase.sequenceId}</dd>
+                  <dd className="min-w-0 break-all text-right font-mono text-sm font-semibold">{purchase.sequenceId}</dd>
                 </div>
                 <div className="flex items-start justify-between gap-4">
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Truck className="size-4" /> Supplier
                   </dt>
-                  <dd className="max-w-44 text-right text-sm font-semibold">
+                  <dd className="min-w-0 max-w-44 break-words text-right text-sm font-semibold">
                     {purchase.customer?.name ?? "—"}
                   </dd>
                 </div>
@@ -467,7 +459,7 @@ export function PurchaseDetailClient() {
                   <dt className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CalendarClock className="size-4" /> Purchase date
                   </dt>
-                  <dd className="max-w-44 text-right text-sm font-medium">
+                  <dd className="min-w-0 max-w-44 break-words text-right text-sm font-medium">
                     {formatPurchaseDate(purchase.customDate)}
                   </dd>
                 </div>
@@ -476,7 +468,7 @@ export function PurchaseDetailClient() {
                     <dt className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Warehouse className="size-4" /> Inventory
                     </dt>
-                    <dd className="max-w-44 text-right text-sm font-medium">
+                    <dd className="min-w-0 max-w-44 break-all text-right text-sm font-medium">
                       {purchase.inventoryName ?? purchase.inventoryId}
                     </dd>
                   </div>
@@ -533,6 +525,17 @@ export function PurchaseDetailClient() {
           </Card>
 
         </div>
+
+        {/* Keep audit history last in the mobile reading order while placing it
+            beneath the main purchase content on wide screens. */}
+        <Card className="min-w-0 overflow-hidden xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Logs History</CardTitle>
+          </CardHeader>
+          <CardContent className="min-w-0 p-0">
+            <LogsTable entityId={purchase.id} />
+          </CardContent>
+        </Card>
       </div>
 
       {paymentOpen && canAddPayment && (

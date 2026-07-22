@@ -409,12 +409,12 @@ export default function ReportsPage() {
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as ReportType)}
       >
-        <TabsList className="mb-5 h-auto flex-wrap gap-1 rounded-xl border border-border bg-muted/40 p-1">
+        <TabsList className="mb-5 h-auto flex-wrap gap-2 rounded-xl border border-transparent bg-transparent p-0 sm:gap-1 sm:border-border sm:bg-muted/40 sm:p-1">
           {REPORT_TABS.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="h-6 flex-none cursor-pointer rounded-lg px-3.5 data-active:text-primary-foreground dark:data-active:text-primary-foreground"
+              className="h-7 flex-none cursor-pointer rounded-lg border-gray-200 px-3.5 hover:border-gray-400 data-active:border-primary data-active:text-primary-foreground sm:h-6 sm:border-transparent sm:hover:border-transparent sm:data-active:border-transparent dark:data-active:text-primary-foreground"
             >
               {tab.label}
             </TabsTrigger>

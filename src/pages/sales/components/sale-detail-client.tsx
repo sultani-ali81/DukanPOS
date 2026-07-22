@@ -234,7 +234,7 @@ export function SaleDetailClient() {
                         <p className="font-medium">
                           {item.product?.name ?? "Unknown product"}
                         </p>
-                        <dl className="grid grid-cols-3 gap-2 text-sm">
+                        <dl className="grid grid-cols-2 gap-3 text-sm min-[420px]:grid-cols-3">
                           <div>
                             <dt className="text-xs text-muted-foreground">
                               Unit price

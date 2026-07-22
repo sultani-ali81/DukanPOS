@@ -160,16 +160,17 @@ export default function ProductDetailPage() {
         title={product.name}
         description="Product details and stock information."
       >
-        <div className="flex gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button asChild variant="outline">
             <Link to="/products">
               <ArrowLeft className="size-4" /> Back
             </Link>
           </Button>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button className="flex-1 sm:flex-none" onClick={() => setDialogOpen(true)}>
             <Pencil className="size-4" /> Edit Product
           </Button>
           <Button
+            className="flex-1 sm:flex-none"
             variant="destructive"
             onClick={() => setDeleteDialogOpen(true)}
             disabled={deleting}

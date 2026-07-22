@@ -145,7 +145,7 @@ export default function InventoryDetailPage() {
       <PageHeader
         title={loading ? "Loading\u2026" : (inventory?.name ?? "Inventory")}
       >
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 min-[480px]:flex-row sm:w-auto">
           <Button
             variant="outline"
             onClick={() =>

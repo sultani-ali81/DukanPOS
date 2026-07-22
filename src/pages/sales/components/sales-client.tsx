@@ -55,7 +55,7 @@ function SalesTableSkeleton() {
 
 function SalesCardSkeleton() {
   return (
-    <div className="space-y-3 md:hidden">
+    <div className="space-y-3 xl:hidden">
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
@@ -218,7 +218,7 @@ export function SalesClient() {
         </div>
 
         <CardContent className="p-0">
-          <div className="hidden md:block">
+          <div className="hidden overflow-x-auto xl:block">
             <Table className="min-w-[920px]">
               <TableHeader>
                 <TableRow className="bg-muted/40">
@@ -326,7 +326,7 @@ export function SalesClient() {
             </Table>
           </div>
 
-          <div className="p-3 md:hidden">
+          <div className="p-3 xl:hidden">
             {isLoading ? (
               <SalesCardSkeleton />
             ) : sales.length === 0 ? (

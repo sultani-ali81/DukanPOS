@@ -76,7 +76,7 @@ export function Pagination({
           <span
             key={`ellipsis-${index}`}
             aria-hidden="true"
-            className="h-8 w-8 flex items-center justify-center text-gray-400"
+            className="hidden h-8 w-8 items-center justify-center text-gray-400 sm:flex"
           >
             <MoreHorizontal className="h-4 w-4" />
           </span>
@@ -89,7 +89,10 @@ export function Pagination({
             variant={currentPage === page ? "default" : "outline"}
             size="sm"
             onClick={() => onPageChange(page as number)}
-            className="h-8 w-8 p-0 rounded-lg"
+            className={cn(
+              "h-8 w-8 rounded-lg p-0",
+              currentPage !== page && "hidden sm:inline-flex",
+            )}
           >
             {page}
           </Button>

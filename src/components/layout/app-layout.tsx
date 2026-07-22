@@ -54,22 +54,22 @@ export default function AppLayout() {
     .toUpperCase();
 
   return (
-    <div className="flex h-dvh overflow-hidden gap-2.5 bg-gray-300 p-2.5">
+    <div className="fixed inset-0 flex overflow-hidden bg-gray-300 p-1.5 sm:gap-2.5 sm:p-2.5">
       {/* Desktop sidebar */}
-      <aside className="hidden h-full w-64 shrink-0 overflow-hidden p-1 rounded-lg bg-white lg:block">
+      <aside className="hidden h-full w-64 shrink-0 overflow-hidden rounded-lg bg-white p-1 xl:block">
         <SidebarNav />
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-hidden">
         {/* Top bar */}
-        <header className="z-30 flex min-h-[60px] shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
+        <header className="z-30 flex min-h-[60px] min-w-0 shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               render={
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden"
+                  className="xl:hidden"
                   aria-label="Open menu"
                 >
                   <Menu className="size-5" />
@@ -82,7 +82,7 @@ export default function AppLayout() {
             </SheetContent>
           </Sheet>
 
-          <div className="relative hidden max-w-sm flex-1 sm:block">
+          <div className="relative hidden min-w-0 max-w-sm flex-1 sm:block">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
@@ -158,7 +158,7 @@ export default function AppLayout() {
         </header>
 
         <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg bg-white p-[4.5px]">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-2.5">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain p-2.5 pb-[max(1rem,env(safe-area-inset-bottom))] scroll-pb-4 [-webkit-overflow-scrolling:touch]">
             <Outlet />
           </div>
         </main>

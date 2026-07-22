@@ -535,9 +535,9 @@ export default function PosPage() {
   );
 
   return (
-    <div className="fixed inset-0 p-2.5 overflow-hidden bg-gray-300 flex flex-col lg:flex-row gap-2.5">
+    <div className="fixed inset-0 flex flex-col gap-2 overflow-hidden bg-gray-300 p-1.5 sm:gap-2.5 sm:p-2.5 lg:flex-row">
       {/* ── Product list ── */}
-      <div className="bg-white flex-1 rounded-lg min-w-0 flex flex-col h-full p-4 border border-gray-200">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white p-2.5 sm:p-4">
         {/* ── Exit POS + Open/Close Session row (left / right) ── */}
         {exitSessionRow}
 

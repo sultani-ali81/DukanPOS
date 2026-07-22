@@ -112,17 +112,17 @@ export default function DashboardPage() {
       )}
 
       {/* ── Range toolbar ── */}
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
+      <div className="mb-5 flex min-w-0 flex-wrap items-center gap-2">
+        <div className="grid w-full min-w-0 grid-cols-2 gap-2 rounded-xl border border-transparent bg-transparent p-0 sm:w-auto sm:grid-cols-none sm:grid-flow-col sm:gap-1 sm:border-border sm:bg-muted/40 sm:p-1">
           {RANGE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => setRange(opt.value)}
               className={cn(
-                "h-6 rounded-lg cursor-pointer px-3.5 text-sm font-medium transition-colors",
+                "h-8 min-w-0 cursor-pointer whitespace-nowrap rounded-lg border px-2 text-xs font-medium outline-none transition-colors focus-visible:ring-0 sm:h-7 sm:px-3.5 sm:text-sm",
                 range === opt.value && !isCustomActive
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "border-primary bg-primary text-white shadow-sm hover:border-primary/80 active:border-primary"
+                  : "border-gray-200 bg-white text-muted-foreground hover:border-gray-400 hover:text-foreground active:border-gray-500 sm:border-transparent sm:bg-transparent",
               )}
             >
               {opt.label}
