@@ -93,12 +93,12 @@ export default function AppLayout() {
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-6">
             <ThemeToggle />
 
             <DropdownMenu>
               <DropdownMenuTrigger className="cursor-pointer">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
                   <Globe className="size-4" />
                   <span className="hidden md:inline">English</span>
                 </div>
