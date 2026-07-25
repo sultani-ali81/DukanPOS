@@ -2,6 +2,7 @@ import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "next-themes";
 import { SWRConfig } from "swr";
 import { useAuthStore } from "./lib/store";
 import { router } from "./router/index";
@@ -19,9 +20,16 @@ export function AuthScopedApp() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Suspense fallback={null}>
-      <AuthScopedApp />
-    </Suspense>
-    <Toaster richColors position="top-right" />
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="dukanpos-theme"
+    >
+      <Suspense fallback={null}>
+        <AuthScopedApp />
+      </Suspense>
+      <Toaster richColors position="top-right" />
+    </ThemeProvider>
   </StrictMode>,
 );

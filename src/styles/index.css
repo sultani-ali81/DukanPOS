@@ -123,33 +123,33 @@ Option B: from CDN (uncomment if you don't have local files) */
 }
 
 .dark {
-  /* Glassmorphism Dark Theme */
+  /* Solid dark surfaces with only subtle layering between components. */
   --background: oklch(0.17 0.02 285);
   --foreground: oklch(0.97 0.01 285);
 
-  --card: oklch(0.23 0.02 285 / 65%);
+  --card: oklch(0.22 0.02 285);
   --card-foreground: oklch(0.97 0.01 285);
 
-  --popover: oklch(0.23 0.02 285 / 75%);
+  --popover: oklch(0.235 0.02 285);
   --popover-foreground: oklch(0.97 0.01 285);
 
   --primary: oklch(0.74 0.22 290);
   --primary-foreground: oklch(0.15 0.02 285);
 
-  --secondary: oklch(0.28 0.02 285 / 70%);
+  --secondary: oklch(0.28 0.02 285);
   --secondary-foreground: oklch(0.97 0.01 285);
 
-  --muted: oklch(0.25 0.015 285 / 60%);
+  --muted: oklch(0.25 0.015 285);
   --muted-foreground: oklch(0.75 0.01 285);
 
-  --accent: oklch(0.33 0.04 290 / 70%);
+  --accent: oklch(0.31 0.035 290);
   --accent-foreground: oklch(0.97 0.01 285);
 
   --destructive: oklch(0.72 0.2 25);
 
   /* FIX: Boosted dark mode white line opacity from 10% to 18% so lines stand out on dark panels */
   --border: oklch(1 0 0 / 18%);
-  --input: oklch(1 0 0 / 22%);
+  --input: oklch(0.3 0.02 285);
   --ring: oklch(0.74 0.22 290);
 
   --chart-1: oklch(0.74 0.22 290);
@@ -158,11 +158,11 @@ Option B: from CDN (uncomment if you don't have local files) */
   --chart-4: oklch(0.8 0.12 260);
   --chart-5: oklch(0.85 0.08 240);
 
-  --sidebar: oklch(0.23 0.02 285 / 65%);
+  --sidebar: oklch(0.205 0.02 285);
   --sidebar-foreground: oklch(0.97 0.01 285);
   --sidebar-primary: oklch(0.74 0.22 290);
   --sidebar-primary-foreground: oklch(0.15 0.02 285);
-  --sidebar-accent: oklch(0.3 0.02 285 / 70%);
+  --sidebar-accent: oklch(0.29 0.02 285);
   --sidebar-accent-foreground: oklch(0.97 0.01 285);
   --sidebar-border: oklch(1 0 0 / 14%);
   --sidebar-ring: oklch(0.74 0.22 290);
@@ -260,6 +260,73 @@ Option B: from CDN (uncomment if you don't have local files) */
   }
 }
 
+/* Smooth, short-lived theme transition added by the header toggle. */
+.theme-transition,
+.theme-transition body,
+.theme-transition .app-theme,
+.theme-transition .app-theme header,
+.theme-transition .app-theme aside,
+.theme-transition .app-theme main,
+.theme-transition .app-theme [data-slot="card"],
+.theme-transition [data-slot="dialog-content"],
+.theme-transition [data-slot="dropdown-menu-content"],
+.theme-transition [data-slot="sheet-content"] {
+  transition:
+    color 350ms ease,
+    background-color 350ms ease,
+    border-color 350ms ease,
+    box-shadow 350ms ease;
+}
+
+/*
+ * A compatibility layer for older screens that still use Tailwind's fixed
+ * gray palette instead of the semantic theme tokens.
+ */
+.dark .app-theme {
+  .bg-white {
+    background-color: var(--card);
+  }
+
+  .bg-gray-50,
+  .bg-slate-50 {
+    background-color: var(--muted);
+  }
+
+  .bg-gray-100,
+  .bg-gray-200,
+  .bg-slate-100,
+  .bg-slate-200 {
+    background-color: var(--accent);
+  }
+
+  .text-gray-900,
+  .text-gray-800,
+  .text-gray-700,
+  .text-slate-900,
+  .text-slate-800,
+  .text-slate-700 {
+    color: var(--foreground);
+  }
+
+  .text-gray-600,
+  .text-gray-500,
+  .text-gray-400,
+  .text-slate-600,
+  .text-slate-500,
+  .text-slate-400 {
+    color: var(--muted-foreground);
+  }
+
+  .border-gray-100,
+  .border-gray-200,
+  .border-gray-300,
+  .border-slate-100,
+  .border-slate-200,
+  .border-slate-300 {
+    border-color: var(--border);
+  }
+}
+
 @layer components {
   .glass {
     background: color-mix(in oklch, white 70%, transparent);
@@ -274,7 +341,7 @@ Option B: from CDN (uncomment if you don't have local files) */
   }
 
   .dark .glass {
-    background: rgba(25, 25, 35, 0.55);
+    background: rgba(25, 25, 35, 0.94);
 
     box-shadow:
       0 8px 32px rgba(139, 92, 246, 0.18),

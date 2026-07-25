@@ -61,7 +61,9 @@ export default function OtpDialog({
           <DialogTitle className="text-base font-semibold text-center">
             {title}
           </DialogTitle>
-          <p className="text-xs text-gray-400 text-center">{description}</p>
+          <p className="text-center text-xs text-muted-foreground">
+            {description}
+          </p>
         </DialogHeader>
 
         <div className="flex flex-col items-center space-y-4">
@@ -90,7 +92,7 @@ export default function OtpDialog({
 
           <button
             onClick={handleClose}
-            className="w-full text-xs text-gray-400 hover:text-gray-600 transition"
+            className="w-full text-xs text-muted-foreground transition hover:text-foreground"
           >
             Cancel
           </button>

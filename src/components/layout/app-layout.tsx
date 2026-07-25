@@ -1,4 +1,5 @@
 import { SidebarNav } from "@/components/sidebar-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,12 +24,11 @@ import {
   LogOut,
   Mail,
   Menu,
-  Search,
+  Store,
   UserCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Input } from "../ui/input";
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
@@ -54,15 +54,15 @@ export default function AppLayout() {
     .toUpperCase();
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden bg-gray-300 p-1.5 sm:gap-2.5 sm:p-2.5">
+    <div className="app-theme fixed inset-0 flex overflow-hidden bg-gray-300 p-1.5 sm:gap-2.5 sm:p-2.5">
       {/* Desktop sidebar */}
-      <aside className="hidden h-full w-64 shrink-0 overflow-hidden rounded-lg bg-white p-1 xl:block">
+      <aside className="hidden h-full w-64 shrink-0 overflow-hidden rounded-lg bg-background p-1 xl:block">
         <SidebarNav />
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 overflow-hidden">
         {/* Top bar */}
-        <header className="z-30 flex min-h-[60px] min-w-0 shrink-0 items-center gap-3 rounded-lg bg-white px-4 py-3 md:px-6">
+        <header className="z-30 flex min-h-[60px] min-w-0 shrink-0 items-center gap-3 rounded-lg border border-border/60 bg-background px-4 py-3 shadow-sm md:px-6">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               render={
@@ -82,16 +82,20 @@ export default function AppLayout() {
             </SheetContent>
           </Sheet>
 
-          <div className="relative hidden min-w-0 max-w-sm flex-1 sm:block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search products, sales, contacts..."
-              className="h-10 w-full rounded-lg  pl-9 pr-3 text-sm placeholder:text-muted-foreground "
-            />
+          <div className="flex min-w-0 shrink items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <Store className="size-[18px]" />
+            </div>
+            <div className="min-w-0 leading-tight">
+              <p className="truncate font-heading text-base font-bold tracking-tight text-foreground sm:text-lg">
+                {profile?.storeName || "Dukan POS"}
+              </p>
+            </div>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+
             <DropdownMenu>
               <DropdownMenuTrigger className="cursor-pointer">
                 <div className="flex items-center gap-3">
@@ -157,7 +161,7 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg bg-white p-[4.5px]">
+        <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-border/60 bg-background p-[4.5px] shadow-sm">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain p-2.5 pb-[max(1rem,env(safe-area-inset-bottom))] scroll-pb-4 [-webkit-overflow-scrolling:touch]">
             <Outlet />
           </div>

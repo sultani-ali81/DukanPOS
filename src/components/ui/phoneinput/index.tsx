@@ -119,7 +119,7 @@ export const PhoneNumberInput: React.ForwardRefExoticComponent<PhoneNumberInputP
         )}
         <div
           className={cn(
-            "h-12 w-full min-w-0 rounded-xl border border-input px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 md:text-sm dark:bg-input/30",
+            "h-12 w-full min-w-0 rounded-xl border border-input px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 md:text-sm dark:bg-input/80",
             error &&
               "border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40",
             controlClassName,

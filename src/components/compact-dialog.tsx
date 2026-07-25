@@ -27,7 +27,7 @@ function CompactDialogHeader({
   return (
     <DialogHeader
       className={cn(
-        "px-5 pt-5 pb-4 border-b border-gray-100",
+        "border-b border-border px-5 pt-5 pb-4",
         className,
       )}
       {...props}
