@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronRight, FileBarChart2 } from "lucide-react";
 import { Fragment, useState } from "react";
 
+import { PaginationFooter } from "@/components/pagination-footer";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -51,7 +52,7 @@ export function ReportPanel<T extends { id: string }>({
   const { rows, meta, isLoading, error } = useReport<T>({
     type,
     page,
-    limit: itemsPerPage,
+    itemsPerPage: itemsPerPage,
   });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -161,4 +162,3 @@ export function ReportPanel<T extends { id: string }>({
     </>
   );
 }
-import { PaginationFooter } from "@/components/pagination-footer";

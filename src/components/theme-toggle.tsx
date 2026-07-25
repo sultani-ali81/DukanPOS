@@ -47,7 +47,7 @@ export function ThemeToggle() {
       />
       <Moon
         className={cn(
-          "absolute size-5 fill-indigo-400/20 text-indigo-400 transition-all duration-500 ease-out",
+          "absolute size-5 fill-primary/20 text-primary transition-all duration-500 ease-out",
           isDark
             ? "rotate-0 scale-100 opacity-100"
             : "rotate-90 scale-0 opacity-0",
@@ -58,7 +58,7 @@ export function ThemeToggle() {
         className={cn(
           "absolute size-8 rounded-full transition-all duration-500",
           isDark
-            ? "scale-100 bg-indigo-400/10"
+            ? "scale-100 bg-primary/10"
             : "scale-0 bg-amber-400/10",
         )}
       />

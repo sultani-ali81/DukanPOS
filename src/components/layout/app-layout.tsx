@@ -18,15 +18,7 @@ import {
 } from "@/components/ui/sheet";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuthStore } from "@/lib/store";
-import {
-  Bell,
-  Globe,
-  LogOut,
-  Mail,
-  Menu,
-  Store,
-  UserCircle,
-} from "lucide-react";
+import { Globe, LogOut, Mail, Menu, Store, UserCircle } from "lucide-react";
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
@@ -45,7 +37,13 @@ export default function AppLayout() {
     navigate("/", { replace: true });
   };
 
-  const initials = (user?.name ?? user?.role ?? "?")
+  const displayName =
+    [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
+    user?.name ||
+    user?.email?.split("@")[0] ||
+    "User";
+
+  const initials = displayName
     .split(" ")
     .map((p) => p[0])
     .filter(Boolean)
@@ -54,9 +52,9 @@ export default function AppLayout() {
     .toUpperCase();
 
   return (
-    <div className="app-theme fixed inset-0 flex overflow-hidden bg-gray-300 p-1.5 sm:gap-2.5 sm:p-2.5">
+    <div className="app-theme fixed inset-0 flex overflow-hidden bg-gray-300 p-1.5 dark:bg-gray-900 sm:gap-2.5 sm:p-2.5">
       {/* Desktop sidebar */}
-      <aside className="hidden h-full w-64 shrink-0 overflow-hidden rounded-lg bg-background p-1 xl:block">
+      <aside className="hidden h-full w-64 shrink-0 overflow-hidden rounded-lg bg-background border border-border/60 p-1 xl:block">
         <SidebarNav />
       </aside>
 
@@ -88,12 +86,12 @@ export default function AppLayout() {
             </div>
             <div className="min-w-0 leading-tight">
               <p className="truncate font-heading text-base font-bold tracking-tight text-foreground sm:text-lg">
-                {profile?.storeName || "Dukan POS"}
+                {profile?.storeName}
               </p>
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-6">
+          <div className="ml-auto flex items-center gap-2 sm:gap-4 lg:gap-6">
             <ThemeToggle />
 
             <DropdownMenu>
@@ -112,27 +110,27 @@ export default function AppLayout() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Notifications"
-              className="relative"
-            >
-              <Bell className="size-5" />
-              <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-destructive" />
-            </Button>
-
             <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Avatar className="size-9 cursor-pointer">
-                  <AvatarImage
-                    src={profile?.imageUrl ?? undefined}
-                    alt={user?.name ?? "Avatar"}
-                  />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+              <DropdownMenuTrigger className="cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <div className="flex items-center gap-2.5">
+                  <Avatar className="size-9">
+                    <AvatarImage
+                      src={profile?.imageUrl ?? undefined}
+                      alt={`${displayName}'s avatar`}
+                    />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden min-w-0 text-left leading-tight md:block">
+                    <p className="max-w-36 truncate text-sm font-semibold text-foreground">
+                      {displayName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {profile?.role || user?.role}
+                    </p>
+                  </div>
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>

@@ -78,22 +78,22 @@ Option B: from CDN (uncomment if you don't have local files) */
   --background: oklch(0.98 0.02 285);
   --foreground: oklch(0.24 0.015 285);
 
-  --card: oklch(1 0 0 / 65%);
+  --card: oklch(1 0 0 / 46%);
   --card-foreground: oklch(0.24 0.015 285);
 
-  --popover: oklch(1 0 0 / 75%);
+  --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.24 0.015 285);
 
   --primary: oklch(18.34% 0.09661 269.202);
   --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.95 0.015 285 / 75%);
+  --secondary: oklch(0.95 0.015 285 / 54%);
   --secondary-foreground: oklch(0.24 0.015 285);
 
-  --muted: oklch(0.97 0.01 285 / 60%);
+  --muted: oklch(0.97 0.01 285 / 54%);
   --muted-foreground: oklch(0.48 0.015 285);
 
-  --accent: oklch(0.92 0.04 290 / 75%);
+  --accent: oklch(0.92 0.04 290 / 54%);
   --accent-foreground: oklch(0.24 0.015 285);
 
   --destructive: oklch(0.62 0.22 25);
@@ -110,11 +110,11 @@ Option B: from CDN (uncomment if you don't have local files) */
 
   --radius: 1rem;
 
-  --sidebar: oklch(1 0 0 / 65%);
+  --sidebar: oklch(1 0 0 / 96%);
   --sidebar-foreground: oklch(0.24 0.015 285);
   --sidebar-primary: oklch(25.522% 0.15688 272.262);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.95 0.02 290 / 70%);
+  --sidebar-accent: oklch(0.95 0.02 290 / 54%);
   --sidebar-accent-foreground: oklch(0.24 0.015 285);
 
   /* FIX: Light mode sidebar border visible separation */
@@ -124,48 +124,48 @@ Option B: from CDN (uncomment if you don't have local files) */
 
 .dark {
   /* Solid dark surfaces with only subtle layering between components. */
-  --background: oklch(0.17 0.02 285);
-  --foreground: oklch(0.97 0.01 285);
+  --background: oklch(0.17 0.018 225);
+  --foreground: oklch(0.97 0.008 220);
 
-  --card: oklch(0.22 0.02 285);
-  --card-foreground: oklch(0.97 0.01 285);
+  --card: oklch(0.22 0.022 225);
+  --card-foreground: oklch(0.97 0.008 220);
 
-  --popover: oklch(0.235 0.02 285);
-  --popover-foreground: oklch(0.97 0.01 285);
+  --popover: oklch(0.235 0.024 225);
+  --popover-foreground: oklch(0.97 0.008 220);
 
-  --primary: oklch(0.74 0.22 290);
-  --primary-foreground: oklch(0.15 0.02 285);
+  --primary: oklch(64.304% 0.11406 218.122);
+  --primary-foreground: oklch(0.15 0.022 225);
 
-  --secondary: oklch(0.28 0.02 285);
-  --secondary-foreground: oklch(0.97 0.01 285);
+  --secondary: oklch(0.28 0.025 225);
+  --secondary-foreground: oklch(0.97 0.008 220);
 
-  --muted: oklch(0.25 0.015 285);
-  --muted-foreground: oklch(0.75 0.01 285);
+  --muted: oklch(0.25 0.018 225);
+  --muted-foreground: oklch(0.76 0.018 220);
 
-  --accent: oklch(0.31 0.035 290);
-  --accent-foreground: oklch(0.97 0.01 285);
+  --accent: oklch(0.31 0.045 218);
+  --accent-foreground: oklch(0.97 0.008 220);
 
   --destructive: oklch(0.72 0.2 25);
 
   /* FIX: Boosted dark mode white line opacity from 10% to 18% so lines stand out on dark panels */
   --border: oklch(1 0 0 / 18%);
-  --input: oklch(0.3 0.02 285);
-  --ring: oklch(0.74 0.22 290);
+  --input: oklch(0.3 0.028 225);
+  --ring: oklch(64.304% 0.11406 218.122);
 
-  --chart-1: oklch(0.74 0.22 290);
-  --chart-2: oklch(0.7 0.18 275);
-  --chart-3: oklch(0.65 0.14 310);
-  --chart-4: oklch(0.8 0.12 260);
-  --chart-5: oklch(0.85 0.08 240);
+  --chart-1: oklch(64.304% 0.11406 218.122);
+  --chart-2: oklch(0.73 0.13 195);
+  --chart-3: oklch(0.68 0.15 245);
+  --chart-4: oklch(0.75 0.12 165);
+  --chart-5: oklch(0.78 0.14 82);
 
-  --sidebar: oklch(0.205 0.02 285);
-  --sidebar-foreground: oklch(0.97 0.01 285);
-  --sidebar-primary: oklch(0.74 0.22 290);
-  --sidebar-primary-foreground: oklch(0.15 0.02 285);
-  --sidebar-accent: oklch(0.29 0.02 285);
-  --sidebar-accent-foreground: oklch(0.97 0.01 285);
+  --sidebar: oklch(0.205 0.022 225);
+  --sidebar-foreground: oklch(0.97 0.008 220);
+  --sidebar-primary: oklch(64.304% 0.11406 218.122);
+  --sidebar-primary-foreground: oklch(0.15 0.022 225);
+  --sidebar-accent: oklch(0.29 0.035 218);
+  --sidebar-accent-foreground: oklch(0.97 0.008 220);
   --sidebar-border: oklch(1 0 0 / 14%);
-  --sidebar-ring: oklch(0.74 0.22 290);
+  --sidebar-ring: oklch(64.304% 0.11406 218.122);
 }
 
 @layer base {
@@ -282,16 +282,35 @@ Option B: from CDN (uncomment if you don't have local files) */
  * A compatibility layer for older screens that still use Tailwind's fixed
  * gray palette instead of the semantic theme tokens.
  */
-.dark .app-theme {
+.dark
+  :is(
+    .app-theme,
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="drawer-content"],
+    [data-slot="sheet-content"],
+    [data-slot="popover-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="select-content"],
+    [data-slot="combobox-content"]
+  ) {
+  &.bg-white,
   .bg-white {
     background-color: var(--card);
   }
 
+  &.bg-gray-50,
+  &.bg-slate-50,
   .bg-gray-50,
   .bg-slate-50 {
     background-color: var(--muted);
   }
 
+  &.bg-gray-100,
+  &.bg-gray-200,
+  &.bg-slate-100,
+  &.bg-slate-200,
   .bg-gray-100,
   .bg-gray-200,
   .bg-slate-100,
@@ -299,6 +318,12 @@ Option B: from CDN (uncomment if you don't have local files) */
     background-color: var(--accent);
   }
 
+  &.text-gray-900,
+  &.text-gray-800,
+  &.text-gray-700,
+  &.text-slate-900,
+  &.text-slate-800,
+  &.text-slate-700,
   .text-gray-900,
   .text-gray-800,
   .text-gray-700,
@@ -308,6 +333,12 @@ Option B: from CDN (uncomment if you don't have local files) */
     color: var(--foreground);
   }
 
+  &.text-gray-600,
+  &.text-gray-500,
+  &.text-gray-400,
+  &.text-slate-600,
+  &.text-slate-500,
+  &.text-slate-400,
   .text-gray-600,
   .text-gray-500,
   .text-gray-400,
@@ -317,6 +348,12 @@ Option B: from CDN (uncomment if you don't have local files) */
     color: var(--muted-foreground);
   }
 
+  &.border-gray-100,
+  &.border-gray-200,
+  &.border-gray-300,
+  &.border-slate-100,
+  &.border-slate-200,
+  &.border-slate-300,
   .border-gray-100,
   .border-gray-200,
   .border-gray-300,

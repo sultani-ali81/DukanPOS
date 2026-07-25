@@ -137,7 +137,7 @@ export default function DashboardPage() {
         />
 
         {isCustomActive && (
-          <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+          <Badge className="hidden border-primary/20 bg-primary/10 text-xs text-primary sm:inline-flex">
             Custom Range
           </Badge>
         )}

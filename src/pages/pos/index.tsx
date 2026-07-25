@@ -6,6 +6,7 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -466,39 +467,42 @@ export default function PosPage() {
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
     hasActiveSession || sessionError
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
-      : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100",
+      : "border-green-200 bg-green-50 text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-950/80 dark:text-green-300 dark:hover:bg-green-900",
   );
 
   const closeBtnClass = cn(
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
     !hasActiveSession
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
-      : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100",
+      : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/80 dark:text-red-300 dark:hover:bg-red-900",
   );
 
   const cashMovementBtnClass = cn(
     "flex items-center gap-1.5 h-9 px-3 rounded-xl border text-sm font-medium transition-colors",
     !hasActiveSession
       ? "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed"
-      : "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100",
+      : "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20",
   );
 
   // ── Exit + session row — shared between desktop and mobile ───────────────────
 
   const exitSessionRow = (
-    <div className="flex-none flex items-center justify-between gap-2 mb-3">
-      <Button
-        onClick={handleExitPos}
-        className="flex items-center gap-1.5 h-9 px-3 rounded-xl transition-colors cursor-pointer"
-        variant="default"
-      >
-        {isCashier ? (
-          <LogOut className="w-3.5 h-3.5" />
-        ) : (
-          <ArrowLeft className="w-3.5 h-3.5" />
-        )}
-        {isCashier ? "Log Out" : "Exit POS"}
-      </Button>
+    <div className="mb-3 flex flex-none items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleExitPos}
+          className="flex h-9 cursor-pointer items-center gap-1.5 rounded-xl px-3 transition-colors"
+          variant="default"
+        >
+          {isCashier ? (
+            <LogOut className="w-3.5 h-3.5" />
+          ) : (
+            <ArrowLeft className="w-3.5 h-3.5" />
+          )}
+          {isCashier ? "Log Out" : "Exit POS"}
+        </Button>
+        <ThemeToggle />
+      </div>
 
       <div className="flex items-center gap-2">
         <button
@@ -535,9 +539,9 @@ export default function PosPage() {
   );
 
   return (
-    <div className="fixed inset-0 flex flex-col gap-2 overflow-hidden bg-gray-300 p-1.5 sm:gap-2.5 sm:p-2.5 lg:flex-row">
+    <div className="app-theme fixed inset-0 flex flex-col gap-2 overflow-hidden bg-gray-300 p-1.5 dark:bg-gray-900 sm:gap-2.5 sm:p-2.5 lg:flex-row">
       {/* ── Product list ── */}
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white p-2.5 sm:p-4">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm sm:p-4">
         {/* ── Exit POS + Open/Close Session row (left / right) ── */}
         {exitSessionRow}
 

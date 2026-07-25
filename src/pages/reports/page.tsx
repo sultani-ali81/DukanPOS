@@ -11,19 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/currency";
-import { cn } from "@/lib/utils";
 import {
   getStatusClassName,
   getStatusLabel,
   getStatusVariant,
 } from "@/lib/status";
+import { cn } from "@/lib/utils";
 import type {
   CashMovementReportRow,
   InventoryReportRow,
@@ -414,7 +409,7 @@ export default function ReportsPage() {
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="h-7 flex-none cursor-pointer rounded-lg border-gray-200 px-3.5 hover:border-gray-400 data-active:border-primary data-active:text-primary-foreground sm:h-6 sm:border-transparent sm:hover:border-transparent sm:data-active:border-transparent dark:data-active:text-primary-foreground"
+              className="h-7 flex-none cursor-pointer rounded-lg border-gray-200 px-3.5 hover:border-gray-400 data-active:border-primary data-active:text-primary-foreground dark:data-active:bg-primary sm:h-6 sm:border-transparent sm:hover:border-transparent sm:data-active:border-transparent dark:hover:bg-primary dark:data-active:text-gray-100"
             >
               {tab.label}
             </TabsTrigger>

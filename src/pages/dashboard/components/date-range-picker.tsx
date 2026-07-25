@@ -5,10 +5,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { CalendarDays, X } from "lucide-react";
 import { useState } from "react";
-import { useMediaQuery } from "@/hooks/use-media-query";
 
 export interface DateRange {
   from: Date | undefined;
@@ -37,7 +37,7 @@ export function DateRangePicker({
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [local, setLocal] = useState<DateRange>(value);
-  const isMobile = useMediaQuery("(max-width: 639px)");
+  const isCompact = useMediaQuery("(max-width: 767px)");
 
   const handleOpen = (o: boolean) => {
     if (o) setLocal(value);
@@ -87,23 +87,25 @@ export function DateRangePicker({
         <Button
           disabled={disabled}
           className={cn(
-            "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-0 sm:w-auto",
+            "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-xl border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-0 md:w-auto",
             hasRange
-              ? "border-indigo-300 bg-indigo-50 text-indigo-700 hover:border-indigo-500 hover:bg-indigo-100 active:border-indigo-600"
+              ? "border-primary/30 bg-primary/10 text-primary hover:border-primary/60 hover:bg-primary/15 active:border-primary"
               : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 active:border-gray-500",
             disabled && "opacity-50 cursor-not-allowed",
           )}
         >
           <CalendarDays className="size-3.5 shrink-0" />
-          <span className="min-w-0 flex-1 truncate text-left sm:max-w-[180px]">{label}</span>
+          <span className="min-w-0 flex-1 truncate text-left md:max-w-[180px]">
+            {label}
+          </span>
           {hasRange && (
             <span
-              role="Button"
+              role="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleClear();
               }}
-              className="ml-1 rounded-full hover:bg-indigo-200 p-0.5 transition-colors"
+              className="ml-1 rounded-full p-0.5 transition-colors hover:bg-primary/20"
             >
               <X className="size-3" />
             </span>
@@ -112,8 +114,8 @@ export function DateRangePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gray-100 p-0 shadow-xl sm:w-auto"
-        align={isMobile ? "center" : "end"}
+        className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[42rem] overflow-y-auto overscroll-contain rounded-2xl border border-gray-100 p-0 shadow-xl md:w-auto"
+        align={isCompact ? "center" : "end"}
         sideOffset={8}
       >
         {/* Header */}
@@ -132,10 +134,11 @@ export function DateRangePicker({
 
         {/* Calendar */}
         <Calendar
+          className="max-[359px]:p-2 max-[359px]:[--cell-size:1.75rem]"
           mode="range"
           selected={{ from: local.from, to: local.to }}
           onDayClick={handleDayClick}
-          numberOfMonths={isMobile ? 1 : 2}
+          numberOfMonths={isCompact ? 1 : 2}
           pagedNavigation
           startMonth={new Date(2020, 0)}
           endMonth={new Date(new Date().getFullYear() + 1, 11)}
@@ -144,25 +147,27 @@ export function DateRangePicker({
         />
 
         {/* Footer */}
-        <div className="px-4 pb-4 pt-3 flex items-center justify-between gap-3 border-t border-gray-100">
+        <div className="flex flex-col-reverse gap-2 border-t border-gray-100 px-3 pb-3 pt-3 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:gap-3 min-[360px]:px-4 min-[360px]:pb-4">
           <Button
+            variant="ghost"
+            size="sm"
             onClick={handleClear}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="h-8 w-full text-xs text-gray-400 transition-colors hover:text-gray-600 min-[360px]:w-auto"
           >
             Clear
           </Button>
-          <div className="flex gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 min-[360px]:flex min-[360px]:w-auto">
             <Button
               variant="outline"
               size="sm"
-              className="h-8 rounded-xl border-gray-200 text-xs"
+              className="h-8 w-full rounded-xl border-gray-200 text-xs min-[360px]:w-auto"
               onClick={() => setOpen(false)}
             >
               Cancel
             </Button>
             <Button
               size="sm"
-              className="h-8 rounded-xl text-xs font-semibold"
+              className="h-8 w-full rounded-xl text-xs font-semibold min-[360px]:w-auto"
               disabled={!canApply}
               onClick={handleApply}
             >

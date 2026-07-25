@@ -37,13 +37,7 @@ import type {
   Product,
   ProductFormSubmitValues,
 } from "@/types/product";
-import {
-  Loader2,
-  Package,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Loader2, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -136,9 +130,7 @@ export default function ProductsPage() {
         description: `"${product.name}" has been removed.`,
       });
       setProductToDelete(null);
-      await mutateCache(
-        createCrudFamilyMatcher("products", product.id),
-      );
+      await mutateCache(createCrudFamilyMatcher("products", product.id));
     } catch {
       toast.error("Could not delete product", {
         description: "Please try again.",
@@ -212,12 +204,10 @@ export default function ProductsPage() {
           <Table className="table-fixed min-w-[630px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="py-3 pl-3 w-2/5">Product</TableHead>
-                <TableHead className="py-3 w-1/5">Category</TableHead>
-                <TableHead className="py-3 w-[14%] text-right">Price</TableHead>
-                <TableHead className="py-3 w-[12%] text-right">
-                  Actions
-                </TableHead>
+                <TableHead className="pb-3 pl-12 text-left">Product</TableHead>
+                <TableHead className="pb-3 text-center">Category</TableHead>
+                <TableHead className="pb-3 text-center">Price</TableHead>
+                <TableHead className="pb-3 text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -254,7 +244,7 @@ export default function ProductsPage() {
                       className="cursor-pointer transition-colors hover:bg-muted/50"
                       onClick={() => navigate(`/products/${p.id}`)}
                     >
-                      <TableCell className="py-3.5 pl-3 pr-2">
+                      <TableCell className="py-3.5 pl-6 pr-2">
                         <div className="flex items-center gap-3">
                           <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
                             {p.primaryImage ? (
@@ -278,21 +268,21 @@ export default function ProductsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-3.5">
+                      <TableCell className="py-3.5 text-center">
                         {p.category ? (
                           <Badge variant="secondary">{p.category}</Badge>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-2 py-3.5 text-right font-mono font-semibold text-primary">
+                      <TableCell className="px-2 py-3.5 text-center font-mono font-semibold text-primary">
                         {formatCurrency(p.price)}
                       </TableCell>
                       <TableCell
                         className="px-2 py-3.5 text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="text-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -372,9 +362,7 @@ export default function ProductsPage() {
                 if (productToDelete) void handleDelete(productToDelete);
               }}
             >
-              {deletingId ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
+              {deletingId ? <Loader2 className="size-4 animate-spin" /> : null}
               {deletingId ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </div>

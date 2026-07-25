@@ -385,7 +385,7 @@ export function PosReceiptDialog({
             type="button"
             aria-label="Close receipt"
             onClick={() => onOpenChange(false)}
-            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-black hover:bg-gray-200 transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-foreground transition-colors hover:bg-gray-200"
           >
             <X className="w-3.5 h-3.5" />
           </button>
