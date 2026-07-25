@@ -19,6 +19,7 @@ import {
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -27,7 +28,6 @@ export default function ForgotPassword() {
   const [error, setError] = useState("");
   const [otpOpen, setOtpOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const [resetToken, setResetToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -55,8 +55,8 @@ export default function ForgotPassword() {
   };
 
   const handleVerify = async (code: string) => {
-    const result = await verifyResetCode({ email, code });
-    setResetToken(result.resetToken);
+    await verifyResetCode({ email, code });
+    setOtpOpen(false);
     setPasswordOpen(true);
   };
 
@@ -74,8 +74,9 @@ export default function ForgotPassword() {
 
     try {
       setSavingPassword(true);
-      await setNewPassword({ resetToken, newPassword: password });
+      const result = await setNewPassword(password);
       setPasswordOpen(false);
+      toast.success(result.message);
       navigate("/login", { replace: true });
     } catch (err: unknown) {
       setPasswordError(extractError(err, "Unable to reset your password"));
@@ -174,7 +175,17 @@ export default function ForgotPassword() {
         onVerify={handleVerify}
       />
 
-      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+      <Dialog
+        open={passwordOpen}
+        onOpenChange={(open) => {
+          setPasswordOpen(open);
+          if (!open) {
+            setPassword("");
+            setConfirmPassword("");
+            setPasswordError("");
+          }
+        }}
+      >
         <DialogContent className="max-w-sm rounded-2xl p-6">
           <DialogHeader className="text-center">
             <DialogTitle className="text-center text-lg font-semibold">

@@ -34,26 +34,18 @@ export const forgotPassword = (email: string) =>
 
 export const verifyResetCode = (payload: { email: string; code: string }) =>
   api
-    .post<{ message: string; resetToken: string }>(
-      "/auth/reset-password",
-      payload,
+    .post<{ message: string }>("/auth/reset-password", payload, {
+      withCredentials: true,
+    })
+    .then((response) => response.data);
+
+export const setNewPassword = (newPassword: string) =>
+  api
+    .post<{ message: string }>(
+      "/auth/new-password",
+      { newPassword },
+      { withCredentials: true },
     )
-    .then((response) => response.data);
-
-export const setNewPassword = (payload: {
-  resetToken: string;
-  newPassword: string;
-}) =>
-  api
-    .post<{ message: string }>("/auth/new-password", payload)
-    .then((response) => response.data);
-
-export const resetPassword = (payload: {
-  token: string | null;
-  password: string;
-}) =>
-  api
-    .post<{ message: string }>("/auth/reset-password", payload)
     .then((response) => response.data);
 
 export const enable2FA = (): Promise<{ qrCode: string }> =>
