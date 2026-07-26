@@ -196,7 +196,7 @@ export function PurchasesClient() {
                   <TableHead>Date</TableHead>
                   <TableHead>Purchase status</TableHead>
                   <TableHead>Payment</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-center">Total</TableHead>
                   <TableHead className="pr-5 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -249,7 +249,7 @@ export function PurchasesClient() {
                           status={purchase.paymentStatus}
                         />
                       </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums">
+                      <TableCell className="text-center font-semibold tabular-nums">
                         {formatCurrency(purchase.totalPrice)}
                       </TableCell>
                       <TableCell className="pr-5">

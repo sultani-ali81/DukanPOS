@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { PasswordToggle } from "@/components/password-toggle";
 import DateInput from "@/components/ui/DateInput";
 import {
   Dialog,
@@ -97,6 +98,8 @@ export function EditProfileDialog({
   onSaved,
   onEmailChange,
 }: EditProfileDialogProps) {
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -533,12 +536,18 @@ export function EditProfileDialog({
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="ep-oldPassword">Current Password</Label>
-                    <Input
-                      id="ep-oldPassword"
-                      type="password"
-                      className="h-11 rounded-lg"
-                      {...register("oldPassword")}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="ep-oldPassword"
+                        type={showOldPassword ? "text" : "password"}
+                        className="h-11 rounded-lg pr-12"
+                        {...register("oldPassword")}
+                      />
+                      <PasswordToggle
+                        shown={showOldPassword}
+                        onToggle={() => setShowOldPassword((value) => !value)}
+                      />
+                    </div>
                     {errors.oldPassword && (
                       <p className="text-xs text-destructive">
                         {errors.oldPassword.message}
@@ -547,12 +556,18 @@ export function EditProfileDialog({
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="ep-password">New Password</Label>
-                    <Input
-                      id="ep-password"
-                      type="password"
-                      className="h-11 rounded-lg"
-                      {...register("password")}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="ep-password"
+                        type={showPassword ? "text" : "password"}
+                        className="h-11 rounded-lg pr-12"
+                        {...register("password")}
+                      />
+                      <PasswordToggle
+                        shown={showPassword}
+                        onToggle={() => setShowPassword((value) => !value)}
+                      />
+                    </div>
                     {errors.password && (
                       <p className="text-xs text-destructive">
                         {errors.password.message}

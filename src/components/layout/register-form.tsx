@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { AuthInput } from "@/components/layout/auth-input";
 import AuthLayout from "@/components/layout/auth-layout";
+import { PasswordToggle } from "@/components/password-toggle";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -14,7 +15,7 @@ import {
 import { PhoneNumberInput } from "@/components/ui/phoneinput";
 import { passwordSchema } from "@/lib/password";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Lock, Mail, Store, User } from "lucide-react";
+import { Lock, Mail, Store, User } from "lucide-react";
 import { useForm } from "react-hook-form";
 import type { Value } from "react-phone-number-input";
 import { isValidPhoneNumber } from "react-phone-number-input";
@@ -235,19 +236,10 @@ export default function RegisterForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Password"
                       trailing={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-                        >
-                          {showPassword ? (
-                            <EyeOff size={18} />
-                          ) : (
-                            <Eye size={18} />
-                          )}
-                        </Button>
+                        <PasswordToggle
+                          shown={showPassword}
+                          onToggle={() => setShowPassword((prev) => !prev)}
+                        />
                       }
                       {...field}
                     />
@@ -269,19 +261,10 @@ export default function RegisterForm() {
                       type={showConfirm ? "text" : "password"}
                       placeholder="Confirm Password"
                       trailing={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowConfirm((prev) => !prev)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-                        >
-                          {showConfirm ? (
-                            <EyeOff size={18} />
-                          ) : (
-                            <Eye size={18} />
-                          )}
-                        </Button>
+                        <PasswordToggle
+                          shown={showConfirm}
+                          onToggle={() => setShowConfirm((prev) => !prev)}
+                        />
                       }
                       {...field}
                     />

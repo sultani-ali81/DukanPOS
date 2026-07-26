@@ -86,7 +86,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <>
+    <div className="auth-light">
       <AuthLayout
         panel={
           <>
@@ -256,6 +256,6 @@ export default function ForgotPassword() {
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

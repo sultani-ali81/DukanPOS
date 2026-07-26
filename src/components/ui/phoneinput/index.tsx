@@ -118,6 +118,7 @@ export const PhoneNumberInput: React.ForwardRefExoticComponent<PhoneNumberInputP
           </div>
         )}
         <div
+          data-slot="phone-input"
           className={cn(
             "h-12 w-full min-w-0 rounded-xl border border-input px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 md:text-sm dark:bg-input/80",
             error &&

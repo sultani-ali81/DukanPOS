@@ -121,6 +121,26 @@ Option B: from CDN (uncomment if you don't have local files) */
   /* FIX: Light mode sidebar border visible separation */
   --sidebar-border: oklch(0.24 0.015 285 / 10%);
   --sidebar-ring: oklch(11.571% 0.04438 297.649);
+
+  color: var(--foreground);
+  color-scheme: light;
+}
+
+/*
+ * Auth screens always use the light field treatment, even when the document
+ * theme is dark. These explicit declarations also cover the composed phone
+ * input, whose native input inherits its colors from the page.
+ */
+.auth-light input,
+.auth-light [data-slot="input"],
+.auth-light [data-slot="phone-input"] {
+  background-color: transparent !important;
+  color: var(--foreground) !important;
+}
+
+.auth-light input::placeholder,
+.auth-light [data-slot="input"]::placeholder {
+  color: var(--muted-foreground) !important;
 }
 
 .dark {

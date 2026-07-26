@@ -6,7 +6,7 @@ import type {
 
 const PURCHASE_STATUS_STYLES: Record<PurchaseStatus, string> = {
   Draft: "border-border bg-muted/60 text-muted-foreground",
-  Done: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700",
+  Done: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:border-emerald-300/40 dark:bg-emerald-300/15 dark:text-emerald-300",
   Cancelled: "border-red-500/30 bg-red-500/10 text-red-600",
 };
 
@@ -16,7 +16,8 @@ const PAYMENT_STATUS: Record<
 > = {
   fully_paid: {
     label: "Fully paid",
-    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700",
+    className:
+      "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:border-emerald-300/40 dark:bg-emerald-300/15 dark:text-emerald-300",
   },
   partially_paid: {
     label: "Partially paid",

@@ -12,7 +12,7 @@ function CompactDialogContent({
   return (
     <DialogContent
       className={cn(
-        "max-w-sm rounded-2xl p-0 overflow-hidden gap-0",
+        "max-h-[calc(100dvh-2rem)] max-w-sm overflow-hidden rounded-2xl p-0 gap-0 [&>form]:flex [&>form]:min-h-0 [&>form]:max-h-[calc(100dvh-2rem)] [&>form]:flex-col",
         className,
       )}
       {...props}
@@ -27,7 +27,7 @@ function CompactDialogHeader({
   return (
     <DialogHeader
       className={cn(
-        "border-b border-border px-5 pt-5 pb-4",
+        "shrink-0 border-b border-border px-5 pt-5 pb-4",
         className,
       )}
       {...props}
@@ -41,7 +41,10 @@ function CompactDialogBody({
 }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("px-5 py-4 space-y-4", className)}
+      className={cn(
+        "min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4",
+        className,
+      )}
       {...props}
     />
   );
@@ -52,7 +55,10 @@ function CompactDialogFooter({
   ...props
 }: React.ComponentProps<"div">) {
   return (
-    <div className={cn("px-5 pb-5 flex gap-2", className)} {...props} />
+    <div
+      className={cn("flex shrink-0 gap-2 px-5 pb-5 pt-1", className)}
+      {...props}
+    />
   );
 }
 

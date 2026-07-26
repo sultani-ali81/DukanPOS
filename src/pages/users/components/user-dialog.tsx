@@ -6,6 +6,7 @@ import {
   CompactDialogHeader,
 } from "@/components/compact-dialog";
 import { Button } from "@/components/ui/button";
+import { PasswordToggle } from "@/components/password-toggle";
 import {
   Dialog,
   DialogDescription,
@@ -25,30 +26,47 @@ import { passwordSchema } from "@/lib/password";
 import type { CreateUserPayload, UpdateUserPayload, User } from "@/types/user";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { Value as PhoneValue } from "react-phone-number-input";
 import { z } from "zod";
 
 // ─── Schemas ────────────────────────────────────────────────────────────────
 
-const editUserSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required"),
-  lastName: z.string().trim().min(1, "Last name is required"),
-  phone: z.string().optional(),
-});
+const editUserSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "First name is required"),
+    lastName: z.string().trim().min(1, "Last name is required"),
+    phone: z.string().optional(),
+    oldPassword: z.string().optional(),
+    password: z.string().optional(),
+  })
+  .refine((data) => !data.password || data.password.length >= 8, {
+    message: "Password must be at least 8 characters",
+    path: ["password"],
+  })
+  .refine((data) => !data.password || !!data.oldPassword, {
+    message: "Current password is required to set a new password",
+    path: ["oldPassword"],
+  });
 
-const createUserSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required"),
-  lastName: z.string().trim().min(1, "Last name is required"),
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Enter a valid email address"),
-  password: passwordSchema,
-  phone: z.string().optional(),
-  role: z.enum(["Cashier", "Admin"]),
-});
+const createUserSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "First name is required"),
+    lastName: z.string().trim().min(1, "Last name is required"),
+    email: z
+      .string()
+      .min(1, "Email is required")
+      .email("Enter a valid email address"),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm the password"),
+    phone: z.string().optional(),
+    role: z.enum(["Cashier", "Admin"]),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,6 +75,8 @@ export type UserFormValues = {
   lastName: string;
   email?: string;
   password?: string;
+  confirmPassword?: string;
+  oldPassword?: string;
   phone?: string;
   role?: "Cashier" | "Admin";
 };
@@ -82,6 +102,9 @@ export function UserDialog({
   onSubmit,
 }: UserDialogProps) {
   const isEdit = !!editingUser;
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
 
   const resolver = useMemo(
     () => zodResolver(isEdit ? editUserSchema : createUserSchema),
@@ -101,6 +124,8 @@ export function UserDialog({
       lastName: "",
       email: "",
       password: "",
+      confirmPassword: "",
+      oldPassword: "",
       phone: "",
       role: "Cashier",
     },
@@ -112,6 +137,8 @@ export function UserDialog({
       lastName: editingUser?.lastName ?? "",
       email: editingUser?.email ?? "",
       password: "",
+      confirmPassword: "",
+      oldPassword: "",
       phone: editingUser?.phone ?? "",
       role: editingUser?.role ?? "Cashier",
     });
@@ -123,6 +150,12 @@ export function UserDialog({
           firstName: values.firstName,
           lastName: values.lastName,
           phone: values.phone,
+          ...(values.password
+            ? {
+                oldPassword: values.oldPassword,
+                password: values.password,
+              }
+            : {}),
         } as UpdateUserPayload)
       : ({
           firstName: values.firstName,
@@ -140,6 +173,8 @@ export function UserDialog({
       lastName: "",
       email: "",
       password: "",
+      confirmPassword: "",
+      oldPassword: "",
       phone: "",
       role: "Cashier",
     });
@@ -229,17 +264,96 @@ export function UserDialog({
                 <Label className="text-sm font-medium text-gray-700">
                   Password <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  type="password"
-                  placeholder="Min 8 characters"
-                  className="h-11 rounded-xl border-gray-200 text-sm"
-                  {...register("password")}
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Min 8 characters"
+                    className="h-11 rounded-xl border-gray-200 pr-12 text-sm"
+                    {...register("password")}
+                  />
+                  <PasswordToggle
+                    shown={showPassword}
+                    onToggle={() => setShowPassword((value) => !value)}
+                  />
+                </div>
                 {errors.password && (
                   <p className="text-xs text-destructive">
                     {errors.password.message}
                   </p>
                 )}
+              </div>
+            )}
+
+            {!isEdit && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium text-gray-700">
+                  Confirm Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Repeat password"
+                    className="h-11 rounded-xl border-gray-200 pr-12 text-sm"
+                    {...register("confirmPassword")}
+                  />
+                  <PasswordToggle
+                    shown={showConfirmPassword}
+                    onToggle={() => setShowConfirmPassword((value) => !value)}
+                  />
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-xs text-destructive">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {isEdit && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Current Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showOldPassword ? "text" : "password"}
+                      className="h-11 rounded-xl border-gray-200 pr-12 text-sm"
+                      {...register("oldPassword")}
+                    />
+                    <PasswordToggle
+                      shown={showOldPassword}
+                      onToggle={() => setShowOldPassword((value) => !value)}
+                    />
+                  </div>
+                  {errors.oldPassword && (
+                    <p className="text-xs text-destructive">
+                      {errors.oldPassword.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">
+                    New Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Min 8 characters"
+                      className="h-11 rounded-xl border-gray-200 pr-12 text-sm"
+                      {...register("password")}
+                    />
+                    <PasswordToggle
+                      shown={showPassword}
+                      onToggle={() => setShowPassword((value) => !value)}
+                    />
+                  </div>
+                  {errors.password && (
+                    <p className="text-xs text-destructive">
+                      {errors.password.message}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 

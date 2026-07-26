@@ -118,7 +118,7 @@ export default function UsersPage() {
             key={r}
             onClick={() => setRole(r)}
             className={cn(
-              "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+              "rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer",
               role === r
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-secondary-foreground hover:bg-accent",

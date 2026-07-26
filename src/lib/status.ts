@@ -18,7 +18,7 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
     label: "Done",
     variant: "outline",
     className:
-      "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-400",
+      "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:border-emerald-300/40 dark:bg-emerald-300/15 dark:text-emerald-300",
   },
   completed: {
     label: "Completed",

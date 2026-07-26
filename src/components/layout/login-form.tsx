@@ -5,7 +5,8 @@ import { useAuthStore } from "@/lib/store";
 import { decodeToken } from "@/lib/utils";
 import TwoFADialog from "@/pages/(auth)/two-fa-dialog";
 import { login } from "@/queries/auth";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
+import { PasswordToggle } from "@/components/password-toggle";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -147,15 +148,10 @@ export default function LoginForm() {
               placeholder="Password"
               autoComplete="new-password"
               trailing={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:bg-transparent"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </Button>
+                <PasswordToggle
+                  shown={showPassword}
+                  onToggle={() => setShowPassword((prev) => !prev)}
+                />
               }
             />
 
