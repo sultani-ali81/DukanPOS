@@ -103,7 +103,7 @@ export function ProductDialog({
     setValue,
     formState: { errors, isSubmitting, dirtyFields },
   } = useForm<ProductFormValues>({
-    defaultValues: { name: "", price: 0, categoryName: "" },
+    defaultValues: { name: "", price: 0, categoryName: "", barcode: "" },
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,6 +144,7 @@ export function ProductDialog({
       name: editingProduct?.name ?? "",
       price: editingProduct?.price ?? 0,
       categoryName: editingProduct?.category ?? "",
+      barcode: editingProduct?.barcode ?? "",
     });
 
     setExistingImages(editingProduct?.images ?? []);
@@ -249,6 +250,7 @@ export function ProductDialog({
       if (dirtyFields.name) payload.name = values.name;
       if (dirtyFields.price) payload.price = values.price;
       if (dirtyFields.categoryName) payload.categoryName = values.categoryName;
+      if (dirtyFields.barcode) payload.barcode = values.barcode.trim();
 
       if (
         Object.keys(payload).length === 0 &&
@@ -259,7 +261,13 @@ export function ProductDialog({
         return;
       }
     } else {
-      Object.assign(payload, values);
+      Object.assign(payload, {
+        name: values.name,
+        price: values.price,
+        categoryName: values.categoryName,
+      });
+      const barcode = values.barcode.trim();
+      if (barcode) payload.barcode = barcode;
     }
 
     try {
@@ -293,6 +301,7 @@ export function ProductDialog({
                 name: recoveredProduct.name,
                 price: recoveredProduct.price,
                 categoryName: recoveredProduct.category ?? "",
+                barcode: recoveredProduct.barcode ?? "",
               });
             }
           },
@@ -307,6 +316,7 @@ export function ProductDialog({
           name: result.product.name,
           price: result.product.price,
           categoryName: result.product.category ?? "",
+          barcode: result.product.barcode ?? "",
         });
       }
 
@@ -491,6 +501,40 @@ export function ProductDialog({
               {errors.price && (
                 <p className="text-xs text-destructive">
                   {errors.price.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="p-barcode">Barcode</Label>
+              <Input
+                id="p-barcode"
+                type="text"
+                autoComplete="off"
+                placeholder="Type or scan a barcode"
+                disabled={isSubmitting}
+                onKeyDown={(event) => {
+                  // Most USB scanners append Enter. Keep that suffix from
+                  // submitting the entire product form unexpectedly.
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                }}
+                {...register("barcode", {
+                  maxLength: {
+                    value: 128,
+                    message: "Barcode must be 128 characters or fewer",
+                  },
+                })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Click this field, then scan the product or enter its barcode
+                manually.
+              </p>
+              {errors.barcode && (
+                <p className="text-xs text-destructive">
+                  {errors.barcode.message}
                 </p>
               )}
             </div>

@@ -2,6 +2,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
+  barcode?: string | null;
   productCode?: string;
   category?: string;
   categoryId?: string;
@@ -34,6 +35,7 @@ export interface ProductFormValues {
   name: string;
   price: number;
   categoryName: string;
+  barcode: string;
 }
 
 // Partial because edits only send dirty fields — see dirtyFields logic
@@ -46,11 +48,13 @@ export interface CreateProductPayload {
   name: string;
   price: number;
   categoryName: string;
+  barcode?: string;
   attachmentIds?: string[];
 }
 export interface UpdateProductPayload {
   name?: string;
   price?: number;
   categoryName?: string;
+  barcode?: string;
   attachmentIds?: string[];
 }

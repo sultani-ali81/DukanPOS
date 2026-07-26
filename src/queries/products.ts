@@ -37,6 +37,7 @@ function mapProduct(raw: Record<string, unknown>): Product {
     id: raw.id as string,
     name: raw.name as string,
     price: raw.price as number,
+    barcode: (raw.barcode as string | null | undefined) ?? null,
     productCode: raw.productCode as string | undefined,
     categories,
     category: categories[0]?.name,
