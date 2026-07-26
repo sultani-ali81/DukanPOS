@@ -83,126 +83,130 @@ export default function VerifyEmailPage() {
 
   if (!email) {
     return (
+      <div className="auth-light">
+        <AuthLayout
+          reverse
+          panel={
+            <>
+              <MailCheck className="mx-auto size-12 text-white/90" />
+              <h2 className="mt-5 text-3xl font-bold">Verify Your Email</h2>
+              <p className="mt-4 text-sm leading-relaxed text-white/80">
+                Create an account first so we know where to send your
+                verification code.
+              </p>
+            </>
+          }
+        >
+          <div className="w-full max-w-sm text-center">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+              <MailCheck className="size-7" />
+            </div>
+            <h1 className="mt-5 text-2xl font-bold text-primary">
+              Email address missing
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              We could not find a pending registration. Return to registration
+              to create your account and request a verification code.
+            </p>
+            <Button asChild className="mt-7 h-11 w-full rounded-full">
+              <Link to="/register">
+                <ArrowLeft className="size-4" /> Back to registration
+              </Link>
+            </Button>
+          </div>
+        </AuthLayout>
+      </div>
+    );
+  }
+
+  return (
+    <div className="auth-light">
       <AuthLayout
         reverse
         panel={
           <>
-            <MailCheck className="mx-auto size-12 text-white/90" />
-            <h2 className="mt-5 text-3xl font-bold">Verify Your Email</h2>
+            <CheckCircle2 className="mx-auto size-12 text-white/90" />
+            <h2 className="mt-5 text-3xl font-bold">Almost There!</h2>
             <p className="mt-4 text-sm leading-relaxed text-white/80">
-              Create an account first so we know where to send your verification
-              code.
+              Verify your email to activate your account and start managing your
+              store.
             </p>
           </>
         }
       >
-        <div className="w-full max-w-sm text-center">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
             <MailCheck className="size-7" />
           </div>
-          <h1 className="mt-5 text-2xl font-bold text-primary">
-            Email address missing
+          <h1 className="mt-5 text-3xl font-bold text-primary">
+            Check your email
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-500">
-            We could not find a pending registration. Return to registration to
-            create your account and request a verification code.
+            Enter the 6-digit verification code sent to
+            <strong className="mt-1 block break-all font-semibold text-slate-700">
+              {email}
+            </strong>
           </p>
-          <Button asChild className="mt-7 h-11 w-full rounded-full">
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={code}
+                onChange={(value) => {
+                  setCode(value.replace(/\D/g, "").slice(0, 6));
+                  if (error) setError("");
+                }}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                aria-label="Six-digit email verification code"
+                aria-invalid={!!error}
+                disabled={loading}
+                autoFocus
+              >
+                <InputOTPGroup>
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <InputOTPSlot key={index} index={index} />
+                  ))}
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600"
+              >
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={loading || !email || code.length !== 6}
+              className="h-12 w-full rounded-full text-sm font-semibold uppercase tracking-wide"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Verifying...
+                </>
+              ) : (
+                "Verify Email"
+              )}
+            </Button>
+          </form>
+
+          <p className="mt-6 text-xs leading-5 text-slate-400">
+            Didn't receive a code? Check your spam folder or return to
+            registration to try again.
+          </p>
+          <Button asChild variant="link" className="mt-1 text-sm">
             <Link to="/register">
               <ArrowLeft className="size-4" /> Back to registration
             </Link>
           </Button>
         </div>
       </AuthLayout>
-    );
-  }
-
-  return (
-    <AuthLayout
-      reverse
-      panel={
-        <>
-          <CheckCircle2 className="mx-auto size-12 text-white/90" />
-          <h2 className="mt-5 text-3xl font-bold">Almost There!</h2>
-          <p className="mt-4 text-sm leading-relaxed text-white/80">
-            Verify your email to activate your account and start managing your
-            store.
-          </p>
-        </>
-      }
-    >
-      <div className="w-full max-w-md text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <MailCheck className="size-7" />
-        </div>
-        <h1 className="mt-5 text-3xl font-bold text-primary">
-          Check your email
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          Enter the 6-digit verification code sent to
-          <strong className="mt-1 block break-all font-semibold text-slate-700">
-            {email}
-          </strong>
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="flex justify-center">
-            <InputOTP
-              maxLength={6}
-              value={code}
-              onChange={(value) => {
-                setCode(value.replace(/\D/g, "").slice(0, 6));
-                if (error) setError("");
-              }}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              aria-label="Six-digit email verification code"
-              aria-invalid={!!error}
-              disabled={loading}
-              autoFocus
-            >
-              <InputOTPGroup>
-                {Array.from({ length: 6 }, (_, index) => (
-                  <InputOTPSlot key={index} index={index} />
-                ))}
-              </InputOTPGroup>
-            </InputOTP>
-          </div>
-
-          {error && (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600"
-            >
-              {error}
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            disabled={loading || !email || code.length !== 6}
-            className="h-12 w-full rounded-full text-sm font-semibold uppercase tracking-wide"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="size-4 animate-spin" /> Verifying...
-              </>
-            ) : (
-              "Verify Email"
-            )}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-xs leading-5 text-slate-400">
-          Didn&apos;t receive a code? Check your spam folder or return to
-          registration to try again.
-        </p>
-        <Button asChild variant="link" className="mt-1 text-sm">
-          <Link to="/register">
-            <ArrowLeft className="size-4" /> Back to registration
-          </Link>
-        </Button>
-      </div>
-    </AuthLayout>
+    </div>
   );
 }

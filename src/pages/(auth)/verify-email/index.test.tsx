@@ -93,6 +93,17 @@ describe("registration email verification", () => {
     });
   });
 
+  it("keeps the overlaid native OTP input text invisible", () => {
+    renderPage("user@example.com");
+
+    const input = screen.getByLabelText(
+      "Six-digit email verification code",
+    );
+
+    expect(input.getAttribute("data-input-otp")).toBe("true");
+    expect(getComputedStyle(input).color).toBe("rgba(0, 0, 0, 0)");
+  });
+
   it.each(["Invalid OTP code", "OTP has expired"])(
     "shows the backend error: %s",
     async (message) => {

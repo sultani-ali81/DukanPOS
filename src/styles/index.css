@@ -131,16 +131,22 @@ Option B: from CDN (uncomment if you don't have local files) */
  * theme is dark. These explicit declarations also cover the composed phone
  * input, whose native input inherits its colors from the page.
  */
-.auth-light input,
+.auth-light input:not([data-input-otp]),
 .auth-light [data-slot="input"],
 .auth-light [data-slot="phone-input"] {
   background-color: transparent !important;
   color: var(--foreground) !important;
 }
 
-.auth-light input::placeholder,
+.auth-light input:not([data-input-otp])::placeholder,
 .auth-light [data-slot="input"]::placeholder {
   color: var(--muted-foreground) !important;
+}
+
+/* The OTP slots render the value; keep their overlaid native input invisible. */
+.auth-light [data-input-otp] {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 .dark {
