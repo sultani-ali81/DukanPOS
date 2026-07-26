@@ -33,33 +33,55 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
+      aria-pressed={isDark}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}
-      className="group relative overflow-hidden rounded-full border border-border bg-background shadow-sm"
+      className={cn(
+        "group relative h-8 w-14 overflow-hidden rounded-full border p-0 shadow-inner transition-colors duration-900",
+        isDark
+          ? "border-primary/30 bg-slate-950 hover:bg-slate-950"
+          : "border-amber-300 bg-amber-100 hover:bg-amber-100",
+      )}
     >
-      <Sun
+      <span
+        aria-hidden="true"
         className={cn(
-          "absolute size-5 text-amber-500 transition-all duration-500 ease-out",
+          "absolute left-0.5  flex size-6 items-center justify-center rounded-full shadow-sm transition-[transform,background-color] duration-800 ease-in-out",
           isDark
-            ? "-rotate-90 scale-0 opacity-0"
-            : "rotate-0 scale-100 opacity-100",
+            ? "translate-x-7 rotate-[360deg] bg-primary"
+            : "translate-x-0 rotate-0 bg-amber-400",
         )}
-      />
-      <Moon
+      >
+        <Sun
+          className={cn(
+            "absolute size-4 text-amber-950 transition-all duration-300",
+            isDark
+              ? "-rotate-90 scale-0 opacity-0"
+              : "rotate-0 scale-100 opacity-100",
+          )}
+        />
+        <Moon
+          className={cn(
+            "absolute size-4 fill-primary-foreground/15 text-primary-foreground transition-all duration-300",
+            isDark
+              ? "rotate-0 scale-100 opacity-100"
+              : "rotate-90 scale-0 opacity-0",
+          )}
+        />
+      </span>
+
+      <span
+        aria-hidden="true"
         className={cn(
-          "absolute size-5 fill-primary/20 text-primary transition-all duration-500 ease-out",
-          isDark
-            ? "rotate-0 scale-100 opacity-100"
-            : "rotate-90 scale-0 opacity-0",
+          "absolute left-2 top-4 size-1 rounded-full bg-white transition-opacity duration-300",
+          isDark ? "opacity-70" : "opacity-0",
         )}
       />
       <span
         aria-hidden="true"
         className={cn(
-          "absolute size-8 rounded-full transition-all duration-500",
-          isDark
-            ? "scale-100 bg-primary/10"
-            : "scale-0 bg-amber-400/10",
+          "absolute left-4 top-1.5 size-0.5 rounded-full bg-white transition-opacity duration-300",
+          isDark ? "opacity-50" : "opacity-0",
         )}
       />
     </Button>

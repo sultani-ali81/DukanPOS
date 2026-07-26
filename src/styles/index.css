@@ -24,7 +24,7 @@
 }
 
 Option B: from CDN (uncomment if you don't have local files) */
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *):not(.auth-light, .auth-light *));
 
 @theme inline {
   --font-sans: "Satoshi", system-ui, sans-serif;
@@ -73,7 +73,8 @@ Option B: from CDN (uncomment if you don't have local files) */
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
+:root,
+.auth-light {
   /* Glassmorphism Light Theme */
   --background: oklch(0.98 0.02 285);
   --foreground: oklch(0.24 0.015 285);
