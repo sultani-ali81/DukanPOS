@@ -200,14 +200,22 @@ export default function ProductsPage() {
       )}
 
       <Card className="overflow-hidden border">
-        <CardContent className="p-0">
+        <CardContent className="p-0 ">
           <Table className="table-fixed min-w-[630px]">
             <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="pb-3 pl-12 text-left">Product</TableHead>
-                <TableHead className="pb-3 text-center">Category</TableHead>
-                <TableHead className="pb-3 text-center">Price</TableHead>
-                <TableHead className="pb-3 text-center">Actions</TableHead>
+              <TableRow>
+                <TableHead className="pb-3 pl-12 text-left text-base">
+                  Product
+                </TableHead>
+                <TableHead className="pb-3 text-center text-base">
+                  Category
+                </TableHead>
+                <TableHead className="pb-3 text-center text-base">
+                  Price
+                </TableHead>
+                <TableHead className="pb-3 text-center text-base">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
