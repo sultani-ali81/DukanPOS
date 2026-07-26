@@ -206,7 +206,7 @@ export default function JournalPage() {
                             <span className="font-mono text-sm">{seqId}</span>
                           </span>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-gray-900 dark:text-white">
                           {formatDate(entry.createdAt)}
                         </TableCell>
                         <TableCell>
