@@ -226,6 +226,7 @@ export default function PosPage() {
     submitting,
     handlePay,
   } = usePosOrder({
+    userId: user?.id,
     hasActiveSession,
     checkingSession: sessionUnavailable,
     onSaleSuccess: (receipt, createdAt, sale) => {
@@ -278,10 +279,13 @@ export default function PosPage() {
   }, [allProducts]);
 
   // ── On mount: revalidate the persisted walk-in customer for this store ───────
-  const [initialCustomer] = useState(() => ({
-    id: customerId,
-    label: customerLabel,
-  }));
+  const [initialCustomer] = useState(() => {
+    const state = useUtilsStore.getState();
+    return {
+      id: state.walkInCustomerId,
+      label: state.walkInCustomerLabel,
+    };
+  });
   useSWR(
     ["pos-walk-in-customer", initialCustomer.id, initialCustomer.label],
     ([, persistedId, persistedLabel]) =>

@@ -9,6 +9,13 @@ import { Form, FormLabel } from "@/components/ui/form";
 import { ArrowLeft, ArrowRight, Package, Plus, Warehouse } from "lucide-react";
 
 import { extractError } from "@/lib/error";
+import {
+  clearSessionDraft,
+  markSessionDraftLeft,
+  readSessionDraft,
+  writeSessionDraft,
+} from "@/lib/session-draft";
+import { useAuthStore } from "@/lib/store";
 import { createStockMutationMatcher } from "@/lib/stock-cache";
 import InventoryCombobox from "@/pages/purchases/components/inventory-combobox";
 import {
@@ -21,25 +28,39 @@ import {
 } from "./stock-movement-form-schema";
 import { StockMovementItemRow } from "./stock-movement-item-row";
 import { useInventoryProductSearch } from "./use-inventory-product-search";
+import { useEffect, useState } from "react";
 import { useSWRConfig } from "swr";
 
 interface LocationState {
   sourceInventoryId?: string;
 }
 
+type StockMovementDraft = {
+  values: StockMovementFormValues;
+  productDisplays: string[];
+};
+
 export function NewStockMovementClient() {
   const navigate = useNavigate();
   const location = useLocation();
   const { mutate: mutateCache } = useSWRConfig();
   const prefill = (location.state as LocationState) ?? {};
+  const userId = useAuthStore((state) => state.user?.id ?? "anonymous");
+  const draftKey = `stock-movement-draft:${userId}`;
+  const [initialDraft] = useState(() =>
+    readSessionDraft<StockMovementDraft>(draftKey),
+  );
 
   const form = useForm<StockMovementFormValues>({
     resolver: zodResolver(stockMovementFormSchema),
-    defaultValues: {
-      sourceInventoryId: prefill.sourceInventoryId ?? "",
-      destinationInventoryId: "",
-      items: [{ productId: "", productName: "", availableQty: 0, quantity: 1 }],
-    },
+    defaultValues:
+      initialDraft?.values ?? {
+        sourceInventoryId: prefill.sourceInventoryId ?? "",
+        destinationInventoryId: "",
+        items: [
+          { productId: "", productName: "", availableQty: 0, quantity: 1 },
+        ],
+      },
   });
 
   const { fields, append, remove, replace } = useFieldArray({
@@ -51,7 +72,26 @@ export function NewStockMovementClient() {
   const destinationInventoryId = form.watch("destinationInventoryId");
   const watchedItems = form.watch("items");
 
-  const productSearch = useInventoryProductSearch(sourceInventoryId);
+  const productSearch = useInventoryProductSearch(
+    sourceInventoryId,
+    initialDraft?.productDisplays ?? [""],
+  );
+
+  useEffect(() => {
+    writeSessionDraft<StockMovementDraft>(draftKey, {
+      values: form.getValues(),
+      productDisplays: productSearch.displays,
+    });
+  }, [
+    destinationInventoryId,
+    draftKey,
+    form,
+    productSearch.displays,
+    sourceInventoryId,
+    watchedItems,
+  ]);
+
+  useEffect(() => () => markSessionDraftLeft(draftKey), [draftKey]);
 
   const hasItems = watchedItems.some(
     (i) => i.productId && Number(i.quantity) > 0,
@@ -108,6 +148,7 @@ export function NewStockMovementClient() {
       toast.success("Stock transfer created", {
         description: response.message,
       });
+      clearSessionDraft(draftKey);
       navigate("/inventory");
     } catch (err) {
       toast.error("Failed to create stock transfer", {

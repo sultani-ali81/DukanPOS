@@ -10,8 +10,13 @@ interface InventoryProductMeta {
   availableQty: number;
 }
 
-export function useInventoryProductSearch(inventoryId: string) {
-  const [displays, setDisplays] = useState<string[]>([""]);
+export function useInventoryProductSearch(
+  inventoryId: string,
+  initialDisplays: string[] = [""],
+) {
+  const [displays, setDisplays] = useState<string[]>(() =>
+    initialDisplays.length ? initialDisplays : [""],
+  );
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const { data, isLoading } = useSWR(

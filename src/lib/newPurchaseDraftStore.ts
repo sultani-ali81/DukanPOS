@@ -3,7 +3,7 @@ import type { FormValues } from "@/pages/purchases/components/purchase-form-sche
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-const DRAFT_TTL_MS = 60 * 1000; // 1 minute — only counted while away from the page
+const DRAFT_TTL_MS = 10 * 60 * 1000; // 10 minutes — only counted while away
 
 type NewPurchaseDraft = {
   values: FormValues;
@@ -47,7 +47,7 @@ export const useNewPurchaseDraftStore = create<NewPurchaseDraftState>()(
         if (!draft) return null;
         // leftAt === null means it was never marked as "left" (shouldn't normally
         // happen on a fresh mount, but treat as fresh rather than losing data).
-        if (draft.leftAt !== null && Date.now() - draft.leftAt > DRAFT_TTL_MS) {
+        if (draft.leftAt !== null && Date.now() - draft.leftAt >= DRAFT_TTL_MS) {
           set({ draft: null });
           return null;
         }

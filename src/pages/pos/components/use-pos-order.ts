@@ -1,4 +1,10 @@
 import { extractError } from "@/lib/error";
+import {
+  clearSessionDraft,
+  markSessionDraftLeft,
+  readSessionDraft,
+  writeSessionDraft,
+} from "@/lib/session-draft";
 import { createStockMutationMatcher } from "@/lib/stock-cache";
 import { useUtilsStore } from "@/lib/utilsStore";
 import type { PosProduct } from "@/queries/pos-inventory";
@@ -29,6 +35,7 @@ export interface CompletedSaleSnapshot {
 }
 
 interface UsePosOrderOptions {
+  userId?: string;
   hasActiveSession?: boolean;
   checkingSession?: boolean;
   onSaleSuccess?: (
@@ -40,22 +47,44 @@ interface UsePosOrderOptions {
 
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 const WALK_IN_CUSTOMER_NAME = /^walk[\s-]?in customer$/i;
+const POS_DRAFT_KEY_PREFIX = "pos-order-draft";
+
+type PosOrderDraft = {
+  cart: PosCartItem[];
+  customerId: string;
+  customerLabel: string;
+  inventoryId: string;
+  inventoryLabel: string;
+  paymentStatus: SalePaymentStatus;
+  partialPaymentAmount: string;
+};
 
 function hasAtMostTwoDecimals(value: string) {
   return /^(?:\d+|\d*\.\d{1,2})$/.test(value.trim());
 }
 
 export function usePosOrder({
+  userId = "anonymous",
   hasActiveSession = false,
   checkingSession = false,
   onSaleSuccess,
 }: UsePosOrderOptions = {}) {
-  const [cart, setCart] = useState<PosCartItem[]>([]);
+  const draftKey = `${POS_DRAFT_KEY_PREFIX}:${userId}`;
+  const [initialDraft] = useState(() =>
+    readSessionDraft<PosOrderDraft>(draftKey),
+  );
+  const [cart, setCart] = useState<PosCartItem[]>(() =>
+    Array.isArray(initialDraft?.cart) ? initialDraft.cart : [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [paymentStatus, setPaymentStatus] =
-    useState<SalePaymentStatus>("fully_paid");
-  const [partialPaymentAmount, setPartialPaymentAmount] = useState("");
+    useState<SalePaymentStatus>(
+      initialDraft?.paymentStatus ?? "fully_paid",
+    );
+  const [partialPaymentAmount, setPartialPaymentAmount] = useState(
+    initialDraft?.partialPaymentAmount ?? "",
+  );
   const { mutate } = useSWRConfig();
 
   const {
@@ -76,9 +105,45 @@ export function usePosOrder({
     })),
   );
 
-  const [customerId, setCustomerId] = useState<string>(walkInCustomerId);
+  const [customerId, setCustomerId] = useState<string>(
+    initialDraft?.customerId ?? walkInCustomerId,
+  );
   const [customerLabel, setCustomerLabel] =
-    useState<string>(walkInCustomerLabel);
+    useState<string>(initialDraft?.customerLabel ?? walkInCustomerLabel);
+
+  useEffect(() => {
+    if (initialDraft?.inventoryId) setInventoryId(initialDraft.inventoryId);
+    if (initialDraft?.inventoryLabel) {
+      setInventoryLabel(initialDraft.inventoryLabel);
+    }
+  }, [
+    initialDraft,
+    setInventoryId,
+    setInventoryLabel,
+  ]);
+
+  useEffect(() => {
+    writeSessionDraft<PosOrderDraft>(draftKey, {
+      cart,
+      customerId,
+      customerLabel,
+      inventoryId,
+      inventoryLabel,
+      paymentStatus,
+      partialPaymentAmount,
+    });
+  }, [
+    cart,
+    customerId,
+    customerLabel,
+    draftKey,
+    inventoryId,
+    inventoryLabel,
+    partialPaymentAmount,
+    paymentStatus,
+  ]);
+
+  useEffect(() => () => markSessionDraftLeft(draftKey), [draftKey]);
   const isWalkInCustomer = Boolean(
     customerId &&
       ((walkInCustomerId && customerId === walkInCustomerId) ||
@@ -87,12 +152,6 @@ export function usePosOrder({
   const effectivePaymentStatus: SalePaymentStatus = isWalkInCustomer
     ? "fully_paid"
     : paymentStatus;
-
-  useEffect(() => {
-    if (!isWalkInCustomer) return;
-    setPaymentStatus("fully_paid");
-    setPartialPaymentAmount("");
-  }, [isWalkInCustomer]);
 
   const addToCart = (product: PosProduct) => {
     if (!product.hasPrice) {
@@ -169,7 +228,10 @@ export function usePosOrder({
     );
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    clearSessionDraft(draftKey);
+  };
 
   const subtotal = roundMoney(
     cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
