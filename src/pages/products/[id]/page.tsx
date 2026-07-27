@@ -382,7 +382,7 @@ export default function ProductDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <ProductBarcode
-            productCode={product.productCode}
+            productCode={product.barcode || product.productCode}
             productName={product.name}
           />
         </DialogContent>

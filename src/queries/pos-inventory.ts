@@ -22,6 +22,7 @@ export interface PosProduct {
   price: number;
   hasPrice: boolean;
   quantity: number;
+  barcode: string | null;
   sequence: string | null;
   categories: PosProductCategory[];
   images: PosProductImage[];
@@ -68,6 +69,7 @@ interface RawPosProduct {
   name?: string;
   price?: number;
   quantity: number;
+  barcode?: string | null;
   sequence?: string | null;
   categories?: RawPosCategory[];
   images?: RawPosImage[];
@@ -108,6 +110,7 @@ function mapPosProduct(p: RawPosProduct): PosProduct {
     price: hasPrice ? Number(p.price) : 0,
     hasPrice,
     quantity: p.quantity,
+    barcode: p.barcode ?? null,
     sequence: p.sequence ?? null,
     categories: (p.categories ?? []).map((c) => ({ id: c.id, name: c.name })),
     images,

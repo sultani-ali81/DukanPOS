@@ -2,11 +2,10 @@ import { useAuditLogs } from "@/hooks/use-audit-log";
 import { usePagination } from "@/hooks/use-pagination";
 import type { AuditLog } from "@/types/audit";
 import { AuditEntityType } from "@/types/audit";
-import { ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Fragment, useState } from "react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
@@ -68,8 +67,6 @@ function formatDate(dateStr: string) {
   });
 }
 
-const AUDIT_VALUE_PREVIEW_LENGTH = 80;
-
 function AuditValuePreview({
   label,
   value,
@@ -79,32 +76,23 @@ function AuditValuePreview({
   value: string;
   onView: () => void;
 }) {
-  const isLong = value.length > AUDIT_VALUE_PREVIEW_LENGTH;
-
   return (
-    <div className="flex min-w-0 items-center gap-1.5">
-      {isLong && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              className="size-7 shrink-0"
-              aria-label={`View all ${label.toLowerCase()} values`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onView();
-              }}
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>View all</TooltipContent>
-        </Tooltip>
-      )}
-      <span className="min-w-0 whitespace-nowrap">{value}</span>
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="block w-full min-w-0 truncate text-left"
+          aria-label={`View all ${label.toLowerCase()} values`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onView();
+          }}
+        >
+          {value}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>View full value</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -308,14 +296,14 @@ export default function LogsTable({
                       </Badge>
                     </TableCell>
                   )}
-                  <TableCell className="p-3 text-sm text-muted-foreground">
+                  <TableCell className="min-w-0 overflow-hidden p-3 text-sm text-muted-foreground">
                     <AuditValuePreview
                       label="Before"
                       value={before}
                       onView={() => setDetail({ label: "Before", value: before })}
                     />
                   </TableCell>
-                  <TableCell className="p-3 text-sm">
+                  <TableCell className="min-w-0 overflow-hidden p-3 text-sm">
                     <AuditValuePreview
                       label="After"
                       value={after}

@@ -266,8 +266,6 @@ export function ProductDialog({
         price: values.price,
         categoryName: values.categoryName,
       });
-      const barcode = values.barcode.trim();
-      if (barcode) payload.barcode = barcode;
     }
 
     try {
@@ -505,45 +503,49 @@ export function ProductDialog({
               )}
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="p-barcode">Barcode</Label>
-              <Input
-                id="p-barcode"
-                type="text"
-                autoComplete="off"
-                placeholder="Type or scan a barcode"
-                disabled={isSubmitting}
-                onKeyDown={(event) => {
-                  // Most USB scanners append Enter. Keep that suffix from
-                  // submitting the entire product form unexpectedly.
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    event.currentTarget.blur();
-                  }
-                }}
-                {...register("barcode", {
-                  maxLength: {
-                    value: 128,
-                    message: "Barcode must be 128 characters or fewer",
-                  },
-                })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Click this field, then scan the product or enter its barcode
-                manually.
-              </p>
-              {errors.barcode && (
-                <p className="text-xs text-destructive">
-                  {errors.barcode.message}
-                </p>
-              )}
-            </div>
-
             {isEdit && (
-              <ProductBarcode
-                productCode={editingProduct.productCode}
-                productName={editingProduct.name}
-              />
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="p-barcode">Barcode</Label>
+                  <Input
+                    id="p-barcode"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Type or scan a barcode"
+                    disabled={isSubmitting}
+                    onKeyDown={(event) => {
+                      // Most USB scanners append Enter. Keep that suffix from
+                      // submitting the entire product form unexpectedly.
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    {...register("barcode", {
+                      maxLength: {
+                        value: 128,
+                        message: "Barcode must be 128 characters or fewer",
+                      },
+                    })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Click this field, then scan the product or enter its barcode
+                    manually.
+                  </p>
+                  {errors.barcode && (
+                    <p className="text-xs text-destructive">
+                      {errors.barcode.message}
+                    </p>
+                  )}
+                </div>
+
+                <ProductBarcode
+                  productCode={
+                    editingProduct.barcode || editingProduct.productCode
+                  }
+                  productName={editingProduct.name}
+                />
+              </>
             )}
 
             <div className="grid gap-2">

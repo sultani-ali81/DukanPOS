@@ -332,7 +332,7 @@ export default function PosPage() {
         return;
       }
       const product = allProductsRef.current.find(
-        (p) => (p.sequence ?? p.id) === barcode,
+        (p) => (p.barcode ?? p.sequence ?? p.id) === barcode,
       );
       if (!product) {
         toast.warning(
