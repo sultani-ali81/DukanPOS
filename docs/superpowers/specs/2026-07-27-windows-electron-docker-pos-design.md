@@ -52,9 +52,8 @@ Asan POS Setup.exe
    └─ docker-compose.yml         local-service definition
 
 %APPDATA%\Asan POS\
-├─ backend.env                   imported, normalized operator configuration
+├─ backend.env                   imported operator configuration, preserved verbatim
 ├─ compose.env                   minimal Compose-only derived configuration
-├─ migration-state.json          successful compiled-migration-set identifier
 └─ logs\                         launcher and backend logs
 
 Electron
@@ -64,13 +63,19 @@ Electron
   │  └─ MinIO volume: durable object storage
   ├─ compiled migration runner
   ├─ bundled NestJS API at 127.0.0.1:3000
-  └─ DukanPOS renderer at its packaged local file origin
+  └─ DukanPOS renderer at the privileged asanpos://app origin
 ```
 
 Electron is the process owner of the bundled backend, but it does not shut down
 the Docker stack when the desktop window exits. Keeping containers and volumes
 alive preserves data and makes the next startup faster. All local service ports
 are bound to loopback only.
+
+The Electron main process registers a privileged `asanpos://app` protocol before
+app readiness. It resolves `/assets/*` to packaged renderer assets and returns
+the renderer `index.html` for application routes. This preserves the frontend's
+existing browser routing and root-relative Vite asset paths without relying on
+unrestricted `file://` navigation.
 
 ## Project layout
 
@@ -109,7 +114,8 @@ configuration; no service uses a floating `latest` tag.
 - PostgreSQL initializes `DB_NAME`, `DB_USER`, and `DB_PASSWORD` from derived
   Compose configuration and persists its data in a named volume.
 - Redis is available only to the local backend and persists only if the selected
-  Redis configuration requires it.
+  Redis configuration requires it. Its generated local password is required by
+  both the Compose service and backend connection settings.
 - MinIO uses the configured access key and secret, creates/uses the configured
   bucket through the backend, and persists objects in a named volume.
 - Published service ports bind to `127.0.0.1`, never all network interfaces.
@@ -128,11 +134,11 @@ imports it on a fresh installation, before the installed application launches.
 
 1. The installer checks for the sibling `.env` without logging any value.
 2. On a fresh installation, it copies that file into the current user's
-   `%APPDATA%\\Asan POS` directory as `backend.env`.
-3. Electron parses and validates that persistent file, then writes a normalized
-   `backend.env` atomically and a minimal derived `compose.env` containing only
-   values needed by Compose. Mail and OpenAI credentials never enter the Compose
-   environment.
+   `%APPDATA%\\Asan POS` directory as `backend.env` without changing it.
+3. Electron parses and validates that persistent file, then writes a separate,
+   minimal derived `compose.env` containing only values needed by Compose. It
+   generates a local Redis password once and preserves it in that file. Mail and
+   OpenAI credentials never enter the Compose environment.
 4. On every later start or upgrade, the existing app-data configuration wins.
    A new sibling `.env` never silently replaces it.
 
@@ -151,8 +157,9 @@ needed by both current backend styles (`REDIS_HOST`/`REDIS_PORT` and
 assignment operators so the current `.env` format remains accepted.
 
 The full backend environment, including mail and API credentials, is passed
-only to the backend child process. Logs redact values and never print the
-environment. The configuration file stays outside the installer and ASAR.
+only to the backend child process, with the local Redis and MinIO aliases
+overlaid in memory. Logs redact values and never print the environment. The
+configuration file stays outside the installer and ASAR.
 
 ## Startup and database lifecycle
 
@@ -164,18 +171,17 @@ environment. The configuration file stays outside the installer and ASAR.
 5. It runs `docker compose --env-file compose.env up -d` using the bundled
    Compose definition.
 6. It waits for PostgreSQL, Redis, and MinIO health checks to succeed.
-7. For a fresh install, or when the compiled migration-set identifier changes,
-   it invokes AsanPOS's compiled migration runner. PostgreSQL creates the empty
-   configured database before this step.
+7. It invokes AsanPOS's compiled migration runner. PostgreSQL creates the empty
+   configured database before this step, and Knex's migration table ensures
+   `migrate.latest()` applies only pending migrations on later launches.
 8. It starts the bundled NestJS backend with `ELECTRON_RUN_AS_NODE=1`,
    `ASANPOS_ENV_FILE`, `HOST=127.0.0.1`, and `PORT=3000`.
 9. It polls `GET http://127.0.0.1:3000/health`.
 10. Only after that endpoint is ready does it load the DukanPOS renderer.
 
-The migration state is written only after a successful migration. Knex's own
-migration table remains the source of truth for individual migrations. Failed
-migrations do not delete data or advance the app's migration marker; they are
-reported and retried after the underlying issue is resolved.
+Knex's migration table is the source of truth for individual migrations. Failed
+migrations do not delete data; they are reported and retried after the
+underlying issue is resolved.
 
 On normal Electron exit, the app terminates the backend process tree using a
 Windows-safe strategy. It leaves the Compose stack and volumes running. On a
@@ -217,7 +223,7 @@ Automated coverage includes:
   behavior;
 - Compose command generation, Docker detection, health waiting, and error
   classification;
-- migration-set comparison and no-marker-on-failure behavior;
+- idempotent migration execution and no data-loss behavior on failure;
 - backend launch, health polling, logging, and Windows-safe shutdown helpers;
 - deterministic resource staging that contains the renderer, compiled backend,
   production dependencies, migration runner, and Compose file but no `.env`.
@@ -230,7 +236,8 @@ Windows release smoke test on a clean x64 PC:
 4. Confirm images download, containers become healthy, the empty database is
    created, migrations run, and the POS UI loads.
 5. Create representative POS data, close the app, then launch it again.
-6. Confirm the data remains and migrations are skipped when unchanged.
+6. Confirm the data remains and the migration runner finds no pending migration
+   when unchanged.
 7. Upgrade to a build with a new migration and confirm data is preserved while
    only the new migration runs.
 8. Uninstall the application and confirm Docker volumes/business data remain.
@@ -240,8 +247,9 @@ Windows release smoke test on a clean x64 PC:
 AsanPOS already has a loopback startup path, `/health`, environment-file loading,
 and a compiled migration runner. The implementation must additionally ensure
 that the runtime configuration adapter covers both existing Redis configuration
-forms and the MinIO bucket-name mismatch described above. Demo-data seeding is
-not invoked by the installer or first-launch path.
+forms, includes the generated Redis password for queue connections, and covers
+the MinIO bucket-name mismatch described above. Demo-data seeding is not
+invoked by the installer or first-launch path.
 
 This design supersedes the earlier backend packaging assumption that Electron
 does not manage Docker containers: for this chosen single-PC release, Electron
