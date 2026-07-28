@@ -57,7 +57,7 @@ const saleColumns: ReportColumn<SaleReportRow>[] = [
       const seqId = row.sequence
         ? `${row.sequence.prefix}-${String(row.sequence.lastIndex).padStart(4, "0")}`
         : "—";
-      return <span className="font-mono text-sm font-medium">{seqId}</span>;
+      return <span className="font-mono text-base font-medium">{seqId}</span>;
     },
   },
   {
