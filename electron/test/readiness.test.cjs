@@ -48,3 +48,28 @@ test('waits for a healthy backend response after a transient failure', async () 
 
   assert.equal(calls, 2);
 });
+
+test('bounds an individual backend health request by the overall timeout', async () => {
+  let aborted = false;
+  const timestamps = [0, 0, 10];
+
+  await assert.rejects(
+    waitForHealthyBackend({
+      url: 'http://127.0.0.1:3000/health',
+      timeoutMs: 10,
+      intervalMs: 0,
+      requestTimeoutMs: 1,
+      fetchImpl: (_url, { signal }) => new Promise((resolve, reject) => {
+        signal.addEventListener('abort', () => {
+          aborted = true;
+          reject(new Error('request aborted'));
+        });
+      }),
+      sleep: async () => {},
+      now: () => timestamps.shift() ?? 10,
+    }),
+    /Timed out waiting for backend health/,
+  );
+
+  assert.equal(aborted, true);
+});

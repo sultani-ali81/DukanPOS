@@ -17,6 +17,7 @@ const REQUIRED_KEYS = [
   'DB_NAME',
   'REDIS_HOST',
   'REDIS_PORT',
+  'REDIS_PASSWORD',
   'MINIO_ENDPOINT',
   'MINIO_PORT',
   'MINIO_ACCESS_KEY',
@@ -35,7 +36,6 @@ function createRuntimePaths(localAppDataDirectory) {
     backendEnvPath: join(rootDirectory, 'backend.env'),
     composePath: join(dockerDirectory, 'compose.yaml'),
     composeEnvPath: join(dockerDirectory, 'compose.env'),
-    migrationStatePath: join(rootDirectory, 'migration-state.json'),
     logDirectory: join(rootDirectory, 'logs'),
     backendLogPath: join(rootDirectory, 'logs', 'backend.log'),
   };
@@ -75,7 +75,7 @@ function isMissing(value) {
 }
 
 function isLoopbackHost(value) {
-  return value === '127.0.0.1' || value === 'localhost';
+  return value === '127.0.0.1';
 }
 
 function parseRedisUrl(value) {
@@ -94,7 +94,13 @@ function normalizeBackendConfiguration(input) {
 
   if (isMissing(values.REDIS_HOST) && redis) values.REDIS_HOST = redis.host;
   if (isMissing(values.REDIS_PORT) && redis) values.REDIS_PORT = redis.port;
-  if (isMissing(values.REDIS_URL) && !isMissing(values.REDIS_HOST) && !isMissing(values.REDIS_PORT)) {
+  if (!isMissing(values.REDIS_PASSWORD) &&
+      !isMissing(values.REDIS_HOST) &&
+      !isMissing(values.REDIS_PORT)) {
+    values.REDIS_URL = `redis://:${encodeURIComponent(values.REDIS_PASSWORD)}@${values.REDIS_HOST}:${values.REDIS_PORT}`;
+  } else if (isMissing(values.REDIS_URL) &&
+             !isMissing(values.REDIS_HOST) &&
+             !isMissing(values.REDIS_PORT)) {
     values.REDIS_URL = `redis://${values.REDIS_HOST}:${values.REDIS_PORT}`;
   }
 
@@ -108,7 +114,7 @@ function normalizeBackendConfiguration(input) {
 
   for (const key of ['DB_HOST', 'REDIS_HOST', 'MINIO_ENDPOINT']) {
     if (!isMissing(values[key]) && !isLoopbackHost(values[key])) {
-      missing.push(`${key} must be 127.0.0.1 or localhost`);
+      missing.push(`${key} must be 127.0.0.1`);
     }
   }
 
@@ -122,6 +128,7 @@ function createComposeEnvironment(values) {
     POSTGRES_PASSWORD: values.DB_PASSWORD,
     POSTGRES_PORT: values.DB_PORT,
     REDIS_PORT: values.REDIS_PORT,
+    REDIS_PASSWORD: values.REDIS_PASSWORD,
     MINIO_ROOT_USER: values.MINIO_ACCESS_KEY,
     MINIO_ROOT_PASSWORD: values.MINIO_SECRET_KEY,
     MINIO_API_PORT: values.MINIO_PORT || '9000',
@@ -129,18 +136,95 @@ function createComposeEnvironment(values) {
   };
 }
 
+function formatComposeEnvironmentValue(value) {
+  const escapedValue = String(value)
+    .replaceAll('\\', '\\\\')
+    .replaceAll('"', '\\"')
+    .replaceAll('$', () => '$$')
+    .replaceAll('\n', '\\n')
+    .replaceAll('\r', '\\r')
+    .replaceAll('\t', '\\t');
+  return `"${escapedValue}"`;
+}
+
 function writeComposeEnvironment(filePath, values) {
-  const lines = Object.entries(values).map(([key, value]) => `${key}=${value}`);
+  const lines = Object.entries(values).map(
+    ([key, value]) => `${key}=${formatComposeEnvironmentValue(value)}`,
+  );
   const temporaryPath = `${filePath}.tmp`;
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(temporaryPath, `${lines.join('\n')}\n`, { encoding: 'utf8', mode: 0o600 });
   renameSync(temporaryPath, filePath);
 }
 
+function ensureComposeEnvironment(filePath, values) {
+  if (existsSync(filePath)) return false;
+  writeComposeEnvironment(filePath, values);
+  return true;
+}
+
+function parseDoubleQuotedComposeValue(value) {
+  let parsed = '';
+
+  for (let index = 0; index < value.length; index += 1) {
+    const current = value[index];
+    const next = value[index + 1];
+
+    if (current === '$' && next === '$') {
+      parsed += '$';
+      index += 1;
+    } else if (current === '\\' && next) {
+      const escapeSequences = { n: '\n', r: '\r', t: '\t', '"': '"', '\\': '\\' };
+      parsed += escapeSequences[next] ?? next;
+      index += 1;
+    } else {
+      parsed += current;
+    }
+  }
+
+  return parsed;
+}
+
+function parseComposeEnvironment(content) {
+  const values = {};
+
+  for (const line of content.split(/\r?\n/)) {
+    const separator = line.indexOf('=');
+    if (separator <= 0 || line.trimStart().startsWith('#')) continue;
+
+    const key = line.slice(0, separator).trim();
+    const rawValue = line.slice(separator + 1).trim();
+    if (rawValue.startsWith('"') && rawValue.endsWith('"')) {
+      values[key] = parseDoubleQuotedComposeValue(rawValue.slice(1, -1));
+    } else if (rawValue.startsWith("'") && rawValue.endsWith("'")) {
+      values[key] = rawValue.slice(1, -1).replaceAll("\\'", "'");
+    } else {
+      values[key] = rawValue;
+    }
+  }
+
+  return values;
+}
+
+function getComposeEnvironmentMismatches(filePath, expectedValues) {
+  let actualValues;
+  try {
+    actualValues = parseComposeEnvironment(readFileSync(filePath, 'utf8'));
+  } catch {
+    return Object.keys(expectedValues);
+  }
+
+  return Object.entries(expectedValues)
+    .filter(([key, value]) => actualValues[key] !== String(value))
+    .map(([key]) => key);
+}
+
 module.exports = {
   createComposeEnvironment,
   createRuntimePaths,
+  ensureComposeEnvironment,
   ensureRuntimeFiles,
+  getComposeEnvironmentMismatches,
   normalizeBackendConfiguration,
   readBackendConfiguration,
   writeComposeEnvironment,

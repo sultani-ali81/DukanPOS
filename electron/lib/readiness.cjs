@@ -36,6 +36,22 @@ async function probeHttp({ url, timeoutMs = 3000, fetchImpl = fetch }) {
   }
 }
 
+async function probeBackendHealth({ url, timeoutMs, fetchImpl }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetchImpl(url, { signal: controller.signal });
+    if (!response.ok) return false;
+    const body = await response.json();
+    return Boolean(body && body.status === 'ok');
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function assertLocalServices({
   configuration,
   probeTcpImpl = probeTcp,
@@ -79,6 +95,7 @@ async function waitForHealthyBackend({
   url,
   timeoutMs = 45000,
   intervalMs = 500,
+  requestTimeoutMs = 3000,
   fetchImpl = fetch,
   sleep: sleepImpl = sleep,
   now = Date.now,
@@ -86,15 +103,17 @@ async function waitForHealthyBackend({
   const deadline = now() + timeoutMs;
 
   while (true) {
-    try {
-      const response = await fetchImpl(url);
-      if (response.ok) {
-        const body = await response.json();
-        if (body && body.status === 'ok') return;
-      }
-    } catch {
-      // A backend that has not opened its port yet is retried until the deadline.
+    const remainingMs = deadline - now();
+    if (remainingMs <= 0) {
+      throw new Error(`Timed out waiting for backend health at ${url}`);
     }
+
+    const healthy = await probeBackendHealth({
+      url,
+      timeoutMs: Math.min(requestTimeoutMs, remainingMs),
+      fetchImpl,
+    });
+    if (healthy) return;
 
     if (now() >= deadline) {
       throw new Error(`Timed out waiting for backend health at ${url}`);
