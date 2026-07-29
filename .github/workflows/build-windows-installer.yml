@@ -38,6 +38,7 @@ jobs:
           repository: Munib03/AsanPOS
           ref: ${{ inputs.asanpos_ref }}
           token: ${{ secrets.ASANPOS_REPOSITORY_TOKEN || github.token }}
+          persist-credentials: false
           path: backend
 
       - name: Set up Node.js 24
