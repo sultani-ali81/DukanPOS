@@ -26,6 +26,10 @@ const {
 const { ensureDockerStack } = require('./lib/docker-runtime.cjs');
 const { waitForHealthyBackend, waitForLocalServices } = require('./lib/readiness.cjs');
 const { resolveRendererRequest } = require('./lib/renderer-protocol.cjs');
+const {
+  isDockerServicesStartupFailure,
+  startBackendRuntime: startBackendRuntimeImpl,
+} = require('./lib/runtime-startup.cjs');
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -47,7 +51,6 @@ function getResourcePaths() {
     return {
       rendererDirectory: join(process.resourcesPath, 'renderer'),
       backendDirectory: join(process.resourcesPath, 'backend'),
-      backendTemplatePath: join(process.resourcesPath, 'backend', 'backend.env.example'),
       composeTemplatePath: join(process.resourcesPath, 'docker', 'compose.yaml'),
     };
   }
@@ -56,7 +59,6 @@ function getResourcePaths() {
   return {
     rendererDirectory: join(projectDirectory, '.stage', 'renderer'),
     backendDirectory: join(projectDirectory, '.stage', 'backend'),
-    backendTemplatePath: join(projectDirectory, 'electron', 'resources', 'backend.env.example'),
     composeTemplatePath: join(projectDirectory, 'electron', 'resources', 'compose.yaml'),
   };
 }
@@ -76,56 +78,24 @@ function readMigrationManifest(backendDirectory) {
 }
 
 async function startBackendRuntime({ paths, resources }) {
-  ensureRuntimeFiles({
-    composeTemplatePath: resources.composeTemplatePath,
+  await startBackendRuntimeImpl({
     paths,
-  });
-
-  const configuration = normalizeBackendConfiguration(
-    readBackendConfiguration(paths.backendEnvPath),
-  );
-  if (configuration.missing.length > 0) {
-    throw new Error(
-      `The local POS configuration is invalid: ${configuration.missing.join(', ')}`,
-    );
-  }
-
-  const composeEnvironment = createComposeEnvironment(configuration.values);
-  ensureComposeEnvironment(paths.composeEnvPath, composeEnvironment);
-  await ensureDockerStack({
-    composeEnvPath: paths.composeEnvPath,
-    composePath: paths.composePath,
-  });
-  await waitForLocalServices({
-    configuration: configuration.values,
-  });
-
-  readMigrationManifest(resources.backendDirectory);
-  await runNodeScript({
-    entryPath: join(resources.backendDirectory, 'dist', 'database', 'run-migrations.js'),
-    cwd: resources.backendDirectory,
-    env: {
-      ...configuration.values,
-      ASANPOS_ENV_FILE: paths.backendEnvPath,
-      NODE_ENV: 'production',
+    resources,
+    dependencies: {
+      ensureRuntimeFiles,
+      readBackendConfiguration,
+      normalizeBackendConfiguration,
+      createComposeEnvironment,
+      ensureComposeEnvironment,
+      ensureDockerStack,
+      waitForLocalServices,
+      readMigrationManifest,
+      runNodeScript,
+      startNodeProcess,
+      onBackendStarted: (process) => { backendProcess = process; },
+      waitForHealthyBackend,
     },
-    logPath: paths.backendLogPath,
   });
-
-  backendProcess = startNodeProcess({
-    entryPath: join(resources.backendDirectory, 'dist', 'main.js'),
-    cwd: resources.backendDirectory,
-    env: {
-      ...configuration.values,
-      ASANPOS_ENV_FILE: paths.backendEnvPath,
-      NODE_ENV: 'production',
-      HOST: '127.0.0.1',
-      PORT: '3000',
-    },
-    logPath: paths.backendLogPath,
-  });
-
-  await waitForHealthyBackend({ url: 'http://127.0.0.1:3000/health' });
 }
 
 function registerRendererProtocol(rendererDirectory) {
@@ -164,8 +134,8 @@ function createWindow() {
 }
 
 async function showStartupFailure(error, paths) {
-  const detail = ['docker-unavailable', 'compose-unavailable', 'compose-start-failed'].includes(error?.code)
-    ? `${error.message}\n\nInstall Docker Desktop and make sure it is running, then reopen Asan POS.`
+  const detail = isDockerServicesStartupFailure(error)
+    ? `${error.message}\n\nDocker Desktop must be installed, running, and ready. Reopen Asan POS after it is ready.\n\nLog: ${paths.backendLogPath}`
     : `The POS backend could not start. Check the log:\n${paths.backendLogPath}`;
   await dialog.showMessageBox({
     type: 'error',
