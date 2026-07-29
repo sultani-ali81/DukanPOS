@@ -10,9 +10,10 @@ starts its Docker Compose services, waits until they are ready, runs migrations,
 starts the backend, and opens the POS UI. Docker Desktop itself must already be
 installed and running; the application will not silently install or start it.
 
-The application preserves its generated configuration and Docker volumes across
-application upgrades and uninstalls. Business services are bound only to
-`127.0.0.1`.
+Generated configuration and Docker volumes are intended to remain outside the
+application install directory, so upgrades and reinstalls do not replace them.
+Verify that behavior in a clean Windows VM before distributing a release.
+Business services are bound only to `127.0.0.1`.
 
 ## Release on Ubuntu
 
@@ -44,6 +45,20 @@ Windows computer.
 The workflow accepts only a full backend commit SHA, so each installer is tied
 to an explicit backend version.
 
+### What to transfer to Windows
+
+Transfer only the extracted installer file:
+
+```text
+Asan POS Setup-<version>.exe
+```
+
+Do **not** transfer either repository, the staged build directory, `node_modules`,
+`.env` or `backend.env` files, Docker Compose files, Docker named volumes, or
+any `%LOCALAPPDATA%\\Asan POS` runtime files. Those are either build inputs or
+machine-local data; the installed app creates its own runtime configuration and
+Docker setup on first launch.
+
 ## Install on Windows
 
 1. Install Docker Desktop once, choose its normal WSL 2/Linux-container setup,
@@ -58,6 +73,25 @@ to an explicit backend version.
 There is no npm, Python, source checkout, manual `backend.env` editing, Docker
 Compose command, or separate backend installer on Windows. If Docker Desktop
 is closed or unavailable, open it and launch Asan POS again.
+
+## Windows release validation
+
+Before handing an installer to users, validate that exact `.exe` in a clean
+Windows VM (or an equivalent clean Windows test machine). This confirms the
+automated setup path; it is not a substitute for a backup and restore test.
+
+1. Install Docker Desktop and wait until it reports that Docker is running.
+2. Install the generated `Asan POS Setup-<version>.exe`.
+3. Launch Asan POS without editing any file or running a command.
+4. Verify the Compose services are running (PostgreSQL, Redis, and MinIO).
+5. Create a sale and add an attachment.
+6. Close and reopen Asan POS; confirm the sale and attachment are still present.
+7. Restart Docker Desktop, reopen Asan POS, and confirm the data remains.
+8. Uninstall and reinstall the same Asan POS installer, then confirm the data
+   remains.
+
+If any step fails, do not distribute that installer: retain the VM logs and
+runtime data for diagnosis first.
 
 ## Local runtime data
 
