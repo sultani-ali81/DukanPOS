@@ -18,10 +18,6 @@ const {
 function createResources(root) {
   const resourcesDirectory = join(root, 'resources');
   mkdirSync(resourcesDirectory, { recursive: true });
-  writeFileSync(
-    join(resourcesDirectory, 'backend.env.example'),
-    'DB_HOST=127.0.0.1\nDB_PASSWORD=CHANGE_ME\n',
-  );
   writeFileSync(join(resourcesDirectory, 'compose.yaml'), 'name: asan-pos\n');
   return resourcesDirectory;
 }

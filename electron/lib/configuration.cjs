@@ -44,7 +44,6 @@ function createRuntimePaths(localAppDataDirectory) {
 
 function ensureRuntimeFiles({
   resourcesDirectory,
-  backendTemplatePath = resourcesDirectory && join(resourcesDirectory, 'backend.env.example'),
   composeTemplatePath = resourcesDirectory && join(resourcesDirectory, 'compose.yaml'),
   paths,
   randomBytesImpl,
