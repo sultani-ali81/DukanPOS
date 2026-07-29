@@ -28,9 +28,12 @@ const { ensureDockerStack } = require('./lib/docker-runtime.cjs');
 const { waitForHealthyBackend, waitForLocalServices } = require('./lib/readiness.cjs');
 const { resolveRendererRequest } = require('./lib/renderer-protocol.cjs');
 const {
-  isDockerServicesStartupFailure,
   startBackendRuntime: startBackendRuntimeImpl,
 } = require('./lib/runtime-startup.cjs');
+const {
+  appendStartupDiagnostic,
+  createStartupFailureDialog,
+} = require('./lib/startup-failure.cjs');
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -136,18 +139,7 @@ function createWindow() {
 }
 
 async function showStartupFailure(error, paths) {
-  const detail = isDockerServicesStartupFailure(error)
-    ? `${error.message}\n\nDocker Desktop must be installed, running, and ready. Reopen Asan POS after it is ready.\n\nLog: ${paths.backendLogPath}`
-    : `The POS backend could not start. Check the log:\n${paths.backendLogPath}`;
-  await dialog.showMessageBox({
-    type: 'error',
-    title: 'Asan POS needs setup',
-    message: 'Asan POS could not start.',
-    detail,
-    buttons: ['Quit'],
-    defaultId: 0,
-    cancelId: 0,
-  });
+  await dialog.showMessageBox(createStartupFailureDialog({ error, paths }));
 }
 
 async function bootstrap() {
@@ -166,6 +158,9 @@ app.whenReady().then(async () => {
   } catch (error) {
     const paths = desktopPaths || createRuntimePaths(process.env.LOCALAPPDATA || app.getPath('userData'));
     await stopNodeProcess(backendProcess).catch(() => {});
+    try {
+      appendStartupDiagnostic({ logPath: paths.startupLogPath, error });
+    } catch {}
     await showStartupFailure(error, paths);
     quitInProgress = true;
     app.quit();

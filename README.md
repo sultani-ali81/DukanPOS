@@ -70,6 +70,9 @@ Docker setup on first launch.
    `%LOCALAPPDATA%\Asan POS`, starts PostgreSQL, Redis, and MinIO, then starts
    the backend automatically.
 
+The first launch needs internet access so Docker can pull the PostgreSQL,
+Redis, and MinIO images, unless those images have already been preloaded.
+
 There is no npm, Python, source checkout, manual `backend.env` editing, Docker
 Compose command, or separate backend installer on Windows. If Docker Desktop
 is closed or unavailable, open it and launch Asan POS again.
@@ -131,10 +134,17 @@ Docker Desktop running locally.
 
 ## Diagnostics
 
-If the app cannot start, open:
+If the app cannot start, the dialog gives a safe recovery category. Its startup
+diagnostic is stored at:
+
+```text
+%LOCALAPPDATA%\Asan POS\logs\startup.log
+```
+
+For backend output, open:
 
 ```text
 %LOCALAPPDATA%\Asan POS\logs\backend.log
 ```
 
-The setup error dialog identifies Docker Desktop or backend startup problems.
+Do not share either log without first checking it for sensitive business data.

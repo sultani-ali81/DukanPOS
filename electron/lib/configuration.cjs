@@ -59,6 +59,7 @@ function createRuntimePaths(localAppDataDirectory) {
     composeEnvPath: join(dockerDirectory, 'compose.env'),
     logDirectory: join(rootDirectory, 'logs'),
     backendLogPath: join(rootDirectory, 'logs', 'backend.log'),
+    startupLogPath: join(rootDirectory, 'logs', 'startup.log'),
   };
 }
 
