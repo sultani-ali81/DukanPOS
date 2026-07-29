@@ -48,6 +48,15 @@ failures may additionally reference `backend.log`.
 * First-run Docker/configuration failures have a real log file before the
   dialog points at it.
 
+### Single-instance startup guard
+
+Electron acquires its process-wide single-instance lock before registering the
+startup sequence. If a user double-clicks the shortcut while Docker images are
+pulling or configuration is being created, the second process exits without
+touching runtime files. If the main window already exists, a later launch
+restores and focuses it. This prevents concurrent writes to the fixed atomic
+temporary files and concurrent migrations.
+
 ## Verification
 
 Unit tests cover exact legacy-template migration, preservation of an edited

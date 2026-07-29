@@ -191,3 +191,78 @@ Expected: PASS, with only any existing Vite chunk-size warning allowed.
 git add electron/lib/startup-failure.cjs electron/lib/configuration.cjs electron/main.cjs electron/test/startup-failure.test.cjs README.md
 git commit -m "fix: provide safe desktop startup diagnostics"
 ```
+
+### Task 3: Prevent duplicate Electron startup from racing first-run setup
+
+**Files:**
+- Create: `electron/lib/single-instance.cjs`
+- Create: `electron/test/single-instance.test.cjs`
+- Modify: `electron/main.cjs`
+
+**Interfaces:**
+- Produces `acquireSingleInstanceLock({ app, getMainWindow }): boolean`.
+- `app` provides `requestSingleInstanceLock()`, `quit()`, and `on()`.
+- When the lock is held, a `second-instance` event restores a minimized main
+  window and focuses it; when no main window exists, it does nothing.
+
+- [ ] **Step 1: Write failing unit tests for the single-instance boundary**
+
+Create a fake Electron app that records `requestSingleInstanceLock`, `quit`,
+and registered events. Test all three cases:
+
+```js
+assert.equal(acquireSingleInstanceLock({ app: deniedApp, getMainWindow: () => null }), false);
+assert.equal(deniedApp.quitCalls, 1);
+
+assert.equal(acquireSingleInstanceLock({ app: primaryApp, getMainWindow: () => window }), true);
+primaryApp.emit('second-instance');
+assert.deepEqual(window.calls, ['restore', 'focus']);
+
+primaryApp.emit('second-instance'); // with getMainWindow returning null
+```
+
+The final case must not throw or create a new window.
+
+- [ ] **Step 2: Run the focused test and observe failure**
+
+Run:
+
+```bash
+node --test electron/test/single-instance.test.cjs
+```
+
+Expected: FAIL because `single-instance.cjs` does not exist.
+
+- [ ] **Step 3: Implement and integrate before app readiness**
+
+Implement the helper using `app.requestSingleInstanceLock()` once. On a denied
+lock, call `app.quit()` and return false without registering the second-instance
+listener. On the primary instance, register `second-instance`; if the supplied
+window exists, call `restore()` only when `isMinimized()` is true, then call
+`focus()`.
+
+In `electron/main.cjs`, retain the created BrowserWindow in a module-level
+`mainWindow`. Call the helper before `app.whenReady()` and register the
+bootstrap/quit lifecycle only when the lock is acquired. Do not show a second
+window or repeat configuration, Docker, migrations, or backend startup.
+
+- [ ] **Step 4: Run focused and full verification**
+
+Run:
+
+```bash
+node --test electron/test/single-instance.test.cjs
+npm run test:all
+npm run build
+node --check electron/main.cjs
+git diff --check
+```
+
+Expected: PASS, with only the existing Vite chunk-size warning allowed.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add electron/lib/single-instance.cjs electron/test/single-instance.test.cjs electron/main.cjs
+git commit -m "fix: prevent duplicate desktop startup"
+```
