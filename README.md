@@ -1,15 +1,67 @@
 # Asan POS Windows Desktop Installer
 
-This repository contains the DukanPOS React frontend and the Electron Builder
-desktop host. The sibling `../AsanPOS` repository supplies the compiled NestJS
-backend. The Windows installer contains both application layers; PostgreSQL,
-Redis, and MinIO remain a local Docker Desktop Compose stack.
+This repository contains the DukanPOS React frontend and Electron desktop host.
+The installer packages the compiled NestJS backend from `Munib03/AsanPOS`.
+PostgreSQL, Redis, and MinIO run locally in Docker Desktop.
 
-## What the installer does
+`Asan POS Setup-<version>.exe` is a real Windows x64 NSIS installer, not a
+launcher. On first launch, the installed application creates local credentials,
+starts its Docker Compose services, waits until they are ready, runs migrations,
+starts the backend, and opens the POS UI. Docker Desktop itself must already be
+installed and running; the application will not silently install or start it.
 
-`Asan POS Setup-<version>.exe` is a Windows x64 NSIS installer. It installs
-the desktop program, then the first application launch creates these
-user-owned files:
+The application preserves its generated configuration and Docker volumes across
+application upgrades and uninstalls. Business services are bound only to
+`127.0.0.1`.
+
+## Release on Ubuntu
+
+Do all source and release work on Ubuntu. Do not copy the frontend repository,
+backend repository, `node_modules`, Docker files, or environment files to the
+Windows computer.
+
+1. In Ubuntu, commit and push the DukanPOS changes.
+2. In Ubuntu, commit and push the exact AsanPOS backend commit that must be in
+   the installer. Copy its full 40-character commit SHA:
+
+   ```bash
+   git -C "../AsanPOS" rev-parse HEAD
+   ```
+
+3. If `Munib03/AsanPOS` is private, add an `ASANPOS_REPOSITORY_TOKEN` Actions
+   secret in the DukanPOS GitHub repository. Use a fine-grained token with only
+   **Contents: Read** access to the AsanPOS repository. A public AsanPOS
+   repository does not need this secret.
+4. In the DukanPOS GitHub repository, open **Actions** → **Build Windows
+   installer** → **Run workflow**. Paste the full AsanPOS commit SHA into
+   `asanpos_ref` and run it. GitHub builds on a hosted Windows machine, so no
+   Windows build machine or Codex installation is needed.
+5. When the run succeeds, download the artifact named
+   `asan-pos-windows-installer`, extract it on Ubuntu, and copy only
+   `Asan POS Setup-<version>.exe` to Windows (USB drive, local network, or
+   another transfer method).
+
+The workflow accepts only a full backend commit SHA, so each installer is tied
+to an explicit backend version.
+
+## Install on Windows
+
+1. Install Docker Desktop once, choose its normal WSL 2/Linux-container setup,
+   and open Docker Desktop. Accept its terms if prompted and wait until it says
+   Docker is running.
+2. Copy `Asan POS Setup-<version>.exe` to the Windows computer and run it.
+3. Launch **Asan POS** from the Start menu or desktop shortcut. On its first
+   successful launch it generates `backend.env` and Compose credentials under
+   `%LOCALAPPDATA%\Asan POS`, starts PostgreSQL, Redis, and MinIO, then starts
+   the backend automatically.
+
+There is no npm, Python, source checkout, manual `backend.env` editing, Docker
+Compose command, or separate backend installer on Windows. If Docker Desktop
+is closed or unavailable, open it and launch Asan POS again.
+
+## Local runtime data
+
+The installed application owns these local files:
 
 ```text
 %LOCALAPPDATA%\Asan POS\
@@ -20,59 +72,9 @@ user-owned files:
 └─ logs\backend.log
 ```
 
-The installer and app never package a real `.env`, start Docker Desktop, run
-`docker compose up`, stop Docker containers, or remove Docker volumes. This
-keeps business data under the operator's control.
-
-## First-time Windows setup
-
-1. Install Docker Desktop and start it.
-2. Run `Asan POS Setup-<version>.exe`.
-3. Launch Asan POS once. It creates `backend.env` and the Docker project, then
-   explains that the template must be completed.
-4. Edit `%LOCALAPPDATA%\Asan POS\backend.env`. At minimum, replace every
-   `CHANGE_ME` value. Keep these values local and never commit or send the
-   file:
-
-   ```dotenv
-   DB_HOST=127.0.0.1
-   DB_PORT=5432
-   DB_USER=asan_pos
-   DB_PASSWORD=your-postgres-password
-   DB_NAME=asan_pos
-   REDIS_HOST=127.0.0.1
-   REDIS_PORT=6379
-   REDIS_PASSWORD=your-redis-password
-   REDIS_URL=redis://:your-redis-password@127.0.0.1:6379
-   MINIO_ENDPOINT=127.0.0.1
-   MINIO_PORT=9000
-   MINIO_ACCESS_KEY=asanposminio
-   MINIO_SECRET_KEY=your-minio-password
-   MINIO_BUCKET=asan-pos
-   MINIO_BUCKET_NAME=asan-pos
-   MINIO_USE_SSL=false
-   JWT_SECRET=your-long-random-jwt-secret
-   ```
-
-5. Launch Asan POS once more. It validates the file and creates the
-   Docker-only `compose.env` file. It is preserved on later launches and app
-   upgrades; if you deliberately change shared database, Redis, or MinIO credentials,
-   update the matching value in `compose.env` before recreating the containers.
-6. Start the services manually in PowerShell:
-
-   ```powershell
-   cd "$env:LOCALAPPDATA\Asan POS\docker"
-   docker compose --env-file .\compose.env -f .\compose.yaml up -d
-   ```
-
-7. Launch Asan POS. It checks PostgreSQL, Redis, and MinIO, applies pending
-   migrations, starts the backend at `127.0.0.1:3000`, waits for `/health`,
-   and then opens the POS UI.
-
-The Compose file uses named Docker volumes and loopback-only ports. Closing
-Asan POS stops only its backend process; the Docker services and their data
-remain running. Upgrading or uninstalling the application preserves the local
-configuration and Docker volumes.
+Keep this directory and Docker's named volumes when moving to a new version;
+they contain local configuration and business data. Do not copy these files
+between installations unless performing a deliberate backup/restore process.
 
 ## Development checks
 
@@ -90,25 +92,8 @@ npm run build
 npm run stage:desktop
 ```
 
-`npm run start:desktop` stages the application and starts Electron. It needs a
-completed local configuration and manually started Docker services.
-
-## Windows release build
-
-Run this only on a native Windows x64 machine. The backend depends on native
-modules (`bcrypt` and `skia-canvas`), so an installer built on Linux is not a
-release artifact.
-
-```powershell
-cd DukanPOS
-$env:ASANPOS_DIR = "C:\path\to\AsanPOS" # omit when it is ../AsanPOS
-npm run release:win
-```
-
-The installer is written to `electron-dist`. Before distributing it, perform a
-clean Windows test: install Docker Desktop, complete `backend.env`, start
-Compose, install the `.exe`, create representative data, restart the app,
-upgrade it, and verify that Docker data remains intact.
+`npm run start:desktop` stages the application and starts Electron. It needs
+Docker Desktop running locally.
 
 ## Diagnostics
 
@@ -118,5 +103,4 @@ If the app cannot start, open:
 %LOCALAPPDATA%\Asan POS\logs\backend.log
 ```
 
-The setup error dialog also shows the Docker project folder and the exact
-manual Compose command.
+The setup error dialog identifies Docker Desktop or backend startup problems.

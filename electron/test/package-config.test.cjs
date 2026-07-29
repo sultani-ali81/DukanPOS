@@ -22,5 +22,9 @@ test('declares one x64 NSIS installer with staged external resources', () => {
     '.stage/backend/node_modules',
   );
   assert.equal(packageJson.build.nsis.deleteAppDataOnUninstall, false);
+  assert.ok(
+    packageJson.build.files.includes('electron/lib/**'),
+    'packages the Electron library helpers, including Docker startup support',
+  );
   assert.match(packageJson.scripts['package:win'], /electron-rebuild.*--arch x64/);
 });
