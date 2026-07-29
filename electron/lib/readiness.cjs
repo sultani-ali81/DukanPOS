@@ -91,6 +91,31 @@ async function assertLocalServices({
   return results.filter(({ ready }) => !ready).map(({ name }) => name);
 }
 
+async function waitForLocalServices({
+  configuration,
+  timeoutMs = 120000,
+  intervalMs = 500,
+  assertLocalServicesImpl = assertLocalServices,
+  sleep: sleepImpl = sleep,
+  now = Date.now,
+}) {
+  const deadline = now() + timeoutMs;
+  let unavailableServices = [];
+
+  while (true) {
+    unavailableServices = await assertLocalServicesImpl({ configuration });
+    if (unavailableServices.length === 0) return;
+
+    if (now() >= deadline) {
+      throw new Error(
+        `Timed out waiting for local services: ${unavailableServices.join(', ')}`,
+      );
+    }
+
+    await sleepImpl(intervalMs);
+  }
+}
+
 async function waitForHealthyBackend({
   url,
   timeoutMs = 45000,
@@ -128,4 +153,5 @@ module.exports = {
   probeHttp,
   probeTcp,
   waitForHealthyBackend,
+  waitForLocalServices,
 };

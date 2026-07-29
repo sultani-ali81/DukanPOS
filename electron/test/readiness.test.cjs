@@ -3,6 +3,7 @@ const test = require('node:test');
 
 const {
   assertLocalServices,
+  waitForLocalServices,
   waitForHealthyBackend,
 } = require('../lib/readiness.cjs');
 
@@ -23,6 +24,35 @@ test('names only the manually started service that is unavailable', async () => 
   });
 
   assert.deepEqual(unavailable, ['Redis']);
+});
+
+test('waits until all local Docker services are reachable', async () => {
+  let attempts = 0;
+
+  await waitForLocalServices({
+    configuration: localConfiguration,
+    timeoutMs: 100,
+    intervalMs: 0,
+    assertLocalServicesImpl: async () => (++attempts === 1 ? ['MinIO'] : []),
+    sleep: async () => {},
+    now: (() => { let value = 0; return () => (value += 10); })(),
+  });
+
+  assert.equal(attempts, 2);
+});
+
+test('times out with only the final unavailable local service names', async () => {
+  await assert.rejects(
+    waitForLocalServices({
+      configuration: localConfiguration,
+      timeoutMs: 20,
+      intervalMs: 0,
+      assertLocalServicesImpl: async () => ['Redis'],
+      sleep: async () => {},
+      now: (() => { let value = 0; return () => (value += 10); })(),
+    }),
+    /Timed out waiting for local services: Redis/,
+  );
 });
 
 test('waits for a healthy backend response after a transient failure', async () => {

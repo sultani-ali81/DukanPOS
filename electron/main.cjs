@@ -15,7 +15,6 @@ const {
   createRuntimePaths,
   ensureComposeEnvironment,
   ensureRuntimeFiles,
-  getComposeEnvironmentMismatches,
   normalizeBackendConfiguration,
   readBackendConfiguration,
 } = require('./lib/configuration.cjs');
@@ -24,7 +23,8 @@ const {
   startNodeProcess,
   stopNodeProcess,
 } = require('./lib/backend-process.cjs');
-const { assertLocalServices, waitForHealthyBackend } = require('./lib/readiness.cjs');
+const { ensureDockerStack } = require('./lib/docker-runtime.cjs');
+const { waitForHealthyBackend, waitForLocalServices } = require('./lib/readiness.cjs');
 const { resolveRendererRequest } = require('./lib/renderer-protocol.cjs');
 
 protocol.registerSchemesAsPrivileged([
@@ -37,8 +37,6 @@ protocol.registerSchemesAsPrivileged([
 let backendProcess;
 let desktopPaths;
 let quitInProgress = false;
-
-class SetupRequiredError extends Error {}
 
 function getProjectDirectory() {
   return join(__dirname, '..');
@@ -77,14 +75,8 @@ function readMigrationManifest(backendDirectory) {
   return manifest;
 }
 
-function getManualDockerCommand(paths) {
-  return `cd "${paths.dockerDirectory}"\n` +
-    'docker compose --env-file .\\compose.env -f .\\compose.yaml up -d';
-}
-
 async function startBackendRuntime({ paths, resources }) {
   ensureRuntimeFiles({
-    backendTemplatePath: resources.backendTemplatePath,
     composeTemplatePath: resources.composeTemplatePath,
     paths,
   });
@@ -93,31 +85,20 @@ async function startBackendRuntime({ paths, resources }) {
     readBackendConfiguration(paths.backendEnvPath),
   );
   if (configuration.missing.length > 0) {
-    throw new SetupRequiredError(
-      `Complete ${paths.backendEnvPath}. Missing: ${configuration.missing.join(', ')}`,
+    throw new Error(
+      `The local POS configuration is invalid: ${configuration.missing.join(', ')}`,
     );
   }
 
   const composeEnvironment = createComposeEnvironment(configuration.values);
   ensureComposeEnvironment(paths.composeEnvPath, composeEnvironment);
-  const composeMismatches = getComposeEnvironmentMismatches(
-    paths.composeEnvPath,
-    composeEnvironment,
-  );
-  if (composeMismatches.length > 0) {
-    throw new SetupRequiredError(
-      `Update ${paths.composeEnvPath} to match backend.env. Fields: ${composeMismatches.join(', ')}`,
-    );
-  }
-
-  const unavailableServices = await assertLocalServices({
+  await ensureDockerStack({
+    composeEnvPath: paths.composeEnvPath,
+    composePath: paths.composePath,
+  });
+  await waitForLocalServices({
     configuration: configuration.values,
   });
-  if (unavailableServices.length > 0) {
-    throw new SetupRequiredError(
-      `${unavailableServices.join(', ')} is not ready. Start Docker Desktop, then run:\n\n${getManualDockerCommand(paths)}`,
-    );
-  }
 
   readMigrationManifest(resources.backendDirectory);
   await runNodeScript({
@@ -183,20 +164,18 @@ function createWindow() {
 }
 
 async function showStartupFailure(error, paths) {
-  const detail = error instanceof SetupRequiredError
-    ? `${error.message}\n\nDocker setup folder: ${paths.dockerDirectory}`
+  const detail = ['docker-unavailable', 'compose-unavailable', 'compose-start-failed'].includes(error?.code)
+    ? `${error.message}\n\nInstall Docker Desktop and make sure it is running, then reopen Asan POS.`
     : `The POS backend could not start. Check the log:\n${paths.backendLogPath}`;
-  const result = await dialog.showMessageBox({
+  await dialog.showMessageBox({
     type: 'error',
     title: 'Asan POS needs setup',
     message: 'Asan POS could not start.',
     detail,
-    buttons: ['Open setup folder', 'Quit'],
+    buttons: ['Quit'],
     defaultId: 0,
-    cancelId: 1,
+    cancelId: 0,
   });
-
-  if (result.response === 0) await shell.openPath(paths.dockerDirectory);
 }
 
 async function bootstrap() {
