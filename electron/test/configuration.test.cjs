@@ -11,9 +11,23 @@ const {
   ensureComposeEnvironment,
   ensureRuntimeFiles,
   getComposeEnvironmentMismatches,
+  isKnownLegacyPlaceholderConfiguration,
   normalizeBackendConfiguration,
+  readBackendConfiguration,
   writeComposeEnvironment,
 } = require('../lib/configuration.cjs');
+
+const legacyTemplate = [
+  'DB_HOST=127.0.0.1', 'DB_PORT=5432', 'DB_USER=asan_pos',
+  'DB_PASSWORD=CHANGE_ME', 'DB_NAME=asan_pos',
+  'REDIS_HOST=127.0.0.1', 'REDIS_PORT=6379',
+  'REDIS_PASSWORD=CHANGE_ME',
+  'REDIS_URL=redis://:CHANGE_ME@127.0.0.1:6379',
+  'MINIO_ENDPOINT=127.0.0.1', 'MINIO_PORT=9000',
+  'MINIO_ACCESS_KEY=asanposminio', 'MINIO_SECRET_KEY=CHANGE_ME',
+  'MINIO_BUCKET=asan-pos', 'MINIO_BUCKET_NAME=asan-pos',
+  'MINIO_USE_SSL=false', 'JWT_SECRET=CHANGE_ME', '',
+].join('\n');
 
 function createResources(root) {
   const resourcesDirectory = join(root, 'resources');
@@ -54,6 +68,58 @@ test('creates a complete generated backend environment only once', () => {
   const second = ensureRuntimeFiles({ composeTemplatePath, paths, randomBytesImpl });
   assert.equal(second.createdBackendEnvironment, false);
   assert.equal(readFileSync(paths.backendEnvPath, 'utf8'), firstContent);
+});
+
+test('migrates only the exact former placeholder backend environment', () => {
+  const root = mkdtempSync(join(tmpdir(), 'asan-pos-legacy-config-'));
+  const paths = createRuntimePaths(join(root, 'local-app-data'));
+  const resourcesDirectory = createResources(root);
+  const secrets = ['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64), 'd'.repeat(64)];
+  const randomBytesImpl = () => Buffer.from(secrets.shift(), 'hex');
+  mkdirSync(paths.rootDirectory, { recursive: true });
+  writeFileSync(paths.backendEnvPath, legacyTemplate);
+
+  assert.equal(
+    isKnownLegacyPlaceholderConfiguration(readBackendConfiguration(paths.backendEnvPath)),
+    true,
+  );
+
+  const result = ensureRuntimeFiles({
+    composeTemplatePath: join(resourcesDirectory, 'compose.yaml'),
+    paths,
+    randomBytesImpl,
+  });
+  const content = readFileSync(paths.backendEnvPath, 'utf8');
+
+  assert.equal(result.migratedLegacyBackendEnvironment, true);
+  assert.doesNotMatch(content, /CHANGE_ME/);
+  assert.deepEqual(normalizeBackendConfiguration(readBackendConfiguration(paths.backendEnvPath)).missing, []);
+});
+
+test('preserves an edited former placeholder backend environment', () => {
+  const root = mkdtempSync(join(tmpdir(), 'asan-pos-edited-legacy-config-'));
+  const paths = createRuntimePaths(join(root, 'local-app-data'));
+  const resourcesDirectory = createResources(root);
+  const operatorConfiguration = legacyTemplate.replace(
+    'DB_PASSWORD=CHANGE_ME',
+    'DB_PASSWORD=operator-managed',
+  );
+  mkdirSync(paths.rootDirectory, { recursive: true });
+  writeFileSync(paths.backendEnvPath, operatorConfiguration);
+
+  assert.equal(
+    isKnownLegacyPlaceholderConfiguration(readBackendConfiguration(paths.backendEnvPath)),
+    false,
+  );
+
+  const result = ensureRuntimeFiles({
+    composeTemplatePath: join(resourcesDirectory, 'compose.yaml'),
+    paths,
+    randomBytesImpl: () => Buffer.alloc(32, 0xab),
+  });
+
+  assert.equal(result.migratedLegacyBackendEnvironment, false);
+  assert.equal(readFileSync(paths.backendEnvPath, 'utf8'), operatorConfiguration);
 });
 
 test('normalizes Redis and MinIO aliases from one local configuration', () => {

@@ -27,6 +27,26 @@ const REQUIRED_KEYS = [
   'JWT_SECRET',
 ];
 
+const LEGACY_PLACEHOLDER_CONFIGURATION = {
+  DB_HOST: '127.0.0.1',
+  DB_PORT: '5432',
+  DB_USER: 'asan_pos',
+  DB_PASSWORD: 'CHANGE_ME',
+  DB_NAME: 'asan_pos',
+  REDIS_HOST: '127.0.0.1',
+  REDIS_PORT: '6379',
+  REDIS_PASSWORD: 'CHANGE_ME',
+  REDIS_URL: 'redis://:CHANGE_ME@127.0.0.1:6379',
+  MINIO_ENDPOINT: '127.0.0.1',
+  MINIO_PORT: '9000',
+  MINIO_ACCESS_KEY: 'asanposminio',
+  MINIO_SECRET_KEY: 'CHANGE_ME',
+  MINIO_BUCKET: 'asan-pos',
+  MINIO_BUCKET_NAME: 'asan-pos',
+  MINIO_USE_SSL: 'false',
+  JWT_SECRET: 'CHANGE_ME',
+};
+
 function createRuntimePaths(localAppDataDirectory) {
   const rootDirectory = join(localAppDataDirectory, 'Asan POS');
   const dockerDirectory = join(rootDirectory, 'docker');
@@ -60,12 +80,21 @@ function ensureRuntimeFiles({
     );
   }
 
+  const migratedLegacyBackendEnvironment = !createdBackendEnvironment
+    && isKnownLegacyPlaceholderConfiguration(readBackendConfiguration(paths.backendEnvPath));
+  if (migratedLegacyBackendEnvironment) {
+    writeBackendConfiguration(
+      paths.backendEnvPath,
+      createInitialBackendConfiguration(randomBytesImpl),
+    );
+  }
+
   const createdComposeFile = !existsSync(paths.composePath);
   if (createdComposeFile) {
     copyFileSync(composeTemplatePath, paths.composePath);
   }
 
-  return { createdBackendEnvironment, createdComposeFile };
+  return { createdBackendEnvironment, createdComposeFile, migratedLegacyBackendEnvironment };
 }
 
 function createSecret(randomBytesImpl = randomBytes) {
@@ -100,6 +129,14 @@ function writeBackendConfiguration(filePath, values) {
 
 function readBackendConfiguration(configPath) {
   return dotenv.parse(readFileSync(configPath));
+}
+
+function isKnownLegacyPlaceholderConfiguration(input) {
+  const values = trimValues(input);
+  const expectedEntries = Object.entries(LEGACY_PLACEHOLDER_CONFIGURATION);
+
+  return Object.keys(values).length === expectedEntries.length
+    && expectedEntries.every(([key, value]) => values[key] === value);
 }
 
 function trimValues(values) {
@@ -264,6 +301,7 @@ module.exports = {
   ensureComposeEnvironment,
   ensureRuntimeFiles,
   getComposeEnvironmentMismatches,
+  isKnownLegacyPlaceholderConfiguration,
   normalizeBackendConfiguration,
   readBackendConfiguration,
   writeBackendConfiguration,

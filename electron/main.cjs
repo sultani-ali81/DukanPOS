@@ -15,6 +15,7 @@ const {
   createRuntimePaths,
   ensureComposeEnvironment,
   ensureRuntimeFiles,
+  getComposeEnvironmentMismatches,
   normalizeBackendConfiguration,
   readBackendConfiguration,
 } = require('./lib/configuration.cjs');
@@ -87,6 +88,7 @@ async function startBackendRuntime({ paths, resources }) {
       normalizeBackendConfiguration,
       createComposeEnvironment,
       ensureComposeEnvironment,
+      getComposeEnvironmentMismatches,
       ensureDockerStack,
       waitForLocalServices,
       readMigrationManifest,

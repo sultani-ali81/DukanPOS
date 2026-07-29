@@ -39,6 +39,7 @@ function createDependencies(events) {
       return { POSTGRES_PORT: '5432' };
     },
     ensureComposeEnvironment: () => events.push('compose-env'),
+    getComposeEnvironmentMismatches: () => [],
     ensureDockerStack: async () => events.push('docker-stack'),
     waitForLocalServices: async () => events.push('service-wait'),
     readMigrationManifest: () => events.push('migration-manifest'),
@@ -101,6 +102,49 @@ test('does not run migrations or launch the backend after Docker startup fails',
     'compose-values',
     'compose-env',
     'docker-stack',
+  ]);
+});
+
+test('labels an invalid saved POS configuration before Docker starts', async () => {
+  const events = [];
+  const dependencies = createDependencies(events);
+  dependencies.normalizeBackendConfiguration = () => {
+    events.push('normalize-config');
+    return { values: configuration.values, missing: ['DB_PASSWORD'] };
+  };
+
+  await assert.rejects(
+    startBackendRuntime({ paths, resources, dependencies }),
+    (error) => error?.code === 'configuration-invalid',
+  );
+
+  assert.deepEqual(events, [
+    'runtime-files',
+    'read-config',
+    'normalize-config',
+  ]);
+});
+
+test('rejects persisted Compose values that disagree with the POS configuration', async () => {
+  const events = [];
+  const dependencies = createDependencies(events);
+  dependencies.ensureComposeEnvironment = () => {
+    events.push('compose-env');
+    return false;
+  };
+  dependencies.getComposeEnvironmentMismatches = () => ['POSTGRES_PASSWORD'];
+
+  await assert.rejects(
+    startBackendRuntime({ paths, resources, dependencies }),
+    (error) => error?.code === 'compose-environment-mismatch',
+  );
+
+  assert.deepEqual(events, [
+    'runtime-files',
+    'read-config',
+    'normalize-config',
+    'compose-values',
+    'compose-env',
   ]);
 });
 

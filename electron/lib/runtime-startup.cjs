@@ -1,5 +1,13 @@
 const { join } = require('node:path');
 
+class RuntimeConfigurationError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = 'RuntimeConfigurationError';
+    this.code = code;
+  }
+}
+
 function isDockerServicesStartupFailure(error) {
   return ['docker-unavailable', 'compose-unavailable', 'compose-start-failed'].includes(error?.code)
     || /^Timed out waiting for local services:/.test(error?.message || '');
@@ -12,6 +20,7 @@ async function startBackendRuntime({ paths, resources, dependencies }) {
     normalizeBackendConfiguration,
     createComposeEnvironment,
     ensureComposeEnvironment,
+    getComposeEnvironmentMismatches,
     ensureDockerStack,
     waitForLocalServices,
     readMigrationManifest,
@@ -30,13 +39,29 @@ async function startBackendRuntime({ paths, resources, dependencies }) {
     readBackendConfiguration(paths.backendEnvPath),
   );
   if (configuration.missing.length > 0) {
-    throw new Error(
+    throw new RuntimeConfigurationError(
+      'configuration-invalid',
       `The local POS configuration is invalid: ${configuration.missing.join(', ')}`,
     );
   }
 
   const composeEnvironment = createComposeEnvironment(configuration.values);
-  ensureComposeEnvironment(paths.composeEnvPath, composeEnvironment);
+  const createdComposeEnvironment = ensureComposeEnvironment(
+    paths.composeEnvPath,
+    composeEnvironment,
+  );
+  if (!createdComposeEnvironment) {
+    const mismatches = getComposeEnvironmentMismatches(
+      paths.composeEnvPath,
+      composeEnvironment,
+    );
+    if (mismatches.length > 0) {
+      throw new RuntimeConfigurationError(
+        'compose-environment-mismatch',
+        `The saved Docker configuration does not match the POS configuration: ${mismatches.join(', ')}`,
+      );
+    }
+  }
   await ensureDockerStack({
     composeEnvPath: paths.composeEnvPath,
     composePath: paths.composePath,
@@ -74,5 +99,6 @@ async function startBackendRuntime({ paths, resources, dependencies }) {
 
 module.exports = {
   isDockerServicesStartupFailure,
+  RuntimeConfigurationError,
   startBackendRuntime,
 };
