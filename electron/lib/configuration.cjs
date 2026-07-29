@@ -6,6 +6,7 @@ const {
   renameSync,
   writeFileSync,
 } = require('node:fs');
+const { randomBytes } = require('node:crypto');
 const { dirname, join } = require('node:path');
 const dotenv = require('dotenv');
 
@@ -46,18 +47,56 @@ function ensureRuntimeFiles({
   backendTemplatePath = resourcesDirectory && join(resourcesDirectory, 'backend.env.example'),
   composeTemplatePath = resourcesDirectory && join(resourcesDirectory, 'compose.yaml'),
   paths,
+  randomBytesImpl,
 }) {
   mkdirSync(paths.rootDirectory, { recursive: true });
   mkdirSync(paths.dockerDirectory, { recursive: true });
   mkdirSync(paths.logDirectory, { recursive: true });
 
-  if (!existsSync(paths.backendEnvPath)) {
-    copyFileSync(backendTemplatePath, paths.backendEnvPath);
+  const createdBackendEnvironment = !existsSync(paths.backendEnvPath);
+  if (createdBackendEnvironment) {
+    writeBackendConfiguration(
+      paths.backendEnvPath,
+      createInitialBackendConfiguration(randomBytesImpl),
+    );
   }
 
-  if (!existsSync(paths.composePath)) {
+  const createdComposeFile = !existsSync(paths.composePath);
+  if (createdComposeFile) {
     copyFileSync(composeTemplatePath, paths.composePath);
   }
+
+  return { createdBackendEnvironment, createdComposeFile };
+}
+
+function createSecret(randomBytesImpl = randomBytes) {
+  return randomBytesImpl(32).toString('hex');
+}
+
+function createInitialBackendConfiguration(randomBytesImpl) {
+  const dbPassword = createSecret(randomBytesImpl);
+  const redisPassword = createSecret(randomBytesImpl);
+  const minioSecret = createSecret(randomBytesImpl);
+  const jwtSecret = createSecret(randomBytesImpl);
+
+  return {
+    DB_HOST: '127.0.0.1', DB_PORT: '5432', DB_USER: 'asan_pos',
+    DB_PASSWORD: dbPassword, DB_NAME: 'asan_pos',
+    REDIS_HOST: '127.0.0.1', REDIS_PORT: '6379', REDIS_PASSWORD: redisPassword,
+    REDIS_URL: `redis://:${encodeURIComponent(redisPassword)}@127.0.0.1:6379`,
+    MINIO_ENDPOINT: '127.0.0.1', MINIO_PORT: '9000',
+    MINIO_ACCESS_KEY: 'asanposminio', MINIO_SECRET_KEY: minioSecret,
+    MINIO_BUCKET: 'asan-pos', MINIO_BUCKET_NAME: 'asan-pos', MINIO_USE_SSL: 'false',
+    JWT_SECRET: jwtSecret,
+  };
+}
+
+function writeBackendConfiguration(filePath, values) {
+  const lines = Object.entries(values).map(([key, value]) => `${key}=${value}`);
+  const temporaryPath = `${filePath}.tmp`;
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(temporaryPath, `${lines.join('\n')}\n`, { encoding: 'utf8', mode: 0o600 });
+  renameSync(temporaryPath, filePath);
 }
 
 function readBackendConfiguration(configPath) {
@@ -220,6 +259,7 @@ function getComposeEnvironmentMismatches(filePath, expectedValues) {
 }
 
 module.exports = {
+  createInitialBackendConfiguration,
   createComposeEnvironment,
   createRuntimePaths,
   ensureComposeEnvironment,
@@ -227,5 +267,6 @@ module.exports = {
   getComposeEnvironmentMismatches,
   normalizeBackendConfiguration,
   readBackendConfiguration,
+  writeBackendConfiguration,
   writeComposeEnvironment,
 };

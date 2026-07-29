@@ -39,6 +39,27 @@ test('preserves an operator-edited backend environment while initializing Docker
   assert.equal(existsSync(paths.composePath), true);
 });
 
+test('creates a complete generated backend environment only once', () => {
+  const root = mkdtempSync(join(tmpdir(), 'asan-pos-generated-config-'));
+  const paths = createRuntimePaths(join(root, 'local-app-data'));
+  const resourcesDirectory = createResources(root);
+  const composeTemplatePath = join(resourcesDirectory, 'compose.yaml');
+  const secrets = ['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64), 'd'.repeat(64)];
+  const randomBytesImpl = () => Buffer.from(secrets.shift(), 'hex');
+
+  const first = ensureRuntimeFiles({ composeTemplatePath, paths, randomBytesImpl });
+  const firstContent = readFileSync(paths.backendEnvPath, 'utf8');
+
+  assert.equal(first.createdBackendEnvironment, true);
+  assert.match(firstContent, /DB_HOST=127.0.0.1/);
+  assert.match(firstContent, /DB_PASSWORD=a{64}/);
+  assert.doesNotMatch(firstContent, /CHANGE_ME/);
+
+  const second = ensureRuntimeFiles({ composeTemplatePath, paths, randomBytesImpl });
+  assert.equal(second.createdBackendEnvironment, false);
+  assert.equal(readFileSync(paths.backendEnvPath, 'utf8'), firstContent);
+});
+
 test('normalizes Redis and MinIO aliases from one local configuration', () => {
   const result = normalizeBackendConfiguration({
     DB_HOST: '127.0.0.1',
