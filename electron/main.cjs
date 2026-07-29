@@ -34,16 +34,11 @@ const {
   createStartupFailureDialog,
   tryAppendStartupDiagnostic,
 } = require('./lib/startup-failure.cjs');
-
-protocol.registerSchemesAsPrivileged([
-  {
-    scheme: 'asanpos',
-    privileges: { standard: true, secure: true, supportFetchAPI: true },
-  },
-]);
+const { acquireSingleInstanceLock } = require('./lib/single-instance.cjs');
 
 let backendProcess;
 let desktopPaths;
+let mainWindow;
 let quitInProgress = false;
 
 function getProjectDirectory() {
@@ -118,7 +113,7 @@ function registerRendererProtocol(rendererDirectory) {
 }
 
 function createWindow() {
-  const window = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1024,
@@ -131,9 +126,13 @@ function createWindow() {
       preload: join(__dirname, 'preload.cjs'),
     },
   });
+  const window = mainWindow;
 
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.once('ready-to-show', () => window.show());
+  window.once('closed', () => {
+    if (mainWindow === window) mainWindow = null;
+  });
   void window.loadURL('asanpos://app/index.html');
   return window;
 }
@@ -156,32 +155,41 @@ async function bootstrap() {
   createWindow();
 }
 
-app.whenReady().then(async () => {
-  try {
-    await bootstrap();
-  } catch (error) {
-    const paths = desktopPaths || createRuntimePaths(process.env.LOCALAPPDATA || app.getPath('userData'));
-    await stopNodeProcess(backendProcess).catch(() => {});
-    const startupLogAvailable = tryAppendStartupDiagnostic({
-      logPath: paths.startupLogPath,
-      error,
-    });
-    await showStartupFailure(error, paths, {
-      startupLogAvailable,
-      backendLogAvailable: existsSync(paths.backendLogPath),
-    });
+if (acquireSingleInstanceLock({ app, getMainWindow: () => mainWindow })) {
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: 'asanpos',
+      privileges: { standard: true, secure: true, supportFetchAPI: true },
+    },
+  ]);
+
+  app.whenReady().then(async () => {
+    try {
+      await bootstrap();
+    } catch (error) {
+      const paths = desktopPaths || createRuntimePaths(process.env.LOCALAPPDATA || app.getPath('userData'));
+      await stopNodeProcess(backendProcess).catch(() => {});
+      const startupLogAvailable = tryAppendStartupDiagnostic({
+        logPath: paths.startupLogPath,
+        error,
+      });
+      await showStartupFailure(error, paths, {
+        startupLogAvailable,
+        backendLogAvailable: existsSync(paths.backendLogPath),
+      });
+      quitInProgress = true;
+      app.quit();
+    }
+  });
+
+  app.on('window-all-closed', () => app.quit());
+
+  app.on('before-quit', (event) => {
+    if (quitInProgress) return;
+    event.preventDefault();
     quitInProgress = true;
-    app.quit();
-  }
-});
-
-app.on('window-all-closed', () => app.quit());
-
-app.on('before-quit', (event) => {
-  if (quitInProgress) return;
-  event.preventDefault();
-  quitInProgress = true;
-  void stopNodeProcess(backendProcess)
-    .catch(() => {})
-    .finally(() => app.quit());
-});
+    void stopNodeProcess(backendProcess)
+      .catch(() => {})
+      .finally(() => app.quit());
+  });
+}
