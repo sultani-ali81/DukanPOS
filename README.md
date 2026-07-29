@@ -55,7 +55,7 @@ Asan POS Setup-<version>.exe
 
 Do **not** transfer either repository, the staged build directory, `node_modules`,
 `.env` or `backend.env` files, Docker Compose files, Docker named volumes, or
-any `%LOCALAPPDATA%\\Asan POS` runtime files. Those are either build inputs or
+any `%LOCALAPPDATA%\Asan POS` runtime files. Those are either build inputs or
 machine-local data; the installed app creates its own runtime configuration and
 Docker setup on first launch.
 
