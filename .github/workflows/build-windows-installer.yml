@@ -18,7 +18,6 @@ jobs:
     env:
       ASANPOS_DIR: ${{ github.workspace }}\backend
       ASANPOS_REF: ${{ inputs.asanpos_ref }}
-      ASANPOS_REPOSITORY_TOKEN: ${{ secrets.ASANPOS_REPOSITORY_TOKEN }}
 
     steps:
       - name: Verify immutable backend revision
@@ -33,21 +32,12 @@ jobs:
         with:
           path: app
 
-      - name: Check out AsanPOS (public repository)
-        if: ${{ env.ASANPOS_REPOSITORY_TOKEN == '' }}
+      - name: Check out AsanPOS
         uses: actions/checkout@v4
         with:
           repository: Munib03/AsanPOS
           ref: ${{ inputs.asanpos_ref }}
-          path: backend
-
-      - name: Check out AsanPOS (private repository)
-        if: ${{ env.ASANPOS_REPOSITORY_TOKEN != '' }}
-        uses: actions/checkout@v4
-        with:
-          repository: Munib03/AsanPOS
-          ref: ${{ inputs.asanpos_ref }}
-          token: ${{ env.ASANPOS_REPOSITORY_TOKEN }}
+          token: ${{ secrets.ASANPOS_REPOSITORY_TOKEN || github.token }}
           path: backend
 
       - name: Set up Node.js 24
