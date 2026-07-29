@@ -30,6 +30,9 @@ const BACKEND_FAILURE_INFO = {
   message: 'The POS backend could not start.',
 };
 
+const DIAGNOSTIC_WRITE_FAILURE_MESSAGE =
+  'Asan POS could not write a diagnostic log. Contact your POS administrator.';
+
 function isLocalServicesTimeout(error) {
   return typeof error?.message === 'string'
     && error.message.startsWith('Timed out waiting for local services:');
@@ -65,15 +68,32 @@ function appendStartupDiagnostic({
   appendFileSyncImpl(logPath, entry, { encoding: 'utf8', mode: 0o600 });
 }
 
-function createStartupFailureDialog({ error, paths }) {
+function tryAppendStartupDiagnostic(options) {
+  try {
+    appendStartupDiagnostic(options);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function createStartupFailureDialog({
+  error,
+  paths,
+  startupLogAvailable = false,
+  backendLogAvailable = false,
+}) {
   const failure = getStartupFailureInfo(error);
+  const diagnosticDetail = startupLogAvailable
+    ? `Startup log: ${paths.startupLogPath}`
+    : DIAGNOSTIC_WRITE_FAILURE_MESSAGE;
 
   if (failure.category === 'docker') {
     return {
       type: 'error',
       title: 'Asan POS needs Docker Desktop',
       message: 'Asan POS could not start.',
-      detail: `${failure.message}\n\nStartup log: ${paths.startupLogPath}`,
+      detail: `${failure.message}\n\n${diagnosticDetail}`,
       buttons: ['Quit'],
       defaultId: 0,
       cancelId: 0,
@@ -85,7 +105,7 @@ function createStartupFailureDialog({ error, paths }) {
       type: 'error',
       title: 'Asan POS needs configuration help',
       message: 'Asan POS could not start.',
-      detail: `${failure.message}\n\nStartup log: ${paths.startupLogPath}`,
+      detail: `${failure.message}\n\n${diagnosticDetail}`,
       buttons: ['Quit'],
       defaultId: 0,
       cancelId: 0,
@@ -96,7 +116,10 @@ function createStartupFailureDialog({ error, paths }) {
     type: 'error',
     title: 'Asan POS could not start',
     message: failure.message,
-    detail: `Check the startup log and backend log:\n${paths.startupLogPath}\n${paths.backendLogPath}`,
+    detail: [
+      diagnosticDetail,
+      backendLogAvailable ? `Backend log: ${paths.backendLogPath}` : null,
+    ].filter(Boolean).join('\n\n'),
     buttons: ['Quit'],
     defaultId: 0,
     cancelId: 0,
@@ -107,4 +130,5 @@ module.exports = {
   appendStartupDiagnostic,
   createStartupFailureDialog,
   getStartupFailureInfo,
+  tryAppendStartupDiagnostic,
 };

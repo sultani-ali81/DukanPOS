@@ -31,8 +31,8 @@ const {
   startBackendRuntime: startBackendRuntimeImpl,
 } = require('./lib/runtime-startup.cjs');
 const {
-  appendStartupDiagnostic,
   createStartupFailureDialog,
+  tryAppendStartupDiagnostic,
 } = require('./lib/startup-failure.cjs');
 
 protocol.registerSchemesAsPrivileged([
@@ -138,8 +138,12 @@ function createWindow() {
   return window;
 }
 
-async function showStartupFailure(error, paths) {
-  await dialog.showMessageBox(createStartupFailureDialog({ error, paths }));
+async function showStartupFailure(error, paths, logAvailability) {
+  await dialog.showMessageBox(createStartupFailureDialog({
+    error,
+    paths,
+    ...logAvailability,
+  }));
 }
 
 async function bootstrap() {
@@ -158,10 +162,14 @@ app.whenReady().then(async () => {
   } catch (error) {
     const paths = desktopPaths || createRuntimePaths(process.env.LOCALAPPDATA || app.getPath('userData'));
     await stopNodeProcess(backendProcess).catch(() => {});
-    try {
-      appendStartupDiagnostic({ logPath: paths.startupLogPath, error });
-    } catch {}
-    await showStartupFailure(error, paths);
+    const startupLogAvailable = tryAppendStartupDiagnostic({
+      logPath: paths.startupLogPath,
+      error,
+    });
+    await showStartupFailure(error, paths, {
+      startupLogAvailable,
+      backendLogAvailable: existsSync(paths.backendLogPath),
+    });
     quitInProgress = true;
     app.quit();
   }

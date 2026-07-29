@@ -106,7 +106,9 @@ The installed application owns these local files:
 ├─ docker\
 │  ├─ compose.yaml
 │  └─ compose.env
-└─ logs\backend.log
+└─ logs\
+   ├─ backend.log
+   └─ startup.log
 ```
 
 Keep this directory and Docker's named volumes when moving to a new version;
