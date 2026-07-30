@@ -1,0 +1,59 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      asanpos_ref:
+        description: Full 40-character commit SHA from Munib03/AsanPOS to package
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    name: Build x64 NSIS installer
+    runs-on: windows-latest
+    env:
+      ASANPOS_DIR: ${{ github.workspace }}\backend
+      ASANPOS_REF: ${{ inputs.asanpos_ref }}
+
+    steps:
+      - name: Verify immutable backend revision
+        shell: pwsh
+        run: |
+          if ($env:ASANPOS_REF -notmatch '^[0-9a-fA-F]{40}$') {
+            throw 'asanpos_ref must be a full 40-character AsanPOS commit SHA.'
+          }
+
+      - name: Check out DukanPOS
+        uses: actions/checkout@v4
+        with:
+          path: app
+
+      - name: Check out AsanPOS
+        uses: actions/checkout@v4
+        with:
+          repository: Munib03/AsanPOS
+          ref: ${{ inputs.asanpos_ref }}
+          token: ${{ secrets.ASANPOS_REPOSITORY_TOKEN || github.token }}
+          persist-credentials: false
+          path: backend
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build installer
+        working-directory: app
+        shell: pwsh
+        run: npm run release:win
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: asan-pos-windows-installer
+          path: app/electron-dist/*.exe
+          if-no-files-found: error

@@ -1,13 +1,21 @@
 {
   "name": "dukanpos",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
+  "main": "electron/main.cjs",
+  "productName": "Asan POS",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:desktop": "node --test \"electron/test/*.test.cjs\"",
+    "test:all": "npm test && npm run test:desktop",
+    "stage:desktop": "node electron/scripts/stage-desktop.cjs",
+    "start:desktop": "npm run stage:desktop && electron .",
+    "package:win": "npm run stage:desktop && electron-rebuild -f -w bcrypt -w skia-canvas --arch x64 --module-dir .stage/backend && electron-builder --win nsis --x64",
+    "release:win": "powershell -ExecutionPolicy Bypass -File electron/scripts/build-windows.ps1",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -22,6 +30,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
+    "dotenv": "^17.3.1",
     "hook": "^0.1.0",
     "input-otp": "^1.4.2",
     "jsbarcode": "^3.12.3",
@@ -46,6 +55,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@eslint/js": "^10.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -53,6 +63,8 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -62,5 +74,81 @@
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
     "vitest": "^4.1.10"
+  },
+  "build": {
+    "appId": "com.asanpos.desktop",
+    "productName": "Asan POS",
+    "artifactName": "Asan POS Setup-${version}.${ext}",
+    "asar": true,
+    "directories": {
+      "output": "electron-dist"
+    },
+    "files": [
+      "electron/main.cjs",
+      "electron/preload.cjs",
+      "electron/lib/**",
+      "node_modules/dotenv/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".stage/renderer",
+        "to": "renderer",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      },
+      {
+        "from": ".stage/backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!**/.env*",
+          "!**/backend.env",
+          "!**/*.map",
+          "!**/*.d.ts"
+        ]
+      },
+      {
+        "from": ".stage/backend/node_modules",
+        "to": "backend/node_modules",
+        "filter": [
+          "**/*",
+          "!**/.env*",
+          "!**/backend.env",
+          "!**/*.map",
+          "!**/*.d.ts",
+          "!**/test/**",
+          "!**/tests/**",
+          "!**/__tests__/**"
+        ]
+      },
+      {
+        "from": ".stage/docker",
+        "to": "docker",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Asan POS",
+      "deleteAppDataOnUninstall": false
+    }
   }
 }
